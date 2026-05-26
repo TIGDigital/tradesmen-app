@@ -15,7 +15,16 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <AuthGate>
-          <Stack screenOptions={{ headerShown: false }} />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tradesman)" />
+            <Stack.Screen name="project/[id]/index" options={{ presentation: 'card' }} />
+            <Stack.Screen
+              name="project/[id]/compose"
+              options={{ presentation: 'modal' }}
+            />
+          </Stack>
         </AuthGate>
         <StatusBar style="dark" />
       </SafeAreaProvider>

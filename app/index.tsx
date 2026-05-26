@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
+import { Redirect, router } from 'expo-router';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ProjectHero } from '@/components/ProjectHero';
 import { EventPill } from '@/components/ui/EventPill';
-import { signOut } from '@/services/auth';
+import { signOut, switchMyRole } from '@/services/auth';
 import {
   dayOfProject,
   fetchMyCurrentProject,
@@ -18,29 +19,53 @@ import type { ProjectStatus } from '@/theme/tokens';
 export default function HomeScreen() {
   const t = lightTheme;
   const profile = useAuthStore((s) => s.profile);
+  const refreshProfile = useAuthStore((s) => s.refreshProfile);
 
+  // All hooks must run on every render — put the query before any conditional return.
+  const isCustomer = profile?.role !== 'tradesman';
   const { data, isLoading, error } = useQuery({
     queryKey: ['my-current-project', profile?.id],
     queryFn: fetchMyCurrentProject,
-    enabled: !!profile,
+    enabled: !!profile && isCustomer,
   });
+
+  // Tradesman home is the jobs list, not the single-project view.
+  if (profile?.role === 'tradesman') {
+    return <Redirect href="/(tradesman)/jobs" />;
+  }
+
+  function onMenu() {
+    Alert.alert('Menu', undefined, [
+      {
+        text: 'Switch to tradesman view (dev)',
+        onPress: async () => {
+          try {
+            await switchMyRole();
+            await refreshProfile();
+          } catch (e) {
+            Alert.alert('Failed', (e as Error).message);
+          }
+        },
+      },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        onPress: () => signOut(),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['top']}>
       <View style={styles.navBar}>
-        <Pressable
-          onPress={() =>
-            Alert.alert('Sign out?', 'You can sign back in any time.', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
-            ])
-          }
-          hitSlop={12}
-          style={styles.navIconBox}
-        >
+        <Pressable onPress={onMenu} hitSlop={12} style={styles.navIconBox}>
           <Text style={{ fontSize: 22, color: t.colors.text.primary }}>≡</Text>
         </Pressable>
-        <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]} numberOfLines={1}>
+        <Text
+          style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}
+          numberOfLines={1}
+        >
           {data?.title ?? (isLoading ? 'Loading…' : 'No project yet')}
         </Text>
         <View style={styles.navIconBox}>
@@ -62,14 +87,19 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {!isLoading && !error && !data && <EmptyState role={profile?.role} />}
+      {!isLoading && !error && !data && <EmptyState />}
 
-      {data && <ProjectContent data={data} />}
+      {data && (
+        <ProjectContent
+          data={data}
+          onOpen={() => router.push({ pathname: '/project/[id]', params: { id: data.id } })}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
-function EmptyState({ role }: { role: string | null | undefined }) {
+function EmptyState() {
   const t = lightTheme;
   return (
     <View style={styles.center}>
@@ -82,15 +112,19 @@ function EmptyState({ role }: { role: string | null | undefined }) {
           { color: t.colors.text.secondary, textAlign: 'center', marginTop: 8, maxWidth: 280 },
         ]}
       >
-        {role === 'tradesman'
-          ? 'Create a project and invite your customer to get started. (Coming next sprint.)'
-          : 'Your tradesman will invite you when your project is ready. Watch this space.'}
+        Your tradesman will invite you when your project is ready. Watch this space.
       </Text>
     </View>
   );
 }
 
-function ProjectContent({ data }: { data: NonNullable<Awaited<ReturnType<typeof fetchMyCurrentProject>>> }) {
+function ProjectContent({
+  data,
+  onOpen,
+}: {
+  data: NonNullable<Awaited<ReturnType<typeof fetchMyCurrentProject>>>;
+  onOpen: () => void;
+}) {
   const t = lightTheme;
 
   const range = dayOfProject(data.actual_start_date ?? data.expected_start_date, data.expected_end_date);
@@ -113,12 +147,14 @@ function ProjectContent({ data }: { data: NonNullable<Awaited<ReturnType<typeof 
       contentContainerStyle={{ padding: t.space[5], gap: t.space[4] }}
       showsVerticalScrollIndicator={false}
     >
-      <ProjectHero
-        status={data.status as ProjectStatus}
-        headline={headline}
-        subhead={subhead}
-        progressPct={progressPct}
-      />
+      <Pressable onPress={onOpen}>
+        <ProjectHero
+          status={data.status as ProjectStatus}
+          headline={headline}
+          subhead={subhead}
+          progressPct={progressPct}
+        />
+      </Pressable>
 
       <EventPill
         kind="arrival"
@@ -156,41 +192,38 @@ function ProjectContent({ data }: { data: NonNullable<Awaited<ReturnType<typeof 
       </Text>
 
       {latestUpdate ? (
-        <View
-          style={[
-            styles.updateCard,
-            t.elevation[1],
-            {
-              backgroundColor: t.colors.bg.surface,
-              borderRadius: t.radius.lg,
-              padding: t.space[4],
-            },
-          ]}
-        >
-          <View style={styles.updateHead}>
-            <View style={[styles.avatar, { backgroundColor: '#A04A1C' }]}>
-              <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>
-                {tradesmanFirst[0]?.toUpperCase() ?? '?'}
-              </Text>
+        <Pressable onPress={onOpen}>
+          <View
+            style={[
+              styles.updateCard,
+              t.elevation[1],
+              {
+                backgroundColor: t.colors.bg.surface,
+                borderRadius: t.radius.lg,
+                padding: t.space[4],
+              },
+            ]}
+          >
+            <View style={styles.updateHead}>
+              <View style={[styles.avatar, { backgroundColor: '#A04A1C' }]}>
+                <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>
+                  {tradesmanFirst[0]?.toUpperCase() ?? '?'}
+                </Text>
+              </View>
+              <View>
+                <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
+                  {tradesmanName}
+                </Text>
+                <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>
+                  {relativeTime(latestUpdate.created_at!)}
+                </Text>
+              </View>
             </View>
-            <View>
-              <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
-                {tradesmanName}
-              </Text>
-              <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>
-                {relativeTime(latestUpdate.created_at!)}
-              </Text>
-            </View>
+            <Text style={[t.type.body, { color: t.colors.text.primary, marginTop: t.space[3] }]}>
+              {latestUpdate.body}
+            </Text>
           </View>
-          <Text style={[t.type.body, { color: t.colors.text.primary, marginTop: t.space[3] }]}>
-            {latestUpdate.body}
-          </Text>
-          <View style={[styles.photos, { marginTop: t.space[3] }]}>
-            <View style={[styles.photoBox, { backgroundColor: '#D8D5CE' }]} />
-            <View style={[styles.photoBox, { backgroundColor: '#ECEAE4' }]} />
-            <View style={[styles.photoBox, { backgroundColor: '#F4F2EE' }]} />
-          </View>
-        </View>
+        </Pressable>
       ) : (
         <Text style={[t.type.body, { color: t.colors.text.tertiary }]}>
           No updates yet.
@@ -221,6 +254,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  photos: { flexDirection: 'row', gap: 8 },
-  photoBox: { flex: 1, height: 60, borderRadius: 12 },
 });

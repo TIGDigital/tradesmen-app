@@ -64,3 +64,22 @@ export async function setMyRole(role: Role) {
   const { error } = await supabase.from('profiles').update({ role }).eq('id', user.id);
   if (error) throw error;
 }
+
+/**
+ * Dev helper: flip the current user's role without re-signing-up.
+ * Removes the need to keep two test accounts.
+ * In prod, role is set-once at sign-up via role-select.
+ */
+export async function switchMyRole() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+  const { data: current } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  const next: Role = current?.role === 'tradesman' ? 'customer' : 'tradesman';
+  const { error } = await supabase.from('profiles').update({ role: next }).eq('id', user.id);
+  if (error) throw error;
+  return next;
+}

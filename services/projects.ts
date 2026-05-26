@@ -1,4 +1,8 @@
 import { supabase } from '@/services/supabase';
+import type { Database } from '@/types/db';
+
+type TradeType = Database['public']['Enums']['trade_type'];
+type UpdateType = Database['public']['Enums']['update_type'];
 
 /**
  * Fetch the most recently-updated project the signed-in user participates in
@@ -30,7 +34,125 @@ export async function fetchMyCurrentProject() {
   return data;
 }
 
-/** Day N of M based on start/end dates. */
+/** Fetch all non-archived projects the signed-in user owns or participates in. */
+export async function fetchMyProjects() {
+  const { data, error } = await supabase
+    .from('projects')
+    .select(`
+      id, title, status, trade_type, city, postcode,
+      expected_start_date, expected_end_date, actual_start_date,
+      created_at, pending_customer_name, customer_id
+    `)
+    .is('archived_at', null)
+    .order('updated_at', { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Fetch one project + its tradesman + customer + ALL updates (no truncation). */
+export async function fetchProject(projectId: string) {
+  const { data, error } = await supabase
+    .from('projects')
+    .select(`
+      id, title, status, trade_type,
+      address_line_1, address_line_2, city, postcode,
+      expected_start_date, expected_end_date, actual_start_date, actual_end_date,
+      pending_customer_name, pending_customer_phone,
+      tradesman:profiles!projects_tradesman_id_fkey ( id, full_name, avatar_url ),
+      customer:profiles!projects_customer_id_fkey ( id, full_name, avatar_url )
+    `)
+    .eq('id', projectId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** Fetch the timeline feed for a project, newest first. */
+export async function fetchProjectUpdates(projectId: string) {
+  const { data, error } = await supabase
+    .from('project_updates')
+    .select(`
+      id, body, type, created_at, author_id,
+      author:profiles!project_updates_author_id_fkey ( id, full_name )
+    `)
+    .eq('project_id', projectId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Insert a new project (signed-in user becomes the lead tradesman). */
+export async function createProject(args: {
+  title: string;
+  trade_type: TradeType;
+  address_line_1: string;
+  city: string;
+  postcode: string;
+  pending_customer_name: string;
+  pending_customer_phone: string;
+  expected_start_date?: string;
+  expected_end_date?: string;
+}) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+
+  const { data: project, error } = await supabase
+    .from('projects')
+    .insert({
+      tradesman_id: user.id,
+      title: args.title,
+      trade_type: args.trade_type,
+      address_line_1: args.address_line_1,
+      city: args.city,
+      postcode: args.postcode,
+      pending_customer_name: args.pending_customer_name,
+      pending_customer_phone: args.pending_customer_phone,
+      expected_start_date: args.expected_start_date,
+      expected_end_date: args.expected_end_date,
+      status: 'scheduled',
+    })
+    .select()
+    .single();
+  if (error) throw error;
+
+  // Add self to project_crew as lead. (Doc 02 §2.3 notes this is auto-inserted on create.)
+  const { error: crewError } = await supabase.from('project_crew').insert({
+    project_id: project.id,
+    user_id: user.id,
+    role_on_project: 'lead',
+  });
+  if (crewError) throw crewError;
+
+  return project;
+}
+
+/** Post a new update to the timeline. */
+export async function postUpdate(args: {
+  project_id: string;
+  body: string;
+  type?: UpdateType;
+}) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+
+  const { data, error } = await supabase
+    .from('project_updates')
+    .insert({
+      project_id: args.project_id,
+      author_id: user.id,
+      body: args.body,
+      type: args.type ?? 'progress',
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// ---- formatting helpers (unchanged from earlier sprint) ----
+
 export function dayOfProject(start?: string | null, end?: string | null): { day: number; total: number } | null {
   if (!start || !end) return null;
   const s = new Date(start).getTime();
@@ -42,7 +164,6 @@ export function dayOfProject(start?: string | null, end?: string | null): { day:
   return { day, total };
 }
 
-/** Rough "2 hours ago" / "yesterday" / "3 days ago" formatter. */
 export function relativeTime(iso: string): string {
   const diffSec = (Date.now() - new Date(iso).getTime()) / 1000;
   if (diffSec < 60) return 'just now';
@@ -53,7 +174,6 @@ export function relativeTime(iso: string): string {
   return `${days} days ago`;
 }
 
-/** Map project_status enum to the customer-facing headline + subhead per spec D.1. */
 export function statusHeadline(
   status: string,
   ctx: { endDate?: string | null; day?: number; total?: number }
