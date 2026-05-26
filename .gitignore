@@ -36,6 +36,10 @@ yarn-error.*
 # Claude Code working files
 .claude/
 
+# Supabase CLI working files (project link metadata)
+supabase/.temp/
+supabase/.branches/
+
 # typescript
 *.tsbuildinfo
 
