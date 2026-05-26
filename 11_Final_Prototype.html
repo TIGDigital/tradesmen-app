@@ -1,0 +1,4678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tradesmen Uber — Final Prototype</title>
+<style>
+  :root {
+    --bg-canvas: #FBFAF7;
+    --bg-surface: #FFFFFF;
+    --bg-surface-2: #F4F2EE;
+    --border-subtle: #ECEAE4;
+    --border-strong: #D8D5CE;
+    --text-primary: #0B0B0C;
+    --text-secondary: #52524F;
+    --text-tertiary: #8B8A85;
+    --text-inverse: #FFFFFF;
+    --brand-primary: #1B4DD9;
+    --brand-primary-pressed: #143BAA;
+    --brand-tint: #EAF0FF;
+    --status-active-bg: #E2F5EA;
+    --status-active-text: #197A4D;
+    --status-scheduled-bg: #EAF0FF;
+    --status-scheduled-text: #1B4DD9;
+    --status-delayed-bg: #FBE9DC;
+    --status-delayed-text: #A04A1C;
+    --status-pending-bg: #FBF3DC;
+    --status-pending-text: #8B6F2A;
+    --elev-1: 0 1px 2px rgba(11,11,12,0.05), 0 1px 1px rgba(11,11,12,0.03);
+    --elev-2: 0 4px 14px rgba(11,11,12,0.08), 0 1px 3px rgba(11,11,12,0.05);
+    --elev-3: 0 16px 40px rgba(11,11,12,0.12);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+    background: #0E0E10;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    min-height: 100vh;
+    padding: 28px 16px 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  /* ===== Page header + persona switcher ===== */
+  .page-header {
+    width: 100%;
+    max-width: 520px;
+    text-align: center;
+    color: #f0f0ed;
+  }
+  .page-header h1 {
+    margin: 0 0 6px;
+    font-size: 22px; font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .page-header p {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: #9a9a95;
+  }
+  .persona-switch {
+    display: inline-flex;
+    gap: 6px;
+    padding: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 999px;
+  }
+  .persona-pill {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    color: rgba(255,255,255,0.65);
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 12px; font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+    transition: all 180ms;
+  }
+  .persona-pill:hover { color: white; }
+  .persona-pill.active {
+    background: white;
+    color: var(--text-primary);
+  }
+
+  /* ===== Step pills (per-persona quick nav) ===== */
+  .steps {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 12px;
+    max-width: 520px;
+  }
+  .step-pill {
+    appearance: none;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.7);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 11px; font-weight: 600;
+    cursor: pointer;
+    transition: all 180ms;
+  }
+  .step-pill:hover {
+    background: rgba(255,255,255,0.12);
+    color: white;
+  }
+  .step-pill.active {
+    background: var(--brand-primary);
+    color: white;
+    border-color: var(--brand-primary);
+  }
+
+  /* ===== iPhone frame ===== */
+  .device {
+    width: 390px;
+    height: 820px;
+    background: var(--bg-canvas);
+    border-radius: 48px;
+    box-shadow:
+      0 0 0 11px #19191c,
+      0 0 0 12px #2a2a2e,
+      0 30px 80px rgba(0,0,0,0.5);
+    position: relative;
+    overflow: hidden;
+  }
+  .device::before {
+    content: '';
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    width: 116px; height: 32px;
+    background: #19191c;
+    border-radius: 18px;
+    z-index: 40;
+  }
+  .status-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 54px;
+    padding: 16px 32px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 15px; font-weight: 600;
+    color: var(--text-primary);
+    z-index: 39;
+  }
+  .status-icons { display: inline-flex; gap: 5px; align-items: center; }
+  .status-icons svg { display: block; }
+
+  /* ===== Screen container ===== */
+  .screen {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    padding-top: 54px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--bg-canvas);
+    display: none;
+    flex-direction: column;
+  }
+  .screen.active { display: flex; }
+  .screen::-webkit-scrollbar { display: none; }
+
+  /* ===== Nav bar ===== */
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px 12px;
+    min-height: 44px;
+  }
+  .nav-icon {
+    width: 32px; height: 32px;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    color: var(--text-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .nav-icon svg { width: 22px; height: 22px; display: block; }
+  .nav-title {
+    flex: 1;
+    font-size: 17px; font-weight: 600;
+    text-align: center;
+  }
+  .nav-title-left {
+    flex: 1;
+    font-size: 24px; font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .nav-spacer { width: 32px; flex-shrink: 0; }
+
+  /* ===== Typography ===== */
+  .t-title-1 { font-size: 28px; line-height: 32px; font-weight: 700; letter-spacing: -0.4px; }
+  .t-title-2 { font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.2px; }
+  .t-title-3 { font-size: 18px; line-height: 24px; font-weight: 600; }
+  .t-body-lg { font-size: 16px; line-height: 22px; }
+  .t-body-lg-em { font-size: 16px; line-height: 22px; font-weight: 600; }
+  .t-body { font-size: 14px; line-height: 20px; color: var(--text-primary); }
+  .t-body-em { font-size: 14px; line-height: 20px; font-weight: 600; }
+  .t-footnote { font-size: 13px; line-height: 18px; color: var(--text-tertiary); }
+  .t-caption {
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--text-tertiary);
+  }
+  .text-secondary { color: var(--text-secondary); }
+  .text-tertiary { color: var(--text-tertiary); }
+
+  /* ===== Status badge ===== */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .status-badge .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .status-badge.active { background: var(--status-active-bg); color: var(--status-active-text); }
+  .status-badge.scheduled { background: var(--status-scheduled-bg); color: var(--status-scheduled-text); }
+  .status-badge.delayed { background: var(--status-delayed-bg); color: var(--status-delayed-text); }
+  .status-badge.pending { background: var(--status-pending-bg); color: var(--status-pending-text); }
+
+  /* ===== Avatar ===== */
+  .avatar {
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    font-weight: 600;
+    flex-shrink: 0;
+    color: white;
+  }
+  .avatar.sm { width: 28px; height: 28px; font-size: 11px; }
+  .avatar.md { width: 36px; height: 36px; font-size: 13px; }
+  .avatar.lg { width: 48px; height: 48px; font-size: 16px; }
+  .avatar.emma { background: linear-gradient(135deg, #B86B7E, #8C4B5C); }
+  .avatar.dave { background: linear-gradient(135deg, #C4A57B, #A0825A); }
+  .avatar.mike { background: linear-gradient(135deg, #4D6FA8, #2F4D80); }
+  .avatar.liam { background: linear-gradient(135deg, #6FA08C, #4D7466); }
+  .avatar.sam  { background: linear-gradient(135deg, #C49858, #9A7440); }
+
+  /* ===== Cards ===== */
+  .card {
+    background: var(--bg-surface);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: var(--elev-1);
+  }
+  .section-label {
+    padding: 18px 20px 8px;
+    font-size: 11px; font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ===== Project hero card ===== */
+  .project-hero {
+    margin: 8px 20px 16px;
+    padding: 18px;
+    border-radius: 20px;
+    background: white;
+    box-shadow: var(--elev-2);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .project-hero .progress-ring {
+    width: 56px; height: 56px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .project-hero .progress-ring svg {
+    width: 56px; height: 56px;
+    transform: rotate(-90deg);
+  }
+  .project-hero .progress-ring .label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px; font-weight: 700;
+  }
+
+  .meta-card {
+    margin: 0 20px 12px;
+    padding: 12px 16px;
+    background: var(--bg-surface);
+    border-radius: 14px;
+    box-shadow: var(--elev-1);
+  }
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+  }
+  .meta-row + .meta-row {
+    border-top: 0.5px solid var(--border-subtle);
+  }
+  .meta-label { font-size: 12px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; align-self: center; }
+  .meta-value { font-size: 14px; font-weight: 500; color: var(--text-primary); text-align: right; }
+
+  /* ===== Event pills ===== */
+  .event-pill {
+    margin: 0 20px 8px;
+    padding: 10px 14px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: var(--elev-1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .event-pill .pi {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--brand-tint);
+    color: var(--brand-primary);
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .event-pill .pi svg { width: 16px; height: 16px; display: block; }
+  .event-pill .pi.left { background: var(--bg-surface-2); color: var(--text-secondary); }
+  .event-pill .pi.milestone { background: var(--status-active-bg); color: var(--status-active-text); }
+  .event-pill .body { flex: 1; min-width: 0; }
+  .event-pill .title { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+  .event-pill .sub { font-size: 12px; color: var(--text-tertiary); margin-top: 1px; }
+
+  /* ===== EoD prompt (subtle, on dashboard) ===== */
+  .eod-prompt {
+    margin: 16px 20px;
+    padding: 16px;
+    background: linear-gradient(135deg, #FFFEF7 0%, #FFF8E5 100%);
+    border-radius: 18px;
+    border: 1px solid #F2E2A8;
+    box-shadow: var(--elev-1);
+  }
+  .eod-prompt .lead {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .eod-prompt .lead svg { width: 16px; height: 16px; color: #B68B1D; flex-shrink: 0; }
+  .eod-prompt .lead .label { font-size: 11px; font-weight: 700; color: #8B6F2A; text-transform: uppercase; letter-spacing: 0.5px; }
+  .eod-prompt .headline { font-size: 15px; font-weight: 500; color: var(--text-primary); line-height: 20px; margin-bottom: 12px; }
+  .eod-prompt .actions { display: flex; gap: 8px; }
+  .eod-prompt .btn-primary, .eod-prompt .btn-secondary {
+    flex: 1;
+    border: 0;
+    height: 40px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+  }
+  .eod-prompt .btn-primary { background: var(--text-primary); color: white; }
+  .eod-prompt .btn-secondary { background: transparent; color: var(--text-secondary); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12); }
+
+  /* ===== Lock screen + push ===== */
+  .lockscreen {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(at 30% 20%, #4a5d7c 0%, #1f2a3c 60%, #0b1018 100%);
+    color: white;
+    padding-top: 80px;
+  }
+  .lockscreen .time-big {
+    text-align: center;
+    font-size: 80px; font-weight: 100;
+    letter-spacing: -3px;
+    margin-bottom: 4px;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+  .lockscreen .date-big {
+    text-align: center;
+    font-size: 18px;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 80px;
+  }
+  .lockscreen .hint {
+    text-align: center;
+    color: rgba(255,255,255,0.6);
+    font-size: 13px;
+    padding: 0 40px;
+    margin-top: 32px;
+  }
+  .lockscreen .swipe-hint {
+    position: absolute;
+    bottom: 24px; left: 0; right: 0;
+    text-align: center;
+    color: rgba(255,255,255,0.5);
+    font-size: 12px;
+  }
+
+  .push-notif {
+    position: absolute;
+    top: 70px; left: 12px; right: 12px;
+    background: rgba(245,245,247,0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 18px;
+    padding: 12px 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    display: flex;
+    gap: 10px;
+    cursor: pointer;
+    animation: push-in 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes push-in {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .push-notif .app-icon {
+    width: 38px; height: 38px;
+    background: var(--brand-primary);
+    border-radius: 9px;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .push-notif .content { flex: 1; min-width: 0; }
+  .push-notif .meta-row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 10px;
+    color: rgba(60,60,67,0.7);
+    margin-bottom: 1px;
+  }
+  .push-notif .meta-row-top .app-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .push-notif .push-title {
+    font-size: 14px; font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1px;
+  }
+  .push-notif .push-body {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 17px;
+  }
+
+  /* ===== EoD card (redesigned, hero) ===== */
+  .eod-header {
+    padding: 16px 20px 4px;
+  }
+  .eod-header .greet-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .eod-header .for-customer {
+    flex: 1; min-width: 0;
+  }
+  .eod-header .for-customer .label {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .eod-header .for-customer .name {
+    font-size: 17px; font-weight: 600;
+    margin-top: 2px;
+  }
+  .eod-header .for-customer .proj {
+    font-size: 13px; color: var(--text-secondary);
+    margin-top: 1px;
+  }
+  .eod-header .close-btn {
+    width: 32px; height: 32px;
+    border: 0; background: var(--bg-surface-2);
+    border-radius: 50%;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+  }
+  .eod-header .close-btn svg { width: 16px; height: 16px; display: block; }
+
+  .eod-headline {
+    padding: 12px 20px 6px;
+    font-size: 24px; font-weight: 700;
+    letter-spacing: -0.3px;
+    line-height: 30px;
+  }
+  .eod-sub {
+    padding: 0 20px 14px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .draft-card {
+    margin: 0 20px 12px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: var(--elev-2);
+    overflow: hidden;
+  }
+  .draft-card .draft-top {
+    padding: 12px 14px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .draft-card .draft-top .pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--brand-primary);
+    animation: pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.4); }
+  }
+  .draft-card .draft-top .label {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .draft-card .draft-top .edit-link {
+    margin-left: auto;
+    font-size: 13px; font-weight: 500;
+    color: var(--brand-primary);
+    cursor: pointer;
+  }
+  .draft-card .draft-body {
+    padding: 12px 14px;
+    font-size: 15px;
+    line-height: 21px;
+  }
+  .draft-card .draft-photos {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    padding: 2px;
+  }
+  .draft-card .draft-photo {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    background-size: cover;
+    background-position: center;
+  }
+  .ph-a { background: linear-gradient(135deg, #d4cab8 0%, #a89875 100%); }
+  .ph-b { background: linear-gradient(135deg, #b8c4ce 0%, #8395a3 100%); }
+  .ph-c { background: linear-gradient(135deg, #c4b8a8 0%, #968571 100%); }
+
+  .inline-rows {
+    margin: 0 20px 12px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: var(--elev-1);
+    overflow: hidden;
+  }
+  .inline-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+  .inline-row + .inline-row {
+    border-top: 0.5px solid var(--border-subtle);
+  }
+  .inline-row .ic {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--bg-surface-2);
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .inline-row .ic svg { width: 18px; height: 18px; display: block; }
+  .inline-row .text { flex: 1; min-width: 0; }
+  .inline-row .text .l {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .inline-row .text .v {
+    font-size: 14px;
+    color: var(--text-primary);
+    margin-top: 2px;
+  }
+  .inline-row .chev { color: var(--text-tertiary); }
+  .inline-row .chev svg { width: 14px; height: 14px; display: block; }
+
+  .attach-bar {
+    margin: 0 20px 12px;
+    display: flex;
+    gap: 8px;
+  }
+  .attach-btn {
+    flex: 1;
+    background: white;
+    border: 1.5px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 10px 8px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 180ms;
+    color: var(--text-secondary);
+  }
+  .attach-btn:hover {
+    border-color: var(--brand-primary);
+    color: var(--brand-primary);
+    background: var(--brand-tint);
+  }
+  .attach-btn svg { width: 18px; height: 18px; display: block; }
+  .attach-btn .lbl { font-size: 12px; font-weight: 600; }
+  .attach-btn.has {
+    border-color: var(--brand-primary);
+    background: var(--brand-tint);
+    color: var(--brand-primary);
+  }
+
+  .eod-actions {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 14px 20px 24px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 0.5px solid var(--border-subtle);
+  }
+  .eod-actions .btn-send {
+    width: 100%;
+    height: 52px;
+    background: var(--brand-primary);
+    color: white;
+    border: 0;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 16px; font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(27,77,217,0.30);
+  }
+  .eod-actions .btn-send:hover {
+    background: var(--brand-primary-pressed);
+  }
+  .eod-actions .btn-send svg { width: 18px; height: 18px; display: block; }
+  .eod-actions .skip-link {
+    display: block;
+    text-align: center;
+    margin-top: 8px;
+    color: var(--text-tertiary);
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  /* ===== Sent success ===== */
+  .success {
+    padding: 80px 24px 32px;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .success .circle {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: var(--status-active-bg);
+    color: var(--status-active-text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    animation: pop 460ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    60% { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .success .circle svg { width: 40px; height: 40px; display: block; }
+  .success .title { font-size: 24px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.3px; }
+  .success .body {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 20px;
+    max-width: 260px;
+    margin: 0 auto 20px;
+  }
+  .success .preview-card {
+    width: 100%;
+    background: var(--bg-surface-2);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: left;
+    margin-bottom: 20px;
+  }
+  .success .preview-card .pl {
+    font-size: 10px; font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .success .preview-card .pt { font-size: 13px; font-weight: 600; }
+  .success .preview-card .pb {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    line-height: 16px;
+  }
+  .success .done-btn {
+    width: 100%;
+    height: 48px;
+    background: var(--text-primary);
+    color: white;
+    border: 0;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* ===== Customer Updates feed ===== */
+  .day-sep {
+    padding: 14px 20px 6px;
+    font-size: 11px; font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .update-card {
+    margin: 0 20px 8px;
+    background: white;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: var(--elev-1);
+  }
+  .update-card .head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .update-card .head .name {
+    font-size: 13px; font-weight: 600;
+  }
+  .update-card .head .name .badge {
+    font-size: 10px; font-weight: 700;
+    color: var(--brand-primary);
+    margin-left: 6px;
+    letter-spacing: 0.4px;
+  }
+  .update-card .head .meta {
+    font-size: 11px; color: var(--text-tertiary); margin-top: 1px;
+  }
+  .update-card .body {
+    font-size: 14px; line-height: 20px;
+    margin-bottom: 8px;
+  }
+  .update-card .photos {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .update-card .photos .ph {
+    aspect-ratio: 1;
+    border-radius: 4px;
+  }
+  .update-card .eta-line {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 0.5px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .update-card .eta-line svg { width: 14px; height: 14px; color: var(--text-tertiary); }
+  .update-card.eod {
+    border-left: 3px solid var(--brand-primary);
+  }
+
+  /* ===== Customer chat ===== */
+  .chat-list {
+    padding: 14px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .chat-bubble {
+    max-width: 78%;
+    padding: 8px 14px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 19px;
+  }
+  .chat-bubble.received {
+    background: var(--bg-surface-2);
+    color: var(--text-primary);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .chat-bubble.sent {
+    background: var(--brand-primary);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .chat-time {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    padding: 1px 6px;
+  }
+  .chat-time.right { align-self: flex-end; }
+  .chat-time.left { align-self: flex-start; }
+
+  /* ===== Tradesman jobs list ===== */
+  .job-row {
+    margin: 0 20px 8px;
+    background: white;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: var(--elev-1);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .job-row .info { flex: 1; min-width: 0; }
+  .job-row .info .customer { font-size: 15px; font-weight: 600; }
+  .job-row .info .project { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+  .job-row .info .footer-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
+
+  /* ===== Crew list ===== */
+  .crew-row {
+    margin: 0 20px 8px;
+    padding: 12px 14px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: var(--elev-1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .crew-row .info { flex: 1; }
+  .crew-row .info .name { font-size: 14px; font-weight: 600; }
+  .crew-row .info .where { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+
+  /* ===== Apprentice task list ===== */
+  .task-list {
+    margin: 0 20px;
+    background: white;
+    border-radius: 14px;
+    padding: 4px 10px;
+    box-shadow: var(--elev-1);
+  }
+  .task-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 8px;
+  }
+  .task-row + .task-row { border-top: 0.5px solid var(--border-subtle); }
+  .task-row .check {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+  }
+  .task-row.done .check {
+    background: var(--status-active-text);
+    border-color: var(--status-active-text);
+    color: white;
+  }
+  .task-row.done .check svg { width: 12px; height: 12px; display: block; }
+  .task-row .label { font-size: 14px; font-weight: 500; flex: 1; }
+  .task-row.done .label { color: var(--text-tertiary); text-decoration: line-through; }
+
+  /* ===== Brief card from lead ===== */
+  .brief-card {
+    margin: 0 20px 8px;
+    background: white;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: var(--elev-1);
+  }
+  .brief-card .head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .brief-card .head .by { font-size: 12px; color: var(--text-tertiary); }
+  .brief-card .body { font-size: 14px; line-height: 20px; }
+  .brief-card .voice-pill {
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: var(--brand-tint);
+    color: var(--brand-primary);
+    border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+  }
+  .brief-card .voice-pill svg { width: 12px; height: 12px; }
+
+  /* ===== Location consent ===== */
+  .consent-screen {
+    padding: 32px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .consent-screen .icon-wrap {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: var(--brand-tint);
+    color: var(--brand-primary);
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    margin-bottom: 20px;
+  }
+  .consent-screen .icon-wrap svg { width: 36px; height: 36px; display: block; }
+  .consent-screen .title {
+    font-size: 26px; font-weight: 700;
+    letter-spacing: -0.4px;
+    line-height: 32px;
+    margin-bottom: 12px;
+  }
+  .consent-screen .body {
+    font-size: 15px; line-height: 22px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+  }
+  .consent-screen .reassure-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+  }
+  .consent-screen .reassure-row + .reassure-row {
+    border-top: 0.5px solid var(--border-subtle);
+  }
+  .consent-screen .reassure-row .ic {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--status-active-bg);
+    color: var(--status-active-text);
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .consent-screen .reassure-row .ic svg { width: 16px; height: 16px; }
+  .consent-screen .reassure-row .text { font-size: 14px; }
+  .consent-screen .consent-actions { margin-top: auto; }
+  .consent-screen .turn-on {
+    width: 100%;
+    height: 52px;
+    background: var(--brand-primary);
+    color: white;
+    border: 0;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 16px; font-weight: 600;
+    cursor: pointer;
+  }
+  .consent-screen .later {
+    width: 100%;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 0;
+    padding: 14px 0 0;
+    font-family: inherit;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer;
+  }
+
+  /* ===== Tab bar (4 tabs, no FAB anywhere) ===== */
+  .tab-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 70px;
+    padding: 8px 16px 18px;
+    background: rgba(255,255,255,0.94);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 0.5px solid var(--border-subtle);
+    display: flex;
+    align-items: flex-start;
+    z-index: 30;
+  }
+  .tab {
+    flex: 1;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding-top: 4px;
+  }
+  .tab svg { width: 22px; height: 22px; display: block; }
+  .tab .lbl { font-size: 10px; font-weight: 500; }
+  .tab.active { color: var(--brand-primary); }
+
+  /* ===== Notes panel ===== */
+  .notes {
+    width: 100%;
+    max-width: 520px;
+    color: rgba(255,255,255,0.92);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .notes h2 { font-size: 16px; font-weight: 700; margin: 0 0 8px; color: white; }
+  .notes p { margin: 0 0 12px; color: rgba(255,255,255,0.7); font-size: 13px; }
+  .notes h3 {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.7px;
+    color: rgba(255,255,255,0.55);
+    margin: 18px 0 8px;
+  }
+
+  /* Hide screens not belonging to current persona */
+  body[data-persona="customer"] .screen[data-role]:not([data-role="customer"]):not([data-role="any"]) { display: none !important; }
+  body[data-persona="tradesman"] .screen[data-role]:not([data-role="tradesman"]):not([data-role="any"]) { display: none !important; }
+  body[data-persona="apprentice"] .screen[data-role]:not([data-role="apprentice"]):not([data-role="any"]) { display: none !important; }
+
+  /* ===== Persona-aware sticky tab bars ===== */
+  .persona-tabbar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 70px;
+    padding: 8px 16px 18px;
+    background: rgba(255,255,255,0.94);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 0.5px solid var(--border-subtle);
+    display: none;
+    align-items: flex-start;
+    z-index: 30;
+  }
+  body[data-persona="customer"] .persona-tabbar.customer-tabbar { display: flex; }
+  body[data-persona="tradesman"] .persona-tabbar.tradesman-tabbar { display: flex; }
+  body[data-persona="apprentice"] .persona-tabbar.apprentice-tabbar { display: flex; }
+
+  /* Hide tab bar when these "modal-like" screens are active (push, EoD, sent, consent) */
+  .device.no-tabbar .persona-tabbar { display: none !important; }
+
+  /* Tap visual: highlight the tab that maps to the active screen */
+  .persona-tabbar .tab.active { color: var(--brand-primary); }
+
+  /* Ensure screens have bottom padding to clear the sticky tab bar */
+  .screen { padding-bottom: 80px; }
+  .device.no-tabbar .screen { padding-bottom: 0; }
+
+
+  /* ===== Account screen — card-row style (matches 04) ===== */
+  .card-row {
+    margin: 0 20px 8px;
+    background: var(--bg-surface);
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: var(--elev-1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+  .card-row:active { transform: scale(0.985); }
+  .card-row .lead-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--bg-surface-2);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .card-row .lead-icon svg { width: 18px; height: 18px; display: block; }
+  .card-row .lead-icon.gas { background: var(--brand-tint); color: var(--brand-primary); font-weight: 700; font-size: 11px; }
+  .card-row .lead-icon.niceic { background: #EFEAFB; color: #5B4A8B; font-weight: 700; font-size: 10px; }
+  .card-row .lead-icon.cscs { background: var(--status-pending-bg); color: var(--status-pending-text); font-weight: 700; font-size: 10px; }
+  .card-row .body { flex: 1; min-width: 0; }
+  .card-row .body .title { font-size: 15px; font-weight: 600; }
+  .card-row .body .sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+  .card-row .chev { color: var(--text-tertiary); flex-shrink: 0; }
+  .card-row .chev svg { width: 14px; height: 14px; display: block; }
+
+  /* Large hero card */
+  .account-hero {
+    margin: 8px 20px 20px;
+    padding: 18px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: var(--elev-2);
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+  .account-hero .avatar-wrap { position: relative; }
+  .account-hero .avatar-wrap .verified-badge {
+    position: absolute;
+    bottom: -2px; right: -2px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--brand-primary);
+    color: white;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    border: 2px solid white;
+  }
+  .account-hero .avatar-wrap .verified-badge svg { width: 11px; height: 11px; display: block; }
+  .account-hero .info { flex: 1; min-width: 0; }
+  .account-hero .info .name { font-size: 18px; font-weight: 600; }
+  .account-hero .info .meta { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+  .account-hero .info .rating { font-size: 13px; margin-top: 6px; color: var(--text-secondary); }
+  .account-hero .info .rating .star { color: #D9A21B; }
+
+  /* Tier badge */
+  .tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    background: linear-gradient(135deg, #F4D58B 0%, #D9A21B 100%);
+    color: #3A2F11;
+    border-radius: 999px;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 4px;
+  }
+  .tier-badge svg { width: 10px; height: 10px; display: block; }
+
+  /* Tier card (clickable) */
+  .tier-card {
+    margin: 0 20px 16px;
+    padding: 14px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #FFF6E0 0%, #FBF3DC 100%);
+    box-shadow: var(--elev-1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+  }
+  .tier-card .ti {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #F4D58B 0%, #D9A21B 100%);
+    color: #3A2F11;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .tier-card .ti svg { width: 22px; height: 22px; display: block; }
+  .tier-card .body { flex: 1; min-width: 0; }
+  .tier-card .body .title { font-size: 14px; font-weight: 700; color: #3A2F11; }
+  .tier-card .body .sub { font-size: 12px; color: #8B6F2A; margin-top: 2px; }
+
+  /* Subtle section header */
+  .acc-section {
+    padding: 18px 20px 6px;
+    font-size: 11px; font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  /* Sign-out button at bottom of account */
+  .signout-btn {
+    margin: 16px 20px 24px;
+    width: calc(100% - 40px);
+    height: 48px;
+    background: transparent;
+    color: var(--destructive-text, #B5301A);
+    border: 1px solid rgba(181, 48, 26, 0.2);
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+  .signout-btn:hover { background: rgba(181, 48, 26, 0.05); }
+
+
+  /* ===== Polish: micro-interactions across cards ===== */
+  .card, .card-row, .job-row, .event-pill, .project-hero, .meta-card,
+  .crew-row, .update-card, .tier-card, .brief-card {
+    transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 140ms;
+  }
+  .card:active, .card-row:active, .job-row:active, .event-pill:active,
+  .project-hero:active, .crew-row:active, .update-card:active,
+  .tier-card:active, .brief-card:active {
+    transform: scale(0.985);
+  }
+  .screen.active {
+    animation: screen-in 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes screen-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===== Quick-action tiles row (on project hero) ===== */
+  .quick-tiles {
+    margin: 0 20px 16px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .quick-tile {
+    background: white;
+    border-radius: 14px;
+    padding: 14px 10px;
+    box-shadow: var(--elev-1);
+    text-align: center;
+    cursor: pointer;
+    transition: transform 140ms, box-shadow 140ms;
+  }
+  .quick-tile:active { transform: scale(0.97); }
+  .quick-tile .ic {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--brand-tint);
+    color: var(--brand-primary);
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    margin-bottom: 8px;
+  }
+  .quick-tile .ic svg { width: 18px; height: 18px; display: block; }
+  .quick-tile .lbl { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+  .quick-tile .sub { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+
+  /* ===== Schedule screen / Gantt ===== */
+  .schedule-header {
+    margin: 8px 20px 12px;
+    padding: 16px 18px;
+    background: linear-gradient(135deg, #1B4DD9 0%, #143BAA 100%);
+    color: white;
+    border-radius: 18px;
+    box-shadow: var(--elev-2);
+  }
+  .schedule-header .label {
+    font-size: 11px; font-weight: 600;
+    opacity: 0.7;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .schedule-header .title { font-size: 20px; font-weight: 700; margin-top: 4px; }
+  .schedule-header .dates { font-size: 13px; opacity: 0.85; margin-top: 6px; }
+  .schedule-header .progress-mini {
+    margin-top: 12px;
+    height: 6px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .schedule-header .progress-mini .bar {
+    height: 100%;
+    background: white;
+    border-radius: 999px;
+    width: 25%;
+  }
+  .schedule-header .progress-meta {
+    margin-top: 6px;
+    font-size: 11px;
+    display: flex;
+    justify-content: space-between;
+    opacity: 0.85;
+  }
+
+  /* Compact week strip */
+  .week-strip {
+    margin: 0 20px 12px;
+    background: white;
+    border-radius: 14px;
+    padding: 10px 8px 4px;
+    box-shadow: var(--elev-1);
+  }
+  .week-strip .days {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 2px;
+  }
+  .week-strip .day {
+    text-align: center;
+    padding: 4px 0;
+    border-radius: 6px;
+    font-size: 10px;
+    color: var(--text-tertiary);
+  }
+  .week-strip .day .dow { font-weight: 600; }
+  .week-strip .day .num { color: var(--text-primary); font-size: 12px; margin-top: 1px; }
+  .week-strip .day.done { background: var(--status-active-bg); }
+  .week-strip .day.done .num { color: var(--status-active-text); font-weight: 600; }
+  .week-strip .day.today { background: var(--brand-primary); }
+  .week-strip .day.today .dow, .week-strip .day.today .num { color: white; font-weight: 700; }
+  .week-strip .week-label {
+    font-size: 10px; font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    padding: 4px 0 6px;
+  }
+
+  /* Gantt row */
+  .gantt-row {
+    margin: 0 20px 6px;
+    padding: 12px 14px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--elev-1);
+    transition: transform 140ms;
+  }
+  .gantt-row:active { transform: scale(0.985); }
+  .gantt-row .top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .gantt-row .top .name { font-size: 14px; font-weight: 600; flex: 1; }
+  .gantt-row .top .owner { font-size: 11px; color: var(--text-tertiary); }
+  .gantt-row .bar-track {
+    height: 6px;
+    background: var(--bg-surface-2);
+    border-radius: 999px;
+    position: relative;
+    overflow: hidden;
+  }
+  .gantt-row .bar {
+    position: absolute;
+    top: 0; bottom: 0;
+    border-radius: 999px;
+  }
+  .gantt-row .bar.done {
+    background: linear-gradient(90deg, #197A4D, #20A567);
+  }
+  .gantt-row .bar.active {
+    background: linear-gradient(90deg, #1B4DD9, #3E6BDF);
+    box-shadow: 0 0 0 2px rgba(27,77,217,0.18);
+  }
+  .gantt-row .bar.upcoming {
+    background: var(--border-strong);
+  }
+  .gantt-row .meta {
+    margin-top: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+  .gantt-row .status-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+  }
+  .gantt-row .status-dot.done { color: var(--status-active-text); }
+  .gantt-row .status-dot.active { color: var(--brand-primary); }
+  .gantt-row .status-dot .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .gantt-row .today-mark {
+    position: absolute;
+    top: -3px; bottom: -3px;
+    width: 2px;
+    background: var(--brand-primary);
+    border-radius: 1px;
+    z-index: 2;
+  }
+  .gantt-row.is-today .bar { box-shadow: 0 0 0 3px rgba(27,77,217,0.18); }
+
+  /* ===== Photos gallery ===== */
+  .photo-grid-screen {
+    padding: 0 16px 16px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+  .photo-grid-screen .pho {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 140ms, opacity 140ms;
+    position: relative;
+    overflow: hidden;
+  }
+  .photo-grid-screen .pho:active { transform: scale(0.95); }
+  .photo-grid-screen .pho:hover { opacity: 0.92; }
+  .photo-grid-screen .pho.span-2 { grid-column: span 2; }
+  .photo-grid-screen .pho .stamp {
+    position: absolute;
+    bottom: 4px; left: 4px;
+    padding: 2px 6px;
+    background: rgba(0,0,0,0.55);
+    color: white;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .photos-header-strip {
+    margin: 0 20px 12px;
+    padding: 14px 16px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: var(--elev-1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .photos-header-strip .count { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+  .photos-header-strip .label { font-size: 12px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; }
+  .photos-header-strip .meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* ===== Team screen ===== */
+  .team-card {
+    margin: 0 20px 8px;
+    background: white;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: var(--elev-1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: transform 140ms;
+  }
+  .team-card:active { transform: scale(0.985); }
+  .team-card .info { flex: 1; }
+  .team-card .info .name { font-size: 15px; font-weight: 600; }
+  .team-card .info .role { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .team-card .role-chip {
+    font-size: 10px; font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .team-card .role-chip.lead { background: var(--brand-tint); color: var(--brand-primary); }
+  .team-card .role-chip.crew { background: var(--bg-surface-2); color: var(--text-secondary); }
+  .team-card .role-chip.customer { background: #FBE8F0; color: #8C4B5C; }
+  .team-card .actions {
+    display: flex;
+    gap: 4px;
+  }
+  .team-card .actions .a {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--bg-surface-2);
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .team-card .actions .a:active { transform: scale(0.9); }
+  .team-card .actions .a svg { width: 16px; height: 16px; display: block; }
+
+  /* ===== Refined misc polish ===== */
+  .section-label { padding: 18px 20px 6px; }
+  .meta-card, .card { transition: box-shadow 200ms; }
+
+  /* Floating "Today" pill for schedule */
+  .today-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--brand-tint);
+    color: var(--brand-primary);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-left: auto;
+  }
+  .today-pill .dot {
+    width: 6px; height: 6px;
+    background: var(--brand-primary);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+
+  /* ===== Voice waveform ===== */
+  .voice-recorder {
+    margin: 0 20px 12px;
+    background: white;
+    border-radius: 16px;
+    padding: 14px 16px;
+    box-shadow: var(--elev-1);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .voice-recorder .mic {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--brand-primary);
+    color: white;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .voice-recorder .mic svg { width: 18px; height: 18px; }
+  .voice-recorder .wave {
+    flex: 1;
+    height: 32px;
+    display: flex; align-items: center; gap: 2px;
+  }
+  .voice-recorder .wave .bar {
+    flex: 1;
+    background: var(--brand-primary);
+    border-radius: 2px;
+    opacity: 0.7;
+    animation: wave-pulse 1.2s ease-in-out infinite;
+  }
+  .voice-recorder .wave .bar:nth-child(2n) { animation-delay: 0.12s; }
+  .voice-recorder .wave .bar:nth-child(3n) { animation-delay: 0.24s; }
+  .voice-recorder .wave .bar:nth-child(5n) { animation-delay: 0.36s; }
+  @keyframes wave-pulse {
+    0%, 100% { height: 8px; }
+    50% { height: 22px; }
+  }
+  .voice-recorder .duration { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+
+  /* ===== Reactions on updates ===== */
+  .reactions-row {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 0.5px solid var(--border-subtle);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .reaction-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 9px;
+    background: var(--bg-surface-2);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: transform 140ms, background 140ms;
+    border: 1.5px solid transparent;
+  }
+  .reaction-pill:active { transform: scale(0.92); }
+  .reaction-pill.active {
+    background: var(--brand-tint);
+    color: var(--brand-primary);
+    border-color: var(--brand-primary);
+  }
+  .reaction-pill .emoji { font-size: 14px; }
+
+  /* ===== Weather risk card ===== */
+  .weather-card {
+    margin: 0 20px 12px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #FFF8E5 0%, #FFE9B5 100%);
+    border: 1px solid #F2D88A;
+    border-radius: 14px;
+    box-shadow: var(--elev-1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .weather-card .icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.6);
+    color: #8B6F2A;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .weather-card .icon svg { width: 22px; height: 22px; }
+  .weather-card .body { flex: 1; }
+  .weather-card .title { font-size: 13px; font-weight: 700; color: #8B6F2A; text-transform: uppercase; letter-spacing: 0.4px; }
+  .weather-card .desc { font-size: 13px; color: var(--text-primary); margin-top: 2px; line-height: 18px; }
+
+  /* ===== Materials row in schedule ===== */
+  .materials-row {
+    margin: 0 20px 6px;
+    padding: 10px 14px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--elev-1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .materials-row .ic {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--status-pending-bg);
+    color: var(--status-pending-text);
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .materials-row .ic svg { width: 16px; height: 16px; }
+  .materials-row .body { flex: 1; }
+  .materials-row .body .title { font-size: 13px; font-weight: 600; }
+  .materials-row .body .meta { font-size: 11px; color: var(--text-tertiary); margin-top: 1px; }
+
+  /* ===== Snag item ===== */
+  .snag-item {
+    margin: 0 20px 8px;
+    background: white;
+    border-radius: 14px;
+    padding: 12px 14px;
+    box-shadow: var(--elev-1);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: transform 140ms;
+  }
+  .snag-item:active { transform: scale(0.985); }
+  .snag-item .photo {
+    width: 56px; height: 56px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #d4cab8, #a89875);
+    flex-shrink: 0;
+  }
+  .snag-item .body { flex: 1; min-width: 0; }
+  .snag-item .title { font-size: 14px; font-weight: 600; }
+  .snag-item .room { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; }
+  .snag-item .note { font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 18px; }
+  .snag-item .status-pill {
+    font-size: 10px; font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    flex-shrink: 0;
+  }
+  .snag-item .status-pill.open { background: var(--status-delayed-bg); color: var(--status-delayed-text); }
+  .snag-item .status-pill.fixed { background: var(--status-active-bg); color: var(--status-active-text); }
+
+  /* ===== Variation request card ===== */
+  .var-card {
+    margin: 0 20px 12px;
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: var(--elev-2);
+  }
+  .var-card .label-row {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 8px;
+  }
+  .var-card .label-row .badge {
+    padding: 3px 8px;
+    background: var(--brand-tint);
+    color: var(--brand-primary);
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .var-card .title { font-size: 17px; font-weight: 600; line-height: 22px; }
+  .var-card .impact-block {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .var-card .impact-tile {
+    background: var(--bg-surface-2);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .var-card .impact-tile .l { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; }
+  .var-card .impact-tile .v { font-size: 16px; font-weight: 700; margin-top: 4px; letter-spacing: -0.3px; }
+
+  /* ===== Calendar (tradesman week view) ===== */
+  .cal-strip {
+    margin: 12px 20px;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-day {
+    background: white;
+    border-radius: 10px;
+    padding: 8px 4px;
+    text-align: center;
+    box-shadow: var(--elev-1);
+    cursor: pointer;
+    transition: transform 140ms;
+  }
+  .cal-day:active { transform: scale(0.95); }
+  .cal-day .dow { font-size: 10px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; }
+  .cal-day .num { font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .cal-day .dots { display: flex; justify-content: center; gap: 2px; margin-top: 4px; min-height: 6px; }
+  .cal-day .dots .d { width: 5px; height: 5px; border-radius: 50%; }
+  .cal-day .dots .d.j1 { background: var(--status-active-text); }
+  .cal-day .dots .d.j2 { background: var(--brand-primary); }
+  .cal-day .dots .d.j3 { background: #C49858; }
+  .cal-day.today { background: var(--brand-primary); }
+  .cal-day.today .dow, .cal-day.today .num { color: white; }
+  .cal-day.today .dots .d { background: white; }
+
+  .cal-block {
+    margin: 0 20px 8px;
+    padding: 12px 14px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--elev-1);
+    border-left: 3px solid var(--brand-primary);
+    display: flex; gap: 12px; align-items: center;
+  }
+  .cal-block.green { border-left-color: var(--status-active-text); }
+  .cal-block.amber { border-left-color: var(--status-pending-text); }
+  .cal-block .time { font-size: 11px; font-weight: 700; color: var(--text-tertiary); letter-spacing: 0.4px; text-transform: uppercase; }
+  .cal-block .title { font-size: 14px; font-weight: 600; margin-top: 2px; }
+  .cal-block .meta { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+
+  /* ===== Multi-project picker (customer) ===== */
+  .proj-pick {
+    margin: 0 20px 8px;
+    background: white;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: var(--elev-1);
+    display: flex; align-items: center; gap: 12px;
+    transition: transform 140ms;
+  }
+  .proj-pick:active { transform: scale(0.985); }
+  .proj-pick .cover {
+    width: 56px; height: 56px; border-radius: 12px;
+    background: linear-gradient(135deg, #d4cab8, #a89875);
+    flex-shrink: 0;
+  }
+  .proj-pick .info { flex: 1; }
+  .proj-pick .name { font-size: 15px; font-weight: 600; }
+  .proj-pick .meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .proj-pick .stage { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; }
+
+  /* ===== Badges showcase ===== */
+  .badge-grid {
+    margin: 0 20px 16px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .badge-tile {
+    background: white;
+    border-radius: 14px;
+    padding: 14px 8px;
+    box-shadow: var(--elev-1);
+    text-align: center;
+  }
+  .badge-tile .badge-emoji {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #F4D58B 0%, #D9A21B 100%);
+    color: #3A2F11;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    margin: 0 auto 8px;
+  }
+  .badge-tile .badge-emoji svg { width: 22px; height: 22px; }
+  .badge-tile .badge-emoji.locked { background: var(--bg-surface-2); color: var(--text-tertiary); }
+  .badge-tile .badge-name { font-size: 12px; font-weight: 700; }
+  .badge-tile .badge-desc { font-size: 10px; color: var(--text-tertiary); margin-top: 2px; line-height: 13px; }
+
+  /* ===== Notification history rows ===== */
+  .notif-row {
+    margin: 0 20px 6px;
+    padding: 12px 14px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--elev-1);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .notif-row.unread { background: var(--brand-tint); }
+  .notif-row .ic {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--bg-surface-2);
+    color: var(--text-secondary);
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .notif-row.unread .ic { background: rgba(255,255,255,0.7); color: var(--brand-primary); }
+  .notif-row .ic svg { width: 16px; height: 16px; }
+  .notif-row .body { flex: 1; min-width: 0; }
+  .notif-row .body .head {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  }
+  .notif-row .body .head .title { font-size: 13px; font-weight: 600; }
+  .notif-row .body .head .time { font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; }
+  .notif-row .body .desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; line-height: 16px; }
+
+  /* ===== Document row ===== */
+  .doc-row {
+    margin: 0 20px 6px;
+    padding: 12px 14px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--elev-1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: transform 140ms;
+  }
+  .doc-row:active { transform: scale(0.985); }
+  .doc-row .pdf {
+    width: 40px; height: 50px;
+    background: linear-gradient(180deg, #EE5555 0%, #C42E2E 100%);
+    border-radius: 6px;
+    color: white;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    flex-shrink: 0;
+  }
+  .doc-row .pdf.img { background: linear-gradient(180deg, #4D6FA8 0%, #2F4D80 100%); }
+  .doc-row .pdf.cert { background: linear-gradient(180deg, #197A4D 0%, #0F5A37 100%); }
+  .doc-row .body { flex: 1; min-width: 0; }
+  .doc-row .body .title { font-size: 14px; font-weight: 600; }
+  .doc-row .body .meta { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+  .doc-row .actions { color: var(--text-tertiary); }
+  .doc-row .actions svg { width: 18px; height: 18px; }
+
+  /* ===== Before/After slider (just CSS, not interactive) ===== */
+  .ba-slider {
+    margin: 0 20px 12px;
+    position: relative;
+    aspect-ratio: 16 / 10;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--elev-2);
+    background: linear-gradient(135deg, #d4cab8, #a89875);
+  }
+  .ba-slider .after-img {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 50%;
+    background: linear-gradient(135deg, #B8C4CE 0%, #8395A3 100%);
+    border-right: 3px solid white;
+  }
+  .ba-slider .label {
+    position: absolute;
+    bottom: 10px;
+    padding: 4px 10px;
+    background: rgba(0,0,0,0.55);
+    color: white;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .ba-slider .label.before { left: 10px; }
+  .ba-slider .label.after { right: 10px; }
+  .ba-slider .handle {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    width: 4px;
+    margin-left: -2px;
+    background: white;
+    z-index: 2;
+  }
+  .ba-slider .handle::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .ba-slider .handle::before {
+    content: '⇆';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 14px;
+    font-weight: 700;
+    z-index: 3;
+    color: var(--text-primary);
+  }
+
+  /* ===== Apprentice progress tracker ===== */
+  .skill-row {
+    margin: 0 20px 8px;
+    padding: 12px 14px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--elev-1);
+  }
+  .skill-row .head {
+    display: flex; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .skill-row .head .name { font-size: 14px; font-weight: 600; }
+  .skill-row .head .hours { font-size: 12px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+  .skill-row .track {
+    height: 6px;
+    background: var(--bg-surface-2);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .skill-row .track .fill {
+    height: 100%;
+    background: linear-gradient(90deg, #1B4DD9, #6FA08C);
+    border-radius: 999px;
+  }
+
+  /* ===== Empty state ===== */
+  .empty-state {
+    padding: 60px 24px 32px;
+    text-align: center;
+  }
+  .empty-state .icon {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--bg-surface-2);
+    color: var(--text-tertiary);
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+  }
+  .empty-state .icon svg { width: 32px; height: 32px; }
+  .empty-state .title { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+  .empty-state .body { font-size: 14px; color: var(--text-secondary); max-width: 240px; margin: 0 auto; line-height: 20px; }
+
+  /* ===== Skeleton loading ===== */
+  .skeleton {
+    background: linear-gradient(90deg, var(--bg-surface-2) 0%, #ECEAE4 50%, var(--bg-surface-2) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 6px;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ===== Offline banner ===== */
+  .offline-banner {
+    position: absolute;
+    top: 54px; left: 12px; right: 12px;
+    padding: 8px 12px;
+    background: var(--text-primary);
+    color: white;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 38;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: push-in 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .offline-banner svg { width: 16px; height: 16px; }
+
+  /* ===== Reduce motion respect ===== */
+  @media (prefers-reduced-motion: reduce) {
+    .screen.active { animation: none; }
+    .voice-recorder .wave .bar { animation: none; }
+    .draft-card .draft-top .pulse { animation: none; }
+    .today-pill .dot { animation: none; }
+    .skeleton { animation: none; }
+    .push-notif, .eod-sheet, .offline-banner { animation: none; }
+    * { transition-duration: 0.01ms !important; }
+  }
+
+  /* ===== Digest hero ===== */
+  .digest-hero {
+    margin: 8px 20px 16px;
+    padding: 18px;
+    background: linear-gradient(135deg, #197A4D 0%, #0F5A37 100%);
+    color: white;
+    border-radius: 18px;
+    box-shadow: var(--elev-2);
+  }
+  .digest-hero .label { font-size: 11px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .digest-hero .headline { font-size: 22px; font-weight: 700; margin-top: 4px; letter-spacing: -0.3px; line-height: 28px; }
+  .digest-hero .sub { font-size: 13px; opacity: 0.85; margin-top: 6px; }
+  .digest-hero .stats { display: flex; gap: 16px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.15); }
+  .digest-hero .stats .stat { flex: 1; }
+  .digest-hero .stats .stat .n { font-size: 24px; font-weight: 700; letter-spacing: -0.3px; }
+  .digest-hero .stats .stat .l { font-size: 11px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; }
+
+  /* ===== Completion / Review ===== */
+  .completion-hero {
+    padding: 60px 20px 24px;
+    text-align: center;
+  }
+  .completion-hero .confetti {
+    font-size: 56px;
+    margin-bottom: 16px;
+    animation: pop 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .completion-hero .title { font-size: 30px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 8px; }
+  .completion-hero .body { font-size: 15px; color: var(--text-secondary); max-width: 280px; margin: 0 auto 24px; line-height: 22px; }
+  .completion-hero .summary-card {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: var(--elev-2);
+    margin: 0 auto;
+    max-width: 320px;
+    text-align: left;
+  }
+  .completion-hero .summary-card .row {
+    display: flex; justify-content: space-between;
+    padding: 5px 0;
+    font-size: 13px;
+  }
+  .completion-hero .summary-card .row + .row { border-top: 0.5px solid var(--border-subtle); }
+  .completion-hero .summary-card .row .l { color: var(--text-tertiary); }
+  .completion-hero .summary-card .row .v { color: var(--text-primary); font-weight: 500; }
+
+  .star-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 20px 0;
+  }
+  .star-row svg {
+    width: 36px; height: 36px;
+    cursor: pointer;
+    color: #D9A21B;
+    transition: transform 140ms;
+  }
+  .star-row svg:hover { transform: scale(1.15); }
+  .star-row svg.empty { color: var(--border-strong); }
+
+</style>
+</head>
+<body data-persona="tradesman">
+
+<div class="page">
+
+  <div class="page-header">
+    <h1>Tradesmen Uber — Final Prototype</h1>
+    <p>Pick a persona, then walk the flow using the pills below.</p>
+    <div class="persona-switch">
+      <button class="persona-pill" id="p-customer" onclick="setPersona('customer')">Customer (Sarah)</button>
+      <button class="persona-pill active" id="p-tradesman" onclick="setPersona('tradesman')">Tradesman (Dave)</button>
+      <button class="persona-pill" id="p-apprentice" onclick="setPersona('apprentice')">Apprentice (Liam)</button>
+    </div>
+  </div>
+
+  <!-- Persona-specific step pills -->
+  <div class="steps" id="steps"></div>
+
+  <!-- =========== iPhone =========== -->
+  <div class="device">
+
+    <div class="status-bar">
+      <div>9:24</div>
+      <div class="status-icons">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><rect y="9" width="3" height="3" rx="0.5"/><rect x="4" y="6" width="3" height="6" rx="0.5"/><rect x="8" y="3" width="3" height="9" rx="0.5"/><rect x="12" width="3" height="12" rx="0.5"/></svg>
+        <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><path d="M9 2.5A14 14 0 0 0 1.04 4.84a1 1 0 0 0-.07 1.46l.83.83a1 1 0 0 0 1.39.07A10 10 0 0 1 9 4.5c2.34 0 4.49.81 6.18 2.17a1 1 0 0 0 1.36-.07l.83-.83a1 1 0 0 0-.07-1.46A14 14 0 0 0 9 2.5z"/></svg>
+        <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="20" height="11" rx="2.5"/><rect x="2" y="2" width="16" height="8" rx="1.5" fill="currentColor"/><path d="M22 4v4" stroke-linecap="round"/></svg>
+      </div>
+    </div>
+
+    <!-- =================================================== -->
+    <!--               TRADESMAN SCREENS                      -->
+    <!-- =================================================== -->
+
+    <!-- T1: Jobs dashboard -->
+    <div class="screen active" id="t-jobs" data-role="tradesman">
+      <div class="nav-bar">
+        <div class="nav-title-left">Jobs</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+      </div>
+
+      <div style="padding: 0 20px 12px;">
+        <div class="t-title-2">Afternoon, Dave</div>
+        <div class="t-body text-secondary" style="margin-top: 4px;">3 active jobs · 2 on site now</div>
+      </div>
+
+      <div class="section-label">Active jobs</div>
+
+      <div class="job-row" onclick="show('t-project')">
+        <div class="avatar emma md">E</div>
+        <div class="info">
+          <div class="customer">Emma Patel</div>
+          <div class="project">Kitchen extension · SW19</div>
+          <div class="footer-meta">Day 3 of 12 · updated 2h ago · You + Mike + Liam</div>
+        </div>
+        <span class="status-badge active"><span class="dot"></span>On site</span>
+      </div>
+
+      <div class="job-row">
+        <div class="avatar sam md">JR</div>
+        <div class="info">
+          <div class="customer">John Reed</div>
+          <div class="project">Bathroom refit · SE15</div>
+          <div class="footer-meta">Day 4 of 8 · updated yesterday · Sam</div>
+        </div>
+        <span class="status-badge scheduled"><span class="dot"></span>On site</span>
+      </div>
+
+      <div class="job-row">
+        <div class="avatar mike md">SB</div>
+        <div class="info">
+          <div class="customer">Sophie Brown</div>
+          <div class="project">Loft conversion · N4</div>
+          <div class="footer-meta">Awaiting approval · sent Monday</div>
+        </div>
+        <span class="status-badge pending"><span class="dot"></span>Quote</span>
+      </div>
+
+      <div style="height: 90px;"></div>
+
+          </div>
+
+    <!-- T2: Project detail (Emma Patel) -->
+    <div class="screen" id="t-project" data-role="tradesman">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="show('t-jobs')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title">Emma Patel</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </div>
+      </div>
+
+      <div class="project-hero">
+        <div style="flex:1;">
+          <span class="status-badge active"><span class="dot"></span>On site</span>
+          <div class="t-title-3" style="margin-top: 8px;">Kitchen extension</div>
+          <div class="t-footnote" style="margin-top: 2px;">Day 3 of 12 · 14 Acacia Ave SW19</div>
+        </div>
+        <div class="progress-ring">
+          <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="24" fill="none" stroke="#ECEAE4" stroke-width="4"/><circle cx="28" cy="28" r="24" fill="none" stroke="#1B4DD9" stroke-width="4" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="113"/></svg>
+          <div class="label">25%</div>
+        </div>
+      </div>
+
+
+
+      <!-- Weather risk card -->
+      <div class="weather-card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><line x1="9" y1="14" x2="9" y2="18"/><line x1="13" y1="14" x2="13" y2="18"/></svg></div>
+        <div class="body">
+          <div class="title">Weather watch · Thu</div>
+          <div class="desc">Heavy rain expected Thursday — plastering kept indoors, no impact to your timeline.</div>
+        </div>
+      </div>
+
+      <!-- Quick tiles: 6 tiles -->
+      <div class="quick-tiles" style="grid-template-columns: repeat(3, 1fr); gap: 8px;">
+        <div class="quick-tile" onclick="show('schedule')">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div class="lbl">Schedule</div>
+          <div class="sub">12 days</div>
+        </div>
+        <div class="quick-tile" onclick="show('photos')">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></div>
+          <div class="lbl">Photos</div>
+          <div class="sub">23</div>
+        </div>
+        <div class="quick-tile" onclick="show('team')">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3z" fill="currentColor"/></svg></div>
+          <div class="lbl">Team</div>
+          <div class="sub">5</div>
+        </div>
+        <div class="quick-tile" onclick="show('documents')">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div class="lbl">Documents</div>
+          <div class="sub">5 files</div>
+        </div>
+        <div class="quick-tile" onclick="show('variation')">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+          <div class="lbl">Changes</div>
+          <div class="sub">1 open</div>
+        </div>
+        <div class="quick-tile" onclick="show('referral')">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></div>
+          <div class="lbl">Refer trade</div>
+          <div class="sub">Handoff</div>
+        </div>
+      </div>
+
+      <div class="meta-card">
+        <div class="meta-row">
+          <span class="meta-label">Today</span>
+          <span class="meta-value">First-fix electrics</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Tomorrow</span>
+          <span class="meta-value">Plastering · 8:00 AM</span>
+        </div>
+      </div>
+
+
+      <!-- Quick tiles: 6 tiles -->
+      <div class="quick-tiles" style="grid-template-columns: repeat(3, 1fr); gap: 8px;">
+        <div class="quick-tile" onclick="show('schedule')">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div class="lbl">Schedule</div>
+          <div class="sub">12 days</div>
+        </div>
+        <div class="quick-tile" onclick="show('photos')">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></div>
+          <div class="lbl">Photos</div>
+          <div class="sub">23</div>
+        </div>
+        <div class="quick-tile" onclick="show('team')">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3z" fill="currentColor"/></svg></div>
+          <div class="lbl">Team</div>
+          <div class="sub">5</div>
+        </div>
+        <div class="quick-tile" onclick="show('documents')">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div class="lbl">Documents</div>
+          <div class="sub">5 files</div>
+        </div>
+        <div class="quick-tile" onclick="show('variation')">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+          <div class="lbl">Changes</div>
+          <div class="sub">1 open</div>
+        </div>
+        <div class="quick-tile" onclick="show('digest')">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+          <div class="lbl">Weekly digest</div>
+          <div class="sub">Friday 5pm</div>
+        </div>
+      </div>
+
+            <div class="section-label">Today on site</div>
+
+      <div class="event-pill">
+        <div class="pi">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="body">
+          <div class="title">You arrived on site</div>
+          <div class="sub">8:14 AM</div>
+        </div>
+      </div>
+
+      <div class="event-pill">
+        <div class="pi milestone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="body">
+          <div class="title">First-fix electrics complete</div>
+          <div class="sub">2:18 PM · update sent to Emma</div>
+        </div>
+      </div>
+
+      <!-- The subtle End-of-day prompt -->
+      <div class="eod-prompt">
+        <div class="lead">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+          <span class="label">When you head home</span>
+        </div>
+        <div class="headline">We'll prompt you to send Emma a quick update — or end the day now.</div>
+        <div class="actions">
+          <button class="btn-secondary" onclick="show('consent')">Auto-prompt on</button>
+          <button class="btn-primary" onclick="show('t-eod')">End the day now</button>
+        </div>
+      </div>
+
+      <div style="height: 16px;"></div>
+    </div>
+
+    <!-- T3: Lock screen + push notification -->
+    <div class="screen" id="t-push" data-role="tradesman" style="padding-top: 0;">
+      <div class="lockscreen">
+        <div class="push-notif" onclick="show('t-eod')">
+          <div class="app-icon">T</div>
+          <div class="content">
+            <div class="meta-row-top">
+              <span class="app-name">Tradesmen</span>
+              <span>now</span>
+            </div>
+            <div class="push-title">Heading home?</div>
+            <div class="push-body">Send Emma a quick end-of-day update — 20 seconds.</div>
+          </div>
+        </div>
+        <div class="time-big">4:34</div>
+        <div class="date-big">Tuesday, 14 May</div>
+        <div class="hint">📍 You just left Patel kitchen<br/>Tap the notification to open the update card</div>
+        <div class="swipe-hint">Swipe up to open</div>
+      </div>
+    </div>
+
+    <!-- T4: End-of-Day card (redesigned) -->
+    <div class="screen" id="t-eod" data-role="tradesman">
+      <div class="eod-header">
+        <div class="greet-row">
+          <div class="avatar emma lg">E</div>
+          <div class="for-customer">
+            <div class="label">Update for</div>
+            <div class="name">Emma Patel</div>
+            <div class="proj">Kitchen extension · Day 3</div>
+          </div>
+          <button class="close-btn" onclick="show('t-project')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="eod-headline">End your day at Emma's?</div>
+      <div class="eod-sub">Here's what we'll send — tap to edit anything.</div>
+
+      <div class="draft-card">
+        <div class="draft-top">
+          <span class="pulse"></span>
+          <span class="label">Auto draft</span>
+          <span class="edit-link">Edit</span>
+        </div>
+        <div class="draft-body">Wrapped up for today. First-fix electrics complete, plasterer in tomorrow morning. Worktop sample's in the van for you to look at.</div>
+        <div class="draft-photos">
+          <div class="draft-photo ph-a"></div>
+          <div class="draft-photo ph-b"></div>
+          <div class="draft-photo ph-c"></div>
+        </div>
+      </div>
+
+      <div class="inline-rows">
+        <div class="inline-row">
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="text">
+            <div class="l">Project status</div>
+            <div class="v"><span class="status-badge active"><span class="dot"></span>On track</span></div>
+          </div>
+          <div class="chev">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+        <div class="inline-row">
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+          </div>
+          <div class="text">
+            <div class="l">Back tomorrow at</div>
+            <div class="v">8:00 AM</div>
+          </div>
+          <div class="chev">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="attach-bar">
+        <button class="attach-btn has">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <div class="lbl">3 photos</div>
+        </button>
+        <button class="attach-btn" onclick="this.style.display='none'; document.getElementById('voice-rec-t').style.display='flex';">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+          <div class="lbl">Add voice note</div>
+        </button>
+      </div>
+
+      <!-- Voice recorder (initially hidden, appears when "Add voice note" tapped) -->
+      <div class="voice-recorder" id="voice-rec-t" style="display: none;">
+        <div class="mic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/></svg></div>
+        <div class="wave"><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div><div class="bar" style="height: 12px;"></div></div>
+        <div class="duration">0:14</div>
+      </div>
+
+      <div style="height: 130px;"></div>
+
+      <div class="eod-actions">
+        <button class="btn-send" onclick="show('t-sent')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Send to Emma
+        </button>
+        <a class="skip-link" onclick="show('t-project')">Not done yet — skip</a>
+      </div>
+    </div>
+
+    <!-- T5: Sent success -->
+    <div class="screen" id="t-sent" data-role="tradesman">
+      <div class="nav-bar">
+        <div class="nav-spacer"></div>
+        <div class="nav-title"></div>
+        <div class="nav-spacer"></div>
+      </div>
+      <div class="success">
+        <div class="circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="title">Sent to Emma</div>
+        <div class="body">She'll see your photos, status, and tomorrow's start time within a few seconds.</div>
+        <div class="preview-card">
+          <div class="pl">Emma's notification</div>
+          <div class="pt">Dave's end-of-day update</div>
+          <div class="pb">Wrapped up for today. First-fix electrics complete, plasterer in tomorrow morning…</div>
+        </div>
+        <button class="done-btn" onclick="show('t-jobs')">Done</button>
+      </div>
+    </div>
+
+    <!-- T6: Crew tab -->
+    <div class="screen" id="t-crew" data-role="tradesman">
+      <div class="nav-bar">
+        <div class="nav-title-left">Crew</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+      </div>
+
+      <div style="padding: 0 20px 12px;">
+        <div class="t-title-2">Today's team</div>
+        <div class="t-body text-secondary" style="margin-top: 4px;">4 on site, 1 travelling</div>
+      </div>
+
+      <div class="section-label">On site now</div>
+
+      <div class="crew-row">
+        <div class="avatar mike md">M</div>
+        <div class="info">
+          <div class="name">Mike</div>
+          <div class="where">Patel kitchen · since 8:02 AM</div>
+        </div>
+        <span class="status-badge active"><span class="dot"></span>On site</span>
+      </div>
+
+      <div class="crew-row">
+        <div class="avatar liam md">L</div>
+        <div class="info">
+          <div class="name">Liam (apprentice)</div>
+          <div class="where">Patel kitchen · since 9:18 AM</div>
+        </div>
+        <span class="status-badge active"><span class="dot"></span>On site</span>
+      </div>
+
+      <div class="crew-row">
+        <div class="avatar sam md">S</div>
+        <div class="info">
+          <div class="name">Sam</div>
+          <div class="where">Reed bathroom · since 9:35 AM</div>
+        </div>
+        <span class="status-badge active"><span class="dot"></span>On site</span>
+      </div>
+
+      <div class="section-label">Pending your approval</div>
+
+      <div class="event-pill" onclick="alert('Apprentice update review — opens approval flow')">
+        <div class="pi" style="background: var(--status-pending-bg); color: var(--status-pending-text);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+        </div>
+        <div class="body">
+          <div class="title">Liam's daily update</div>
+          <div class="sub">Tap to review before Emma sees it</div>
+        </div>
+      </div>
+
+      <div style="height: 90px;"></div>
+
+          </div>
+
+    <!-- =================================================== -->
+    <!--                CUSTOMER SCREENS                      -->
+    <!-- =================================================== -->
+
+    <!-- C1: Project home -->
+    <div class="screen" id="c-project" data-role="customer">
+      <div class="nav-bar">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </div>
+        <div class="nav-title">Kitchen extension</div>
+        <div class="nav-icon" onclick="show('c-chat')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        </div>
+      </div>
+
+      <div class="project-hero">
+        <div style="flex:1;">
+          <span class="status-badge active"><span class="dot"></span>On track</span>
+          <div class="t-title-3" style="margin-top: 8px;">On track for Friday</div>
+          <div class="t-footnote" style="margin-top: 2px;">Day 3 of 12</div>
+        </div>
+        <div class="progress-ring">
+          <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="24" fill="none" stroke="#ECEAE4" stroke-width="4"/><circle cx="28" cy="28" r="24" fill="none" stroke="#1B4DD9" stroke-width="4" stroke-linecap="round" stroke-dasharray="150.8" stroke-dashoffset="113"/></svg>
+          <div class="label">25%</div>
+        </div>
+      </div>
+
+      <div class="event-pill">
+        <div class="pi">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="body">
+          <div class="title">Dave is on site</div>
+          <div class="sub">Arrived 8:14 AM</div>
+        </div>
+      </div>
+
+      <div class="meta-card">
+        <div class="meta-row">
+          <span class="meta-label">Today</span>
+          <span class="meta-value">First-fix electrics</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Next</span>
+          <span class="meta-value">Worktops · Wed</span>
+        </div>
+      </div>
+
+      <div class="section-label">Latest update</div>
+
+      <div class="update-card">
+        <div class="head">
+          <div class="avatar dave sm">D</div>
+          <div>
+            <div class="name">Dave Smith</div>
+            <div class="meta">2 hours ago</div>
+          </div>
+        </div>
+        <div class="body">First-fix electrics done, plasterer in tomorrow morning ✓</div>
+        <div class="photos">
+          <div class="ph ph-a"></div>
+          <div class="ph ph-b"></div>
+          <div class="ph ph-c"></div>
+        </div>
+      </div>
+
+      <div style="height: 90px;"></div>
+
+          </div>
+
+    <!-- C2: Updates feed (shows the EoD update landing) -->
+    <div class="screen" id="c-updates" data-role="customer">
+      <div class="nav-bar">
+        <div class="nav-spacer"></div>
+        <div class="nav-title">Updates</div>
+        <div class="nav-spacer"></div>
+      </div>
+
+      <div style="padding: 0 20px 8px;">
+        <div class="t-body text-secondary">Everything from Dave on your project. Newest first.</div>
+      </div>
+
+      <div class="day-sep">Today · Tue 14 May</div>
+
+      <!-- The EoD update from Dave (the one we just sent) -->
+      <div class="update-card eod">
+        <div class="head">
+          <div class="avatar dave sm">D</div>
+          <div>
+            <div class="name">Dave Smith<span class="badge">END-OF-DAY</span></div>
+            <div class="meta">4:34 PM · just now</div>
+          </div>
+        </div>
+        <div class="body">Wrapped up for today. First-fix electrics complete, plasterer in tomorrow morning. Worktop sample's in the van for you to look at.</div>
+        <div class="photos">
+          <div class="ph ph-a"></div>
+          <div class="ph ph-b"></div>
+          <div class="ph ph-c"></div>
+        </div>
+        <div class="eta-line">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+          Back tomorrow at <strong style="color: var(--text-primary); margin-left: 3px;">8:00 AM</strong>
+        </div>
+        <div class="reactions-row">
+          <div class="reaction-pill active"><span class="emoji">❤️</span> 1</div>
+          <div class="reaction-pill"><span class="emoji">👍</span></div>
+          <div class="reaction-pill"><span class="emoji">❓</span></div>
+        </div>
+      </div>
+
+      <div class="event-pill">
+        <div class="pi left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+        </div>
+        <div class="body">
+          <div class="title">Dave wrapped up for today</div>
+          <div class="sub">4:32 PM</div>
+        </div>
+      </div>
+
+      <div class="event-pill">
+        <div class="pi milestone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="body">
+          <div class="title">Milestone complete — First-fix electrics</div>
+          <div class="sub">2:18 PM</div>
+        </div>
+      </div>
+
+      <div class="update-card">
+        <div class="head">
+          <div class="avatar dave sm">D</div>
+          <div>
+            <div class="name">Dave Smith</div>
+            <div class="meta">Posted 2:18 PM</div>
+          </div>
+        </div>
+        <div class="body">First-fix electrics done, plasterer in tomorrow morning ✓</div>
+        <div class="photos">
+          <div class="ph ph-a"></div>
+          <div class="ph ph-b"></div>
+          <div class="ph ph-c"></div>
+        </div>
+      </div>
+
+      <div class="event-pill">
+        <div class="pi">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="body">
+          <div class="title">Dave arrived on site</div>
+          <div class="sub">8:14 AM</div>
+        </div>
+      </div>
+
+      <div class="day-sep">Yesterday</div>
+
+      <div class="event-pill">
+        <div class="pi left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+        </div>
+        <div class="body">
+          <div class="title">Dave wrapped up for today</div>
+          <div class="sub">5:18 PM</div>
+        </div>
+      </div>
+
+      <div style="height: 90px;"></div>
+
+          </div>
+
+    <!-- C3: Messages (chat) -->
+    <div class="screen" id="c-chat" data-role="customer">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="show('c-project')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <div class="avatar dave sm">D</div>
+          <div style="text-align: left;">
+            <div style="font-size: 14px; font-weight: 600;">Dave Smith</div>
+            <div style="font-size: 11px; color: var(--text-tertiary); font-weight: 400;">Smith Builders</div>
+          </div>
+        </div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </div>
+      </div>
+
+      <div class="day-sep" style="text-align: center;">Today · Tue 14 May</div>
+
+      <div class="chat-list">
+        <div class="chat-bubble received">Morning! Did the materials turn up OK?</div>
+        <div class="chat-time left">7:42 AM</div>
+        <div class="chat-bubble sent">Yes all here — left them in the garage 👍</div>
+        <div class="chat-time right">7:45 AM</div>
+        <div class="chat-bubble received">Brilliant, thanks. On my way over now</div>
+        <div class="chat-time left">8:01 AM</div>
+        <div class="chat-bubble received">First fix electrics all done — plasterer's confirmed for tomorrow 7:30</div>
+        <div class="chat-time left">2:18 PM</div>
+        <div class="chat-bubble sent">Amazing, thank you so much for the photo updates ♥</div>
+        <div class="chat-time right">2:24 PM</div>
+      </div>
+
+      <div style="height: 60px;"></div>
+    </div>
+
+    <!-- =================================================== -->
+    <!--               APPRENTICE SCREENS                     -->
+    <!-- =================================================== -->
+
+    <!-- A1: Today -->
+    <div class="screen" id="a-today" data-role="apprentice">
+      <div class="nav-bar">
+        <div class="nav-title-left">Today</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        </div>
+      </div>
+
+      <div style="padding: 0 20px 12px;">
+        <div class="t-title-2">Afternoon, Liam</div>
+        <div class="t-body text-secondary" style="margin-top: 4px;">Patel kitchen · with Dave & Mike</div>
+      </div>
+
+      <div class="card" style="margin: 0 20px 12px;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+          <div class="avatar emma md">E</div>
+          <div style="flex: 1;">
+            <div class="t-body-lg-em">Emma Patel</div>
+            <div class="t-footnote">12 Linden Road, SW19</div>
+          </div>
+          <span class="status-badge active"><span class="dot"></span>On site</span>
+        </div>
+        <div class="t-footnote">Arrived 9:18 AM · 7h 14m on site (auto-tracked)</div>
+      </div>
+
+      <div class="section-label">Brief from Dave</div>
+
+      <div class="brief-card">
+        <div class="head">
+          <div class="avatar dave sm">D</div>
+          <div>
+            <div class="t-body-em">Dave Smith</div>
+            <div class="by">7:42 AM</div>
+          </div>
+        </div>
+        <div class="body">Help Mike with 1st fix then prep the back wall for skim. I'll be over by 10.</div>
+        <div class="voice-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Listen · 0:32
+        </div>
+      </div>
+
+      <div class="section-label">Your tasks (3 of 3 done)</div>
+
+      <div class="task-list">
+        <div class="task-row done">
+          <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="label">Pick up PVA from yard</div>
+        </div>
+        <div class="task-row done">
+          <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="label">Help Mike with 1st fix plumbing</div>
+        </div>
+        <div class="task-row done">
+          <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="label">Prep back wall for skim</div>
+        </div>
+      </div>
+
+      <div class="eod-prompt">
+        <div class="lead">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+          <span class="label">When you head home</span>
+        </div>
+        <div class="headline">We'll prompt you for a quick note for Dave — he'll forward to Emma.</div>
+        <div class="actions">
+          <button class="btn-secondary" onclick="show('consent')">Auto-prompt on</button>
+          <button class="btn-primary" onclick="show('a-eod')">End the day now</button>
+        </div>
+      </div>
+
+      <div style="height: 90px;"></div>
+
+          </div>
+
+    <!-- A2: Apprentice End-of-Day (to lead, not customer) -->
+    <div class="screen" id="a-eod" data-role="apprentice">
+      <div class="eod-header">
+        <div class="greet-row">
+          <div class="avatar dave lg">D</div>
+          <div class="for-customer">
+            <div class="label">Note for</div>
+            <div class="name">Dave Smith (your lead)</div>
+            <div class="proj">Dave will review before Emma sees it</div>
+          </div>
+          <button class="close-btn" onclick="show('a-today')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="eod-headline">End your day at Patel kitchen?</div>
+      <div class="eod-sub">Here's what we'll send Dave — edit anything you like.</div>
+
+      <div class="draft-card">
+        <div class="draft-top">
+          <span class="pulse"></span>
+          <span class="label">Auto draft from your tasks</span>
+          <span class="edit-link">Edit</span>
+        </div>
+        <div class="draft-body">Got the PVA, helped Mike finish 1st-fix plumbing, prepped the back wall for skim. Ready for the plasterer tomorrow.</div>
+      </div>
+
+      <div class="inline-rows">
+        <div class="inline-row">
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+          </div>
+          <div class="text">
+            <div class="l">Hours today</div>
+            <div class="v">7h 14m <span style="font-size: 12px; color: var(--text-tertiary);">(auto-tracked)</span></div>
+          </div>
+          <div class="chev">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+        <div class="inline-row">
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="text">
+            <div class="l">Anything to flag for Dave?</div>
+            <div class="v" style="color: var(--text-tertiary);">Optional — nothing today</div>
+          </div>
+          <div class="chev">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="attach-bar">
+        <button class="attach-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <div class="lbl">Add photo</div>
+        </button>
+        <button class="attach-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+          <div class="lbl">Voice note</div>
+        </button>
+      </div>
+
+      <div style="height: 130px;"></div>
+
+      <div class="eod-actions">
+        <button class="btn-send" onclick="show('a-pending')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Send to Dave
+        </button>
+        <a class="skip-link" onclick="show('a-today')">Not done yet — skip</a>
+      </div>
+    </div>
+
+    <!-- A3: Pending lead approval -->
+    <div class="screen" id="a-pending" data-role="apprentice">
+      <div class="nav-bar">
+        <div class="nav-spacer"></div>
+        <div class="nav-title"></div>
+        <div class="nav-spacer"></div>
+      </div>
+      <div class="success">
+        <div class="circle" style="background: var(--brand-tint); color: var(--brand-primary);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <div class="title">Sent to Dave</div>
+        <div class="body">Dave will review and forward to Emma. You'll get a notification once it's gone out.</div>
+        <div class="preview-card">
+          <div class="pl">Status</div>
+          <div class="pt" style="display: flex; align-items: center; gap: 8px;">
+            <div class="avatar dave sm">D</div>
+            <span>Dave Smith</span>
+            <span class="status-badge pending" style="margin-left: auto;">Reviewing</span>
+          </div>
+          <div class="pb">Got the PVA, helped Mike finish 1st-fix plumbing, prepped the back wall for skim…</div>
+        </div>
+        <button class="done-btn" onclick="show('a-today')">Done</button>
+      </div>
+    </div>
+
+    <!-- =================================================== -->
+    <!--              SHARED: LOCATION CONSENT                -->
+    <!-- =================================================== -->
+
+    <div class="screen" id="consent" data-role="any">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="window.history.length > 1 ? show(lastScreen()) : show('t-project')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title"></div>
+        <div class="nav-spacer"></div>
+      </div>
+
+      <div class="consent-screen">
+        <div class="icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div class="title">Help your customer feel calm</div>
+        <div class="body">With your permission, we'll automatically tell Emma when you arrive at and leave her project. Nothing else is shared — no live tracking, no map, no data sold.</div>
+
+        <div class="reassure-row">
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div class="text">Used only for arrival and end-of-day events</div>
+        </div>
+        <div class="reassure-row">
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/></svg>
+          </div>
+          <div class="text">Your customer never sees a live map</div>
+        </div>
+        <div class="reassure-row">
+          <div class="ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
+          </div>
+          <div class="text">Turn off any time from Account</div>
+        </div>
+
+        <div class="consent-actions">
+          <button class="turn-on" onclick="show(lastTradesmanScreen())">Turn on</button>
+          <button class="later" onclick="show(lastTradesmanScreen())">Maybe later</button>
+        </div>
+      </div>
+    </div>
+
+
+
+
+
+    <!-- ============= CUSTOMER ACCOUNT ============= -->
+    <div class="screen" id="c-account" data-role="customer">
+      <div class="nav-bar">
+        <div class="nav-title-left">Account</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82h0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+      </div>
+
+      <!-- Hero card -->
+      <div class="account-hero">
+        <div class="avatar-wrap">
+          <div class="avatar lg" style="background: linear-gradient(135deg, #A582BC, #7E5C95);">S</div>
+        </div>
+        <div class="info">
+          <div class="name">Sarah Mitchell</div>
+          <div class="meta">Joined May 2026 · Verified</div>
+        </div>
+      </div>
+
+      <div class="acc-section">Your project</div>
+
+      <div class="card-row" onclick="show('c-project')">
+        <div class="avatar dave md">D</div>
+        <div class="body">
+          <div class="title">Kitchen extension with Dave</div>
+          <div class="sub">Started 13 May · expected 24 May</div>
+        </div>
+        <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="acc-section">Notifications</div>
+
+      <div class="card-row">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
+        <div class="body">
+          <div class="title">Push notifications</div>
+          <div class="sub">Gentle pings · no marketing</div>
+        </div>
+        <span class="status-badge active"><span class="dot"></span>On</span>
+      </div>
+
+      <div class="card-row" onclick="show('consent')">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <div class="body">
+          <div class="title">Home location anchor</div>
+          <div class="sub">14 Acacia Avenue, SW19</div>
+        </div>
+        <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="acc-section">Privacy &amp; help</div>
+
+      <div class="card-row">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <div class="body">
+          <div class="title">Privacy &amp; data</div>
+          <div class="sub">What we collect &amp; why</div>
+        </div>
+        <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="card-row">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div class="body">
+          <div class="title">Help &amp; support</div>
+          <div class="sub">Get in touch with a human</div>
+        </div>
+        <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <button class="signout-btn">Sign out</button>
+    </div>
+
+    <!-- ============= TRADESMAN MESSAGES LIST ============= -->
+    <div class="screen" id="t-messages" data-role="tradesman">
+      <div class="nav-bar">
+        <div class="nav-title-left">Messages</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+      </div>
+
+      <div class="section-label">Customers</div>
+
+      <div class="job-row" style="cursor: pointer;">
+        <div class="avatar emma md">E</div>
+        <div class="info">
+          <div class="customer">Emma Patel</div>
+          <div class="project">Amazing, thank you so much for the photo…</div>
+          <div class="footer-meta">2:24 PM</div>
+        </div>
+      </div>
+
+      <div class="job-row" style="cursor: pointer;">
+        <div class="avatar sam md">JR</div>
+        <div class="info">
+          <div class="customer">John Reed</div>
+          <div class="project">Cheers Dave, see you Thursday 👍</div>
+          <div class="footer-meta">Yesterday</div>
+        </div>
+      </div>
+
+      <div class="section-label">Crew</div>
+
+      <div class="job-row" style="cursor: pointer;">
+        <div class="avatar mike md">M</div>
+        <div class="info">
+          <div class="customer">Mike</div>
+          <div class="project">Plumbing fully tested, no leaks</div>
+          <div class="footer-meta">1:08 PM</div>
+        </div>
+      </div>
+
+      <div class="job-row" style="cursor: pointer;">
+        <div class="avatar liam md">L</div>
+        <div class="info">
+          <div class="customer">Liam (apprentice)</div>
+          <div class="project">PVA picked up on the way</div>
+          <div class="footer-meta">8:48 AM</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============= TRADESMAN ACCOUNT ============= -->
+    <div class="screen" id="t-account" data-role="tradesman">
+      <div class="nav-bar">
+        <div class="nav-title-left">Account</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82h0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+      </div>
+
+      <!-- Hero card with tier badge -->
+      <div class="account-hero">
+        <div class="avatar-wrap">
+          <div class="avatar lg dave">D</div>
+          <div class="verified-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        </div>
+        <div class="info">
+          <div class="tier-badge">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2H22l-6.2 4.5 2.4 7.3L12 16.5l-6.2 4.5 2.4-7.3L2 9.2h7.6z"/></svg>
+            Elite Pro
+          </div>
+          <div class="name">Smith Builders</div>
+          <div class="meta">Dave Smith · Builder</div>
+          <div class="rating"><span class="star">★</span> 4.9 · 23 reviews</div>
+        </div>
+      </div>
+
+      <!-- Pro stats / tier card -->
+      <div class="tier-card">
+        <div class="ti">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2H22l-6.2 4.5 2.4 7.3L12 16.5l-6.2 4.5 2.4-7.3L2 9.2h7.6z"/></svg>
+        </div>
+        <div class="body">
+          <div class="title">Elite Pro · top 12% in SW London</div>
+          <div class="sub">2 projects from Master · 4 badges earned</div>
+        </div>
+        <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #8B6F2A;"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="acc-section">Business</div>
+
+      <div class="card-row">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V8l7-5 7 5v13"/></svg></div>
+        <div class="body">
+          <div class="title">Business profile</div>
+          <div class="sub">Smith Builders · bio &amp; photos</div>
+        </div>
+        <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="card-row">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+        <div class="body">
+          <div class="title">Service area</div>
+          <div class="sub">SW19, SW20, SW18, SE15</div>
+        </div>
+        <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="acc-section">Verified credentials</div>
+
+      <div class="card-row">
+        <div class="lead-icon" style="background: var(--status-active-bg); color: var(--status-active-text);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="body">
+          <div class="title">Identity verified</div>
+          <div class="sub">Phone confirmed · Photo ID on file</div>
+        </div>
+      </div>
+
+      <div class="card-row">
+        <div class="lead-icon" style="background: var(--status-active-bg); color: var(--status-active-text);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <div class="body">
+          <div class="title">Public liability insurance</div>
+          <div class="sub">£2m cover · valid Dec 2026</div>
+        </div>
+      </div>
+
+      <div class="card-row">
+        <div class="lead-icon gas">GS</div>
+        <div class="body">
+          <div class="title">Gas Safe registered</div>
+          <div class="sub">No. 558827 · verified May 2026</div>
+        </div>
+      </div>
+
+      <div class="card-row">
+        <div class="lead-icon niceic">NIC</div>
+        <div class="body">
+          <div class="title">NICEIC contractor</div>
+          <div class="sub">Electrical work to standard</div>
+        </div>
+      </div>
+
+      <div class="card-row">
+        <div class="lead-icon cscs">CSCS</div>
+        <div class="body">
+          <div class="title">CSCS card</div>
+          <div class="sub">Gold · skilled worker</div>
+        </div>
+      </div>
+
+      <div class="acc-section">Tracking &amp; notifications</div>
+
+      <div class="card-row" onclick="show('consent')">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <div class="body">
+          <div class="title">Location &amp; site geofence</div>
+          <div class="sub">Arrival/leave events only</div>
+        </div>
+        <span class="status-badge active"><span class="dot"></span>On</span>
+      </div>
+
+      <div class="card-row">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div>
+        <div class="body">
+          <div class="title">End-of-day auto-prompt</div>
+          <div class="sub">90 seconds after leave-site</div>
+        </div>
+        <span class="status-badge active"><span class="dot"></span>On</span>
+      </div>
+
+      <div class="acc-section">Recognition</div>
+
+      <div class="card-row" onclick="show('badges')">
+        <div class="lead-icon" style="background: linear-gradient(135deg, #F4D58B, #D9A21B); color: #3A2F11;">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2H22l-6.2 4.5 2.4 7.3L12 16.5l-6.2 4.5 2.4-7.3L2 9.2h7.6z"/></svg>
+        </div>
+        <div class="body">
+          <div class="title">Badges</div>
+          <div class="sub">4 earned · 8 to unlock</div>
+        </div>
+        <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="acc-section">Account</div>
+
+      <div class="card-row">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="body">
+          <div class="title">Help &amp; support</div>
+          <div class="sub">Contact a human</div>
+        </div>
+        <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <button class="signout-btn">Sign out</button>
+    </div>
+
+    <!-- ============= APPRENTICE CREW ============= -->
+    <div class="screen" id="a-crew" data-role="apprentice">
+      <div class="nav-bar">
+        <div class="nav-title-left">Crew</div>
+        <div class="nav-spacer"></div>
+      </div>
+
+      <div class="section-label">Today at Patel kitchen</div>
+
+      <div class="crew-row">
+        <div class="avatar dave md">D</div>
+        <div class="info">
+          <div class="name">Dave (lead)</div>
+          <div class="where">Arriving ~10 AM</div>
+        </div>
+        <span class="status-badge scheduled"><span class="dot"></span>On way</span>
+      </div>
+
+      <div class="crew-row">
+        <div class="avatar mike md">M</div>
+        <div class="info">
+          <div class="name">Mike (fitter)</div>
+          <div class="where">On site · since 8:02 AM</div>
+        </div>
+        <span class="status-badge active"><span class="dot"></span>On site</span>
+      </div>
+
+      <div class="crew-row">
+        <div class="avatar liam md" style="box-shadow: 0 0 0 2px var(--brand-primary);">L</div>
+        <div class="info">
+          <div class="name">You</div>
+          <div class="where">On site · since 9:18 AM (7h 14m)</div>
+        </div>
+        <span class="status-badge active"><span class="dot"></span>On site</span>
+      </div>
+
+      <div class="section-label">Tomorrow</div>
+      <div class="card" style="margin: 0 20px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="avatar emma md">E</div>
+          <div style="flex: 1;">
+            <div class="t-body-em">Patel kitchen</div>
+            <div class="t-footnote" style="margin-top: 1px;">Plastering · 7:30 AM start</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============= APPRENTICE MESSAGES ============= -->
+    <div class="screen" id="a-messages" data-role="apprentice">
+      <div class="nav-bar">
+        <div class="nav-title-left">Messages</div>
+        <div class="nav-spacer"></div>
+      </div>
+
+      <div class="section-label">From your lead</div>
+
+      <div class="job-row" style="cursor: pointer;">
+        <div class="avatar dave md">D</div>
+        <div class="info">
+          <div class="customer">Dave Smith</div>
+          <div class="project">Help Mike with 1st fix then prep the back wall…</div>
+          <div class="footer-meta">7:42 AM · voice note</div>
+        </div>
+      </div>
+
+      <div class="section-label">Crew</div>
+
+      <div class="job-row" style="cursor: pointer;">
+        <div class="avatar mike md">M</div>
+        <div class="info">
+          <div class="customer">Mike</div>
+          <div class="project">Bring the PVA when you come</div>
+          <div class="footer-meta">7:55 AM</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============= APPRENTICE ACCOUNT ============= -->
+    <div class="screen" id="a-account" data-role="apprentice">
+      <div class="nav-bar">
+        <div class="nav-title-left">Account</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82h0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+      </div>
+
+      <!-- Hero card -->
+      <div class="account-hero">
+        <div class="avatar-wrap">
+          <div class="avatar lg liam">L</div>
+        </div>
+        <div class="info">
+          <div class="tier-badge" style="background: linear-gradient(135deg, #6FA08C, #4D7466); color: white;">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+            Apprentice
+          </div>
+          <div class="name">Liam Walker</div>
+          <div class="meta">Working under Dave Smith</div>
+          <div class="rating">Started Aug 2025 · 9 months in</div>
+        </div>
+      </div>
+
+      <div class="acc-section">This week</div>
+      <div onclick="show('a-progress')" style="margin: 0 20px 16px; padding: 14px 18px; background: white; border-radius: 14px; box-shadow: var(--elev-1); display: flex; gap: 24px; cursor: pointer;">
+        <div style="flex: 1;">
+          <div class="t-caption">Hours</div>
+          <div style="font-size: 22px; font-weight: 700; margin-top: 4px; letter-spacing: -0.2px;">31h 12m</div>
+        </div>
+        <div style="flex: 1;">
+          <div class="t-caption">Days on site</div>
+          <div style="font-size: 22px; font-weight: 700; margin-top: 4px; letter-spacing: -0.2px;">4 of 5</div>
+        </div>
+        <div style="flex: 1;">
+          <div class="t-caption">Updates sent</div>
+          <div style="font-size: 22px; font-weight: 700; margin-top: 4px; letter-spacing: -0.2px;">5</div>
+        </div>
+      </div>
+
+      <div class="acc-section">Profile</div>
+
+      <div class="card-row">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/></svg></div>
+        <div class="body">
+          <div class="title">Personal details</div>
+          <div class="sub">Name · phone · emergency contact</div>
+        </div>
+        <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="card-row">
+        <div class="lead-icon cscs">CSCS</div>
+        <div class="body">
+          <div class="title">CSCS card</div>
+          <div class="sub">Apprentice level · valid 2027</div>
+        </div>
+        <span class="status-badge active"><span class="dot"></span>Active</span>
+      </div>
+
+      <div class="acc-section">Tracking &amp; notifications</div>
+
+      <div class="card-row" onclick="show('consent')">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <div class="body">
+          <div class="title">Location on shift</div>
+          <div class="sub">Shared with Dave · clock-in only</div>
+        </div>
+        <span class="status-badge active"><span class="dot"></span>On</span>
+      </div>
+
+      <div class="card-row">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div>
+        <div class="body">
+          <div class="title">End-of-day auto-prompt</div>
+          <div class="sub">Routes to Dave for approval</div>
+        </div>
+        <span class="status-badge active"><span class="dot"></span>On</span>
+      </div>
+
+      <div class="acc-section">Account</div>
+
+      <div class="card-row">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <div class="body">
+          <div class="title">Help &amp; support</div>
+          <div class="sub">Contact a human</div>
+        </div>
+        <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <button class="signout-btn">Sign out</button>
+    </div>
+
+
+    
+
+    <!-- ============= SHARED: SCHEDULE / GANTT ============= -->
+    <div class="screen" id="schedule" data-role="any">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="goBack('project')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title">Schedule</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+      </div>
+
+      <!-- Project schedule hero -->
+      <div class="schedule-header">
+        <div class="label">Kitchen extension · Emma Patel</div>
+        <div class="title">12 working days</div>
+        <div class="dates">Mon 13 May → Fri 24 May 2026</div>
+        <div class="progress-mini"><div class="bar"></div></div>
+        <div class="progress-meta">
+          <span>Day 3 of 12</span>
+          <span>9 days to go</span>
+        </div>
+      </div>
+
+      <!-- Compact week strip -->
+      <div class="week-strip">
+        <div class="week-label">Week 1 · 13–17 May</div>
+        <div class="days">
+          <div class="day done"><div class="dow">M</div><div class="num">13</div></div>
+          <div class="day done"><div class="dow">T</div><div class="num">14</div></div>
+          <div class="day today"><div class="dow">W</div><div class="num">15</div></div>
+          <div class="day"><div class="dow">T</div><div class="num">16</div></div>
+          <div class="day"><div class="dow">F</div><div class="num">17</div></div>
+          <div class="day" style="opacity: 0.35;"></div>
+          <div class="day" style="opacity: 0.35;"></div>
+          <div class="day"><div class="dow">M</div><div class="num">20</div></div>
+          <div class="day"><div class="dow">T</div><div class="num">21</div></div>
+          <div class="day"><div class="dow">W</div><div class="num">22</div></div>
+        </div>
+        <div class="week-label" style="margin-top: 4px;">Week 2 · 20–24 May (continues Thu 23 & Fri 24)</div>
+      </div>
+
+      <!-- Tasks (Gantt rows) -->
+      <div style="padding: 4px 0 8px;">
+
+        <!-- DONE: Strip out -->
+        <div class="gantt-row" onclick="alert('Strip out — Mon 13 May (M.Styles)')">
+          <div class="top">
+            <div class="name">Strip out</div>
+            <div class="owner">M.Styles</div>
+            <span class="status-badge active" style="font-size: 9px; padding: 2px 6px;"><span class="dot"></span>Done</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar done" style="left: 0%; width: 10%;"></div>
+          </div>
+          <div class="meta">
+            <span class="status-dot done"><span class="dot"></span>Mon 13 May</span>
+            <span>Completed 4:30 PM</span>
+          </div>
+        </div>
+
+        <!-- DONE: First-fix plumbing -->
+        <div class="gantt-row" onclick="alert('First-fix plumbing — Tue 14 May (R.Reynolds)')">
+          <div class="top">
+            <div class="name">First-fix plumbing</div>
+            <div class="owner">R.Reynolds</div>
+            <span class="status-badge active" style="font-size: 9px; padding: 2px 6px;"><span class="dot"></span>Done</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar done" style="left: 10%; width: 10%;"></div>
+          </div>
+          <div class="meta">
+            <span class="status-dot done"><span class="dot"></span>Tue 14 May</span>
+            <span>Completed 5:12 PM</span>
+          </div>
+        </div>
+
+        <!-- ACTIVE: First-fix electrics -->
+        <div class="gantt-row is-today">
+          <div class="top">
+            <div class="name">First-fix electrics</div>
+            <div class="owner">S.Jackson</div>
+            <span class="today-pill"><span class="dot"></span>Today</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar active" style="left: 20%; width: 10%;"></div>
+          </div>
+          <div class="meta">
+            <span class="status-dot active"><span class="dot"></span>Wed 15 May · in progress</span>
+            <span>Update sent 2:18 PM</span>
+          </div>
+        </div>
+
+        <!-- UPCOMING: Plastering -->
+        <div class="gantt-row">
+          <div class="top">
+            <div class="name">Plastering</div>
+            <div class="owner">R.Vowles</div>
+          </div>
+          <div class="bar-track">
+            <div class="bar upcoming" style="left: 30%; width: 20%;"></div>
+          </div>
+          <div class="meta">
+            <span>Thu 16 – Fri 17 May</span>
+            <span>2 days</span>
+          </div>
+        </div>
+
+        <!-- UPCOMING: Floor screed -->
+        <div class="gantt-row">
+          <div class="top">
+            <div class="name">Floor screed</div>
+            <div class="owner">S.Wilson</div>
+          </div>
+          <div class="bar-track">
+            <div class="bar upcoming" style="left: 40%; width: 10%;"></div>
+          </div>
+          <div class="meta">
+            <span>Fri 17 May</span>
+            <span>1 day · curing through weekend</span>
+          </div>
+        </div>
+
+        <!-- UPCOMING: Kitchen install -->
+        <div class="gantt-row">
+          <div class="top">
+            <div class="name">Kitchen install</div>
+            <div class="owner">J.Molinue</div>
+          </div>
+          <div class="bar-track">
+            <div class="bar upcoming" style="left: 50%; width: 20%;"></div>
+          </div>
+          <div class="meta">
+            <span>Mon 20 – Tue 21 May</span>
+            <span>2 days</span>
+          </div>
+        </div>
+
+        <!-- UPCOMING: Worktops -->
+        <div class="gantt-row">
+          <div class="top">
+            <div class="name">Worktops fitted</div>
+            <div class="owner">J.Molinue</div>
+          </div>
+          <div class="bar-track">
+            <div class="bar upcoming" style="left: 60%; width: 10%;"></div>
+          </div>
+          <div class="meta">
+            <span>Wed 22 May</span>
+            <span>Customer to confirm sample Wed</span>
+          </div>
+        </div>
+
+        <!-- UPCOMING: Second-fix electrics + plumbing -->
+        <div class="gantt-row">
+          <div class="top">
+            <div class="name">Second-fix electrics</div>
+            <div class="owner">S.Jackson</div>
+          </div>
+          <div class="bar-track">
+            <div class="bar upcoming" style="left: 70%; width: 10%;"></div>
+          </div>
+          <div class="meta">
+            <span>Thu 23 May (AM)</span>
+            <span>Half-day</span>
+          </div>
+        </div>
+
+        <div class="gantt-row">
+          <div class="top">
+            <div class="name">Second-fix plumbing</div>
+            <div class="owner">R.Reynolds</div>
+          </div>
+          <div class="bar-track">
+            <div class="bar upcoming" style="left: 70%; width: 10%;"></div>
+          </div>
+          <div class="meta">
+            <span>Thu 23 May (PM)</span>
+            <span>Half-day</span>
+          </div>
+        </div>
+
+        <!-- UPCOMING: Decoration -->
+        <div class="gantt-row">
+          <div class="top">
+            <div class="name">Decoration</div>
+            <div class="owner">G.Wallis</div>
+          </div>
+          <div class="bar-track">
+            <div class="bar upcoming" style="left: 80%; width: 10%;"></div>
+          </div>
+          <div class="meta">
+            <span>Thu 23 May</span>
+            <span>1 day</span>
+          </div>
+        </div>
+
+        <!-- UPCOMING: Handover / Snagging -->
+        <div class="gantt-row">
+          <div class="top">
+            <div class="name">Handover &amp; snagging</div>
+            <div class="owner">G.Wallis</div>
+          </div>
+          <div class="bar-track">
+            <div class="bar upcoming" style="left: 90%; width: 10%;"></div>
+          </div>
+          <div class="meta">
+            <span>Fri 24 May</span>
+            <span>Project complete</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="padding: 8px 20px 12px; font-size: 11px; color: var(--text-tertiary); text-align: center;">
+        Schedule updated by Dave Smith · last change 2:18 PM today
+      </div>
+    </div>
+
+    <!-- ============= SHARED: PHOTO GALLERY ============= -->
+    <div class="screen" id="photos" data-role="any">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="goBack('project')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title">Photos</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+      </div>
+
+      <div class="photos-header-strip">
+        <div>
+          <div class="label">Photos so far</div>
+          <div style="display: flex; align-items: baseline; gap: 6px;">
+            <div class="count">23</div>
+            <div class="meta">across 4 updates</div>
+          </div>
+        </div>
+      </div>
+
+      
+      <!-- Before/after comparison -->
+      <div class="section-label" style="padding-top: 12px;">Before &amp; after</div>
+      <div class="ba-slider">
+        <div class="after-img"></div>
+        <div class="handle"></div>
+        <div class="label before">Day 1</div>
+        <div class="label after">Today</div>
+      </div>
+      <div style="padding: 0 20px 6px; font-size: 11px; color: var(--text-tertiary); text-align: center;">Drag the handle to see how far Emma's kitchen has come.</div>
+
+      <div style="padding: 4px 20px 6px; font-size: 11px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px;">Today · Wed 15 May</div>
+      <div class="photo-grid-screen">
+        <div class="pho" style="background: linear-gradient(135deg, #d4cab8, #a89875);"><div class="stamp">2:18 PM</div></div>
+        <div class="pho" style="background: linear-gradient(135deg, #b8c4ce, #8395a3);"></div>
+        <div class="pho" style="background: linear-gradient(135deg, #c4b8a8, #968571);"></div>
+      </div>
+
+      <div style="padding: 12px 20px 6px; font-size: 11px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px;">Yesterday · Tue 14 May</div>
+      <div class="photo-grid-screen">
+        <div class="pho" style="background: linear-gradient(135deg, #b8a89c, #8c7563);"><div class="stamp">5:12 PM</div></div>
+        <div class="pho" style="background: linear-gradient(135deg, #a8b8c4, #758c9a);"></div>
+        <div class="pho span-2" style="background: linear-gradient(135deg, #c4a98f, #9a7b5c);"><div class="stamp">3:45 PM</div></div>
+        <div class="pho" style="background: linear-gradient(135deg, #b9c8b3, #8ba381);"></div>
+        <div class="pho" style="background: linear-gradient(135deg, #cab9a8, #9d8669);"></div>
+        <div class="pho" style="background: linear-gradient(135deg, #b8b3a4, #8b8472);"></div>
+      </div>
+
+      <div style="padding: 12px 20px 6px; font-size: 11px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px;">Mon 13 May · Strip out</div>
+      <div class="photo-grid-screen">
+        <div class="pho" style="background: linear-gradient(135deg, #b6a08c, #8a7460);"></div>
+        <div class="pho" style="background: linear-gradient(135deg, #a8a092, #7f7665);"></div>
+        <div class="pho" style="background: linear-gradient(135deg, #c2b09a, #95826b);"></div>
+        <div class="pho span-2" style="background: linear-gradient(135deg, #b6b8af, #898b80);"><div class="stamp">11:02 AM</div></div>
+        <div class="pho" style="background: linear-gradient(135deg, #a5a89c, #7a7c70);"></div>
+      </div>
+
+      <div style="height: 8px;"></div>
+    </div>
+
+    <!-- ============= SHARED: PROJECT TEAM ============= -->
+    <div class="screen" id="team" data-role="any">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="goBack('project')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title">Project team</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+      </div>
+
+      <div style="padding: 0 20px 4px;">
+        <div class="t-body text-secondary">5 people on this project · Kitchen extension at 14 Acacia Ave SW19</div>
+      </div>
+
+      <div class="section-label">Lead</div>
+      <div class="team-card">
+        <div class="avatar lg dave">D</div>
+        <div class="info">
+          <div class="name">Dave Smith</div>
+          <div class="role">Smith Builders · main contractor</div>
+        </div>
+        <span class="role-chip lead">Lead</span>
+      </div>
+
+      <div class="section-label">Crew on this project</div>
+      <div class="team-card">
+        <div class="avatar lg mike">M</div>
+        <div class="info">
+          <div class="name">Mike Davies</div>
+          <div class="role">Fitter · plumbing &amp; carpentry</div>
+        </div>
+        <div class="actions">
+          <div class="a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>
+        </div>
+      </div>
+
+      <div class="team-card">
+        <div class="avatar lg liam">L</div>
+        <div class="info">
+          <div class="name">Liam Walker</div>
+          <div class="role">Apprentice · under Dave</div>
+        </div>
+        <span class="role-chip crew">Apprentice</span>
+      </div>
+
+      <div class="section-label">Specialists</div>
+      <div class="team-card">
+        <div class="avatar lg" style="background: linear-gradient(135deg, #C49858, #9A7440);">RR</div>
+        <div class="info">
+          <div class="name">R. Reynolds</div>
+          <div class="role">Plumber · first &amp; second fix</div>
+        </div>
+        <span class="role-chip crew">Plumber</span>
+      </div>
+
+      <div class="team-card">
+        <div class="avatar lg" style="background: linear-gradient(135deg, #B86B7E, #8C4B5C);">SJ</div>
+        <div class="info">
+          <div class="name">S. Jackson</div>
+          <div class="role">Electrician · NICEIC certified</div>
+        </div>
+        <span class="role-chip crew">Electrician</span>
+      </div>
+
+      <div class="team-card">
+        <div class="avatar lg" style="background: linear-gradient(135deg, #6FA08C, #4D7466);">RV</div>
+        <div class="info">
+          <div class="name">R. Vowles</div>
+          <div class="role">Plasterer · external specialist</div>
+        </div>
+        <span class="role-chip crew">Plasterer</span>
+      </div>
+
+      <div class="team-card">
+        <div class="avatar lg" style="background: linear-gradient(135deg, #4D6FA8, #2F4D80);">JM</div>
+        <div class="info">
+          <div class="name">J. Molinue</div>
+          <div class="role">Kitchen fitter · Howdens partner</div>
+        </div>
+        <span class="role-chip crew">Kitchen</span>
+      </div>
+
+      <div class="section-label">Customer</div>
+      <div class="team-card">
+        <div class="avatar lg emma">E</div>
+        <div class="info">
+          <div class="name">Emma Patel</div>
+          <div class="role">14 Acacia Avenue · joined 13 May</div>
+        </div>
+        <span class="role-chip customer">You</span>
+      </div>
+
+      <div style="height: 8px;"></div>
+    </div>
+
+
+    
+
+    <!-- ============= SHARED: NOTIFICATIONS HISTORY ============= -->
+    <div class="screen" id="notifications" data-role="any">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="goBack('project')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title">Notifications</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+      </div>
+
+      <div style="padding: 0 20px 8px;"><div class="t-body text-secondary">Catch-up on what you missed.</div></div>
+
+      <div class="section-label">Today</div>
+      <div class="notif-row unread">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+        <div class="body">
+          <div class="head"><div class="title">End-of-day update from Dave</div><div class="time">4:34 PM</div></div>
+          <div class="desc">Wrapped up for today. First-fix electrics complete, plasterer in tomorrow morning. Back at 8:00 AM.</div>
+        </div>
+      </div>
+      <div class="notif-row unread">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="body">
+          <div class="head"><div class="title">Milestone complete</div><div class="time">2:18 PM</div></div>
+          <div class="desc">First-fix electrics done — 3 photos added.</div>
+        </div>
+      </div>
+      <div class="notif-row">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <div class="body">
+          <div class="head"><div class="title">Dave arrived on site</div><div class="time">8:14 AM</div></div>
+          <div class="desc">Smith Builders crew on site at 14 Acacia Ave.</div>
+        </div>
+      </div>
+
+      <div class="section-label">Yesterday</div>
+      <div class="notif-row">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></div>
+        <div class="body">
+          <div class="head"><div class="title">End-of-day update from Dave</div><div class="time">5:18 PM</div></div>
+          <div class="desc">Plumbing first-fix all in. Pressure-tested overnight, electrician starts at 7:30 tomorrow.</div>
+        </div>
+      </div>
+      <div class="notif-row">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div>
+        <div class="body">
+          <div class="head"><div class="title">Variation request raised</div><div class="time">11:42 AM</div></div>
+          <div class="desc">Extra socket above kitchen island — awaiting Dave's response.</div>
+        </div>
+      </div>
+
+      <div class="section-label">Mon 13 May</div>
+      <div class="notif-row">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V8l7-5 7 5v13"/></svg></div>
+        <div class="body">
+          <div class="head"><div class="title">Project started</div><div class="time">7:00 AM</div></div>
+          <div class="desc">Kitchen extension with Smith Builders. Welcome.</div>
+        </div>
+      </div>
+
+      <div style="height: 16px;"></div>
+    </div>
+
+    <!-- ============= SHARED: DOCUMENTS / CERTIFICATES ============= -->
+    <div class="screen" id="documents" data-role="any">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="goBack('project')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title">Documents</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+      </div>
+
+      <div style="padding: 0 20px 8px;"><div class="t-body text-secondary">Plans, certificates, and project paperwork — all in one place.</div></div>
+
+      <div class="section-label">Plans &amp; quotes</div>
+      <div class="doc-row">
+        <div class="pdf">PDF</div>
+        <div class="body">
+          <div class="title">Kitchen extension quote — final</div>
+          <div class="meta">2 pages · approved 12 May</div>
+        </div>
+        <div class="actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
+      </div>
+      <div class="doc-row">
+        <div class="pdf img">JPG</div>
+        <div class="body">
+          <div class="title">Architectural plans (3 sheets)</div>
+          <div class="meta">5.4 MB · added 13 May</div>
+        </div>
+        <div class="actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
+      </div>
+
+      <div class="section-label">Certificates &amp; sign-offs</div>
+      <div class="doc-row">
+        <div class="pdf cert">CERT</div>
+        <div class="body">
+          <div class="title">Electrical installation certificate</div>
+          <div class="meta">NICEIC · S.Jackson · pending sign-off</div>
+        </div>
+        <div class="actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
+      </div>
+      <div class="doc-row">
+        <div class="pdf cert">CERT</div>
+        <div class="body">
+          <div class="title">Gas safety certificate</div>
+          <div class="meta">Gas Safe 558827 · pending after 2nd fix</div>
+        </div>
+        <div class="actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
+      </div>
+      <div class="doc-row">
+        <div class="pdf cert">CERT</div>
+        <div class="body">
+          <div class="title">Building control sign-off</div>
+          <div class="meta">Pending inspection · scheduled Thu 23 May</div>
+        </div>
+        <div class="actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
+      </div>
+
+      <div class="section-label">Reference</div>
+      <div class="doc-row">
+        <div class="pdf">PDF</div>
+        <div class="body">
+          <div class="title">Smith Builders public liability insurance</div>
+          <div class="meta">£2m cover · valid Dec 2026</div>
+        </div>
+        <div class="actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></div>
+      </div>
+
+      <div style="padding: 16px 20px 8px;">
+        <button class="signout-btn" style="color: var(--brand-primary); border-color: rgba(27,77,217,0.25);">
+          Export everything as PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- ============= SHARED: SNAG LIST ============= -->
+    <div class="screen" id="snag" data-role="any">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="goBack('project')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title">Snag list</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+      </div>
+
+      <div style="padding: 0 20px 8px;"><div class="t-body text-secondary">Anything you spot that needs fixing before sign-off. Photo + a note is all we need.</div></div>
+
+      <!-- Summary -->
+      <div class="meta-card">
+        <div class="meta-row"><span class="meta-label">Open</span><span class="meta-value" style="color: var(--status-delayed-text);">2</span></div>
+        <div class="meta-row"><span class="meta-label">Fixed</span><span class="meta-value" style="color: var(--status-active-text);">1</span></div>
+      </div>
+
+      <div class="section-label">Open · waiting on Dave</div>
+
+      <div class="snag-item">
+        <div class="photo"></div>
+        <div class="body">
+          <div class="title">Paint touch-up on back wall</div>
+          <div class="room">Kitchen</div>
+          <div class="note">Small scuff above the door frame. Photo attached.</div>
+        </div>
+        <span class="status-pill open">Open</span>
+      </div>
+
+      <div class="snag-item">
+        <div class="photo" style="background: linear-gradient(135deg, #b8c4ce, #8395a3);"></div>
+        <div class="body">
+          <div class="title">Tile grout finish needs tidy</div>
+          <div class="room">Kitchen · splashback</div>
+          <div class="note">Gap on the right-hand corner near worktop.</div>
+        </div>
+        <span class="status-pill open">Open</span>
+      </div>
+
+      <div class="section-label">Fixed</div>
+
+      <div class="snag-item">
+        <div class="photo" style="background: linear-gradient(135deg, #c4b8a8, #968571);"></div>
+        <div class="body">
+          <div class="title">Cabinet door alignment</div>
+          <div class="room">Kitchen · units</div>
+          <div class="note">Top-right cabinet door was sitting low. Adjusted 14 May.</div>
+        </div>
+        <span class="status-pill fixed">Fixed</span>
+      </div>
+
+      <div style="padding: 16px 20px;">
+        <button class="btn-send" style="width: 100%; height: 52px; background: var(--brand-primary); color: white; border: 0; border-radius: 14px; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add a snag
+        </button>
+      </div>
+    </div>
+
+    <!-- ============= SHARED: VARIATION REQUEST ============= -->
+    <div class="screen" id="variation" data-role="any">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="goBack('project')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title">Change request</div>
+        <div class="nav-spacer"></div>
+      </div>
+
+      <div style="padding: 0 20px 8px;">
+        <div class="t-body text-secondary">Need to change something mid-project? Send a quick request — Dave will respond with time &amp; cost impact.</div>
+      </div>
+
+      <div class="section-label">Awaiting Dave's response</div>
+
+      <div class="var-card">
+        <div class="label-row">
+          <span class="badge">Open</span>
+          <span class="t-footnote">Raised Tue 14 May, 11:42 AM</span>
+        </div>
+        <div class="title">Extra socket above the kitchen island for a coffee machine</div>
+        <div style="margin-top: 10px; padding: 10px; background: var(--bg-surface-2); border-radius: 10px;">
+          <div class="t-caption" style="margin-bottom: 4px;">Your note</div>
+          <div class="t-body">Sorry — forgot to ask in the planning meeting. Just for the coffee machine, can squeeze it in?</div>
+        </div>
+      </div>
+
+      <div class="section-label">Responded</div>
+
+      <div class="var-card">
+        <div class="label-row">
+          <span class="badge" style="background: var(--status-active-bg); color: var(--status-active-text);">Approved</span>
+          <span class="t-footnote">Sun 12 May · before start</span>
+        </div>
+        <div class="title">Move sink 30cm closer to window</div>
+        <div class="impact-block">
+          <div class="impact-tile">
+            <div class="l">Cost impact</div>
+            <div class="v">+ £140</div>
+          </div>
+          <div class="impact-tile">
+            <div class="l">Time impact</div>
+            <div class="v">No change</div>
+          </div>
+        </div>
+        <div style="margin-top: 10px; padding: 10px; background: var(--bg-surface-2); border-radius: 10px;">
+          <div class="t-caption" style="margin-bottom: 4px;">Dave's response</div>
+          <div class="t-body">Easy — needs a bit more plumbing pipe but won't delay anything. Approved.</div>
+        </div>
+      </div>
+
+      <div style="padding: 16px 20px;">
+        <button class="btn-send" style="width: 100%; height: 52px; background: var(--brand-primary); color: white; border: 0; border-radius: 14px; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px; height:18px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Raise a new request
+        </button>
+      </div>
+    </div>
+
+    <!-- ============= SHARED: PROJECT COMPLETION ============= -->
+    <div class="screen" id="completion" data-role="any">
+      <div class="nav-bar">
+        <div class="nav-spacer"></div>
+        <div class="nav-title"></div>
+        <div class="nav-icon" onclick="goBack('project')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </div>
+      </div>
+
+      <div class="completion-hero">
+        <div class="confetti">🎉</div>
+        <div class="title">Your kitchen is done</div>
+        <div class="body">Dave's wrapped up at 14 Acacia Ave. Final photos, certificates, and your snag list are all attached below.</div>
+
+        <div class="summary-card">
+          <div class="row"><div class="l">Project</div><div class="v">Kitchen extension</div></div>
+          <div class="row"><div class="l">Duration</div><div class="v">12 working days</div></div>
+          <div class="row"><div class="l">On time</div><div class="v" style="color: var(--status-active-text);">✓ Yes</div></div>
+          <div class="row"><div class="l">Updates received</div><div class="v">14 from Dave</div></div>
+          <div class="row"><div class="l">Photos</div><div class="v">23</div></div>
+          <div class="row"><div class="l">Certificates</div><div class="v">3 ready</div></div>
+        </div>
+
+        <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 8px; max-width: 320px; margin-left: auto; margin-right: auto;">
+          <button class="btn-send" onclick="show('review')" style="width: 100%; height: 52px; background: var(--brand-primary); color: white; border: 0; border-radius: 14px; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer;">Leave Dave a review</button>
+          <button onclick="show('snag')" style="width: 100%; height: 44px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-strong); border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;">View snag list (2 open)</button>
+          <button onclick="show('documents')" style="width: 100%; height: 44px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-strong); border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;">Download all paperwork</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============= SHARED: REVIEW ============= -->
+    <div class="screen" id="review" data-role="any">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="show('completion')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title">Leave a review</div>
+        <div class="nav-spacer"></div>
+      </div>
+
+      <div style="padding: 20px;">
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
+          <div class="avatar lg dave">D</div>
+          <div>
+            <div class="t-title-3">Dave Smith</div>
+            <div class="t-footnote">Smith Builders · Kitchen extension</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; padding: 20px; background: white; border-radius: 16px; box-shadow: var(--elev-1); margin-bottom: 16px;">
+          <div class="t-body" style="margin-bottom: 8px;">How was your project?</div>
+          <div class="star-row">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          </div>
+          <div class="t-footnote" style="color: var(--status-active-text); font-weight: 600;">Excellent · 5 of 5</div>
+        </div>
+
+        <div class="t-caption" style="margin-bottom: 6px;">What stood out?</div>
+        <div class="card" style="padding: 14px; margin-bottom: 16px;">
+          <div class="t-body" style="color: var(--text-secondary);">Dave kept us so well informed throughout — never had to ask &quot;what's happening?&quot; once. Photos every day, on-time finish, snag list dealt with the same week.</div>
+        </div>
+
+        <button class="btn-send" onclick="alert('Review posted — thanks!'); show('completion');" style="width: 100%; height: 52px; background: var(--brand-primary); color: white; border: 0; border-radius: 14px; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer;">Post review</button>
+      </div>
+    </div>
+
+    <!-- ============= TRADESMAN CALENDAR ============= -->
+    <div class="screen" id="t-calendar" data-role="tradesman">
+      <div class="nav-bar">
+        <div class="nav-title-left">This week</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+      </div>
+
+      <div class="cal-strip">
+        <div class="cal-day"><div class="dow">M</div><div class="num">12</div><div class="dots"><span class="d j1"></span></div></div>
+        <div class="cal-day"><div class="dow">T</div><div class="num">13</div><div class="dots"><span class="d j1"></span><span class="d j2"></span></div></div>
+        <div class="cal-day today"><div class="dow">W</div><div class="num">14</div><div class="dots"><span class="d"></span><span class="d"></span><span class="d"></span></div></div>
+        <div class="cal-day"><div class="dow">T</div><div class="num">15</div><div class="dots"><span class="d j1"></span><span class="d j3"></span></div></div>
+        <div class="cal-day"><div class="dow">F</div><div class="num">16</div><div class="dots"><span class="d j1"></span></div></div>
+        <div class="cal-day" style="opacity: 0.4;"><div class="dow">S</div><div class="num">17</div></div>
+        <div class="cal-day" style="opacity: 0.4;"><div class="dow">S</div><div class="num">18</div></div>
+      </div>
+
+      <div class="section-label">Today · Wed 14 May</div>
+
+      <div class="cal-block green">
+        <div style="text-align: right; width: 56px; flex-shrink: 0;">
+          <div class="time">8:00</div>
+          <div class="t-footnote">AM</div>
+        </div>
+        <div style="flex: 1;">
+          <span class="status-badge active" style="margin-bottom: 4px;"><span class="dot"></span>On site</span>
+          <div class="title">Patel kitchen — 1st-fix electrics</div>
+          <div class="meta">Emma Patel · 14 Acacia Ave SW19 · with Mike + Liam</div>
+        </div>
+      </div>
+
+      <div class="cal-block">
+        <div style="text-align: right; width: 56px; flex-shrink: 0;">
+          <div class="time">2:00</div>
+          <div class="t-footnote">PM</div>
+        </div>
+        <div style="flex: 1;">
+          <div class="title">Materials pickup</div>
+          <div class="meta">Howdens, Wimbledon · Patel kitchen units</div>
+        </div>
+      </div>
+
+      <div class="cal-block amber">
+        <div style="text-align: right; width: 56px; flex-shrink: 0;">
+          <div class="time">4:30</div>
+          <div class="t-footnote">PM</div>
+        </div>
+        <div style="flex: 1;">
+          <span class="status-badge pending" style="margin-bottom: 4px;"><span class="dot"></span>Reminder</span>
+          <div class="title">Sign off for the day</div>
+          <div class="meta">Auto-prompt fires when you leave the site</div>
+        </div>
+      </div>
+
+      <div class="section-label">Tomorrow · Thu 15 May</div>
+
+      <div class="cal-block">
+        <div style="text-align: right; width: 56px; flex-shrink: 0;">
+          <div class="time">7:30</div>
+          <div class="t-footnote">AM</div>
+        </div>
+        <div style="flex: 1;">
+          <div class="title">Patel kitchen — plastering</div>
+          <div class="meta">R.Vowles starts · you arrive ~10 AM</div>
+        </div>
+      </div>
+
+      <div class="cal-block">
+        <div style="text-align: right; width: 56px; flex-shrink: 0;">
+          <div class="time">9:00</div>
+          <div class="t-footnote">AM</div>
+        </div>
+        <div style="flex: 1;">
+          <div class="title">Reed bathroom — tiling resumes</div>
+          <div class="meta">John Reed · 8 Peckham Rye SE15 · Sam</div>
+        </div>
+      </div>
+
+      <div style="height: 8px;"></div>
+    </div>
+
+    <!-- ============= CUSTOMER MULTI-PROJECT SWITCHER ============= -->
+    <div class="screen" id="c-projects" data-role="customer">
+      <div class="nav-bar">
+        <div class="nav-title-left">My projects</div>
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+      </div>
+
+      <div class="section-label">Active</div>
+      <div class="proj-pick" onclick="show('c-project')">
+        <div class="cover"></div>
+        <div class="info">
+          <div class="name">Kitchen extension</div>
+          <div class="meta">Smith Builders · Day 3 of 12</div>
+          <div class="stage">In progress · 1st-fix electrics</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-tertiary);"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+
+      <div class="section-label">Completed</div>
+      <div class="proj-pick">
+        <div class="cover" style="background: linear-gradient(135deg, #B8C4CE, #8395A3);"></div>
+        <div class="info">
+          <div class="name">Bathroom refit</div>
+          <div class="meta">Reed &amp; Sons · 8 days · Mar 2025</div>
+          <div class="stage" style="color: var(--status-active-text);">★ 5 review left</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-tertiary);"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+
+      <div class="proj-pick">
+        <div class="cover" style="background: linear-gradient(135deg, #c4b8a8, #968571);"></div>
+        <div class="info">
+          <div class="name">Garden landscaping</div>
+          <div class="meta">Green Thumb Ltd · 12 days · Aug 2024</div>
+          <div class="stage" style="color: var(--status-active-text);">★ 4 review left</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-tertiary);"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+
+      <div style="padding: 16px 20px;">
+        <button style="width: 100%; height: 48px; background: transparent; color: var(--text-secondary); border: 1px dashed var(--border-strong); border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;">
+          Want a new tradesman? Ask a friend for an invite.
+        </button>
+      </div>
+    </div>
+
+    <!-- ============= TRADESMAN BADGES ============= -->
+    <div class="screen" id="badges" data-role="any">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="goBack('account')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title">Your badges</div>
+        <div class="nav-spacer"></div>
+      </div>
+
+      <div style="padding: 0 20px 12px;">
+        <div class="t-body text-secondary">Earned over 23 completed projects · 4 of 12 unlocked</div>
+      </div>
+
+      <div class="section-label">Earned</div>
+      <div class="badge-grid">
+        <div class="badge-tile">
+          <div class="badge-emoji"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14" stroke="white" stroke-width="2.5" fill="none"/></svg></div>
+          <div class="badge-name">On-time pro</div>
+          <div class="badge-desc">5 in a row, on time</div>
+        </div>
+        <div class="badge-tile">
+          <div class="badge-emoji"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4" fill="white"/></svg></div>
+          <div class="badge-name">Photo champ</div>
+          <div class="badge-desc">100+ updates with photos</div>
+        </div>
+        <div class="badge-tile">
+          <div class="badge-emoji"><svg viewBox="0 0 24 24" fill="currentColor"><polyline points="20 6 9 17 4 12" stroke="white" stroke-width="3" fill="none"/></svg></div>
+          <div class="badge-name">First responder</div>
+          <div class="badge-desc">Replies under 1h</div>
+        </div>
+        <div class="badge-tile">
+          <div class="badge-emoji"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15 9 22 9 17 14 19 21 12 17 5 21 7 14 2 9 9 9"/></svg></div>
+          <div class="badge-name">5-star streak</div>
+          <div class="badge-desc">10 reviews in a row</div>
+        </div>
+      </div>
+
+      <div class="section-label">Locked</div>
+      <div class="badge-grid">
+        <div class="badge-tile">
+          <div class="badge-emoji locked"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+          <div class="badge-name">Master tradesman</div>
+          <div class="badge-desc">50 5★ projects</div>
+        </div>
+        <div class="badge-tile">
+          <div class="badge-emoji locked"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+          <div class="badge-name">Crew leader</div>
+          <div class="badge-desc">Train 3 apprentices</div>
+        </div>
+        <div class="badge-tile">
+          <div class="badge-emoji locked"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+          <div class="badge-name">Referral hero</div>
+          <div class="badge-desc">10 trade referrals</div>
+        </div>
+      </div>
+
+      <div style="height: 8px;"></div>
+    </div>
+
+    <!-- ============= TRADESMAN REFERRAL HANDOFF ============= -->
+    <div class="screen" id="referral" data-role="any">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="goBack('project')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title">Refer a trade</div>
+        <div class="nav-spacer"></div>
+      </div>
+
+      <div style="padding: 0 20px 12px;">
+        <div class="t-body text-secondary">Introduce Emma to another trade you trust. They join her project workspace — no search bar, no marketplace.</div>
+      </div>
+
+      <div class="card" style="margin: 0 20px 12px;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <div class="avatar lg" style="background: linear-gradient(135deg, #4D6FA8, #2F4D80);">JG</div>
+          <div style="flex: 1;">
+            <div class="t-body-lg-em">J. Grey Roofing</div>
+            <div class="t-footnote">Roofer · 4.9 ★ · 18 reviews</div>
+          </div>
+          <span class="tier-badge" style="margin: 0;">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2H22l-6.2 4.5 2.4 7.3L12 16.5l-6.2 4.5 2.4-7.3L2 9.2h7.6z"/></svg>
+            Elite Pro
+          </span>
+        </div>
+        <div style="background: var(--bg-surface-2); border-radius: 10px; padding: 12px;">
+          <div class="t-caption" style="margin-bottom: 4px;">Note to Emma</div>
+          <div class="t-body">Hey Emma, James does the roofing on most of my jobs — proper sound guy, always tidy. He's free Mon 3rd June if you want a quote for the back extension flat roof.</div>
+        </div>
+      </div>
+
+      <div style="padding: 0 20px;">
+        <button class="btn-send" style="width: 100%; height: 52px; background: var(--brand-primary); color: white; border: 0; border-radius: 14px; font-family: inherit; font-size: 16px; font-weight: 600; cursor: pointer;">Send introduction to Emma</button>
+      </div>
+    </div>
+
+    <!-- ============= WEEKLY DIGEST (CUSTOMER) ============= -->
+    <div class="screen" id="digest" data-role="any">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="goBack('project')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title">Weekly digest</div>
+        <div class="nav-spacer"></div>
+      </div>
+
+      <div class="digest-hero">
+        <div class="label">Your week · 13–17 May</div>
+        <div class="headline">On track. Plasterer in tomorrow, kitchen units arriving Monday.</div>
+        <div class="sub">Dave's been on site 3 of 3 days and sent 11 updates. No delays.</div>
+        <div class="stats">
+          <div class="stat"><div class="n">3/12</div><div class="l">Days done</div></div>
+          <div class="stat"><div class="n">11</div><div class="l">Updates</div></div>
+          <div class="stat"><div class="n">14</div><div class="l">Photos</div></div>
+        </div>
+      </div>
+
+      <div class="section-label">What's coming up</div>
+      <div class="card-row">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></div>
+        <div class="body">
+          <div class="title">Plastering · Thu 16 May</div>
+          <div class="sub">R.Vowles arrives 7:30 AM · 1.5 days</div>
+        </div>
+      </div>
+      <div class="card-row">
+        <div class="lead-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg></div>
+        <div class="body">
+          <div class="title">Kitchen install · Mon 20 May</div>
+          <div class="sub">J.Molinue · 2-day install</div>
+        </div>
+      </div>
+
+      <div class="section-label">Anything you need to do?</div>
+      <div class="card-row">
+        <div class="lead-icon" style="background: var(--status-pending-bg); color: var(--status-pending-text);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <div class="body">
+          <div class="title">Confirm worktop sample Wed 22</div>
+          <div class="sub">Sample's in Dave's van</div>
+        </div>
+      </div>
+
+      <div style="padding: 12px 20px; font-size: 11px; color: var(--text-tertiary); text-align: center;">
+        Digest sent every Friday at 5 PM — turn off in Account
+      </div>
+    </div>
+
+    <!-- ============= APPRENTICE PROGRESS ============= -->
+    <div class="screen" id="a-progress" data-role="apprentice">
+      <div class="nav-bar">
+        <div class="nav-icon" onclick="show('a-account')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="nav-title">Your progress</div>
+        <div class="nav-spacer"></div>
+      </div>
+
+      <div class="digest-hero" style="background: linear-gradient(135deg, #6FA08C 0%, #4D7466 100%);">
+        <div class="label">Month 9 of apprenticeship</div>
+        <div class="headline">132 hours this month. On track for Level 2 in February.</div>
+        <div class="sub">Dave's signed off 4 milestones in the last 30 days.</div>
+        <div class="stats">
+          <div class="stat"><div class="n">132h</div><div class="l">This month</div></div>
+          <div class="stat"><div class="n">4</div><div class="l">Milestones</div></div>
+          <div class="stat"><div class="n">38%</div><div class="l">Level 2</div></div>
+        </div>
+      </div>
+
+      <div class="section-label">Skills · hours logged</div>
+
+      <div class="skill-row">
+        <div class="head"><div class="name">First-fix plumbing</div><div class="hours">42h / 100h</div></div>
+        <div class="track"><div class="fill" style="width: 42%;"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="head"><div class="name">Carpentry &amp; fitting</div><div class="hours">38h / 100h</div></div>
+        <div class="track"><div class="fill" style="width: 38%;"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="head"><div class="name">Plastering &amp; finishes</div><div class="hours">26h / 100h</div></div>
+        <div class="track"><div class="fill" style="width: 26%;"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="head"><div class="name">Health &amp; safety</div><div class="hours">12h / 30h</div></div>
+        <div class="track"><div class="fill" style="width: 40%;"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="head"><div class="name">Customer interaction</div><div class="hours">14h / 30h</div></div>
+        <div class="track"><div class="fill" style="width: 47%;"></div></div>
+      </div>
+
+      <div style="padding: 16px 20px;">
+        <button style="width: 100%; height: 44px; background: transparent; color: var(--brand-primary); border: 1px solid rgba(27,77,217,0.25); border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;">Share with my college</button>
+      </div>
+    </div>
+
+
+        <!-- ===== PERSONA-AWARE PERSISTENT TAB BARS (sticky footer) ===== -->
+
+    <div class="persona-tabbar customer-tabbar">
+      <div class="tab" onclick="show('c-project')" data-screen="c-project">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2.7L2.7 11h2.6v9.3h5.3v-5.3h2.8v5.3h5.3V11h2.6L12 2.7z"/></svg>
+        <div class="lbl">Project</div>
+      </div>
+      <div class="tab" onclick="show('c-chat')" data-screen="c-chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <div class="lbl">Messages</div>
+      </div>
+      <div class="tab" onclick="show('c-updates')" data-screen="c-updates">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="lbl">Updates</div>
+      </div>
+      <div class="tab" onclick="show('c-account')" data-screen="c-account">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/></svg>
+        <div class="lbl">Account</div>
+      </div>
+    </div>
+
+    <div class="persona-tabbar tradesman-tabbar">
+      <div class="tab" onclick="show('t-jobs')" data-screen="t-jobs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
+        <div class="lbl">Jobs</div>
+      </div>
+      <div class="tab" onclick="show('t-crew')" data-screen="t-crew">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        <div class="lbl">Crew</div>
+      </div>
+      <div class="tab" onclick="show('t-messages')" data-screen="t-messages">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <div class="lbl">Messages</div>
+      </div>
+      <div class="tab" onclick="show('t-account')" data-screen="t-account">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/></svg>
+        <div class="lbl">Account</div>
+      </div>
+    </div>
+
+    <div class="persona-tabbar apprentice-tabbar">
+      <div class="tab" onclick="show('a-today')" data-screen="a-today">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <div class="lbl">Today</div>
+      </div>
+      <div class="tab" onclick="show('a-crew')" data-screen="a-crew">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        <div class="lbl">Crew</div>
+      </div>
+      <div class="tab" onclick="show('a-messages')" data-screen="a-messages">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <div class="lbl">Messages</div>
+      </div>
+      <div class="tab" onclick="show('a-account')" data-screen="a-account">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/></svg>
+        <div class="lbl">Account</div>
+      </div>
+    </div>
+
+  </div>
+  <!-- /device -->
+
+  <!-- ===== Notes ===== -->
+  <div class="notes">
+    <h2>What's in this prototype</h2>
+    <p>Three personas, end-of-day sign-off as the hero flow. Switch personas above; the step pills under the switcher will update to show that persona's main screens.</p>
+
+    <h3>Tradesman flow</h3>
+    <p><strong>Jobs</strong> → tap Emma's project → see the subtle "when you head home" prompt → tap to open the EoD card → send → success preview. Or jump to the lock-screen push to see the auto-trigger.</p>
+
+    <h3>Customer flow</h3>
+    <p><strong>Project</strong> shows live state ("Dave is on site"). The <strong>Updates</strong> tab is where Dave's EoD update lands as the hero card with photos and tomorrow's start time.</p>
+
+    <h3>Apprentice flow</h3>
+    <p>Same EoD pattern, but the update routes to Dave (the lead) for approval — never directly to Emma. Hours auto-tracked from the geofence doubles as payroll proof.</p>
+
+    <h3>Language choices that stuck</h3>
+    <p>"End your day at Emma's?" instead of "Sign off for today." "Heading home?" in the push. "Send to Emma" not "Send update". The customer's name appears everywhere so the tradesman remembers who he's writing to.</p>
+  </div>
+
+</div>
+
+<script>
+  // Persona-specific step pills
+  const FLOWS = {
+    tradesman: [
+      { id: 't-jobs',    label: 'Jobs' },
+      { id: 't-project', label: 'Project' },
+      { id: 't-push',    label: 'Push' },
+      { id: 't-eod',     label: 'EoD card' },
+      { id: 't-sent',    label: 'Sent' },
+      { id: 't-crew',    label: 'Crew' },
+      { id: 't-calendar',label: 'Calendar' },
+      { id: 'badges',    label: 'Badges' },
+      { id: 'referral',  label: 'Refer' },
+    ],
+    customer: [
+      { id: 'c-project',     label: 'Project' },
+      { id: 'c-updates',     label: 'Updates' },
+      { id: 'c-projects',    label: 'My projects' },
+      { id: 'schedule',      label: 'Schedule' },
+      { id: 'snag',          label: 'Snag list' },
+      { id: 'variation',     label: 'Changes' },
+      { id: 'documents',     label: 'Docs' },
+      { id: 'digest',        label: 'Digest' },
+      { id: 'completion',    label: 'Completion' },
+      { id: 'notifications', label: 'Notifs' },
+    ],
+    apprentice: [
+      { id: 'a-today',    label: 'Today' },
+      { id: 'a-eod',      label: 'EoD card' },
+      { id: 'a-pending',  label: 'Pending' },
+      { id: 'a-progress', label: 'Progress' },
+    ],
+  };
+
+  let currentPersona = 'tradesman';
+  let _lastTradesmanScreen = 't-project';
+
+  function setPersona(p) {
+    currentPersona = p;
+    document.body.setAttribute('data-persona', p);
+    // Update persona pills
+    ['customer','tradesman','apprentice'].forEach(x => {
+      document.getElementById('p-' + x).classList.toggle('active', x === p);
+    });
+    // Update step pills
+    const stepsBox = document.getElementById('steps');
+    stepsBox.innerHTML = '';
+    FLOWS[p].forEach(stage => {
+      const btn = document.createElement('button');
+      btn.className = 'step-pill';
+      btn.textContent = stage.label;
+      btn.onclick = () => show(stage.id);
+      stepsBox.appendChild(btn);
+    });
+    // Show first screen for the persona
+    show(FLOWS[p][0].id);
+  }
+
+
+  function goBack(target) {
+    if (target === 'project') {
+      const t = {
+        customer: 'c-project',
+        tradesman: 't-project',
+        apprentice: 'a-today',
+      }[currentPersona] || 'c-project';
+      show(t);
+      return;
+    }
+    if (target === 'account') {
+      const t = {
+        customer: 'c-account',
+        tradesman: 't-account',
+        apprentice: 'a-account',
+      }[currentPersona] || 't-account';
+      show(t);
+      return;
+    }
+    show(target);
+  }
+
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById(id);
+    if (target) {
+      target.classList.add('active');
+      target.scrollTop = 0;
+    }
+    // Hide tab bar on modal-like screens (push, EoD, sent, consent, chat)
+    const NO_TABBAR = ['t-push', 't-eod', 'a-eod', 'consent', 'completion', 'review', 'variation', 'referral', 'badges', 'a-progress'];
+    const device = document.querySelector('.device');
+    if (device) {
+      device.classList.toggle('no-tabbar', NO_TABBAR.indexOf(id) !== -1);
+    }
+    // Update step pills (visual highlight in the side rail)
+    const stepsBox = document.getElementById('steps');
+    if (stepsBox) {
+      const flow = FLOWS[currentPersona] || [];
+      [...stepsBox.children].forEach((btn, i) => {
+        btn.classList.toggle('active', flow[i] && flow[i].id === id);
+      });
+    }
+    // Highlight the tab that corresponds to the home screen for this view
+    document.querySelectorAll('.persona-tabbar .tab').forEach(t => t.classList.remove('active'));
+    // Map screens to which tab is "active" — fallback: same id, else first tab
+    const TAB_FOR_SCREEN = {
+      // Customer
+      'c-project': 'c-project', 'c-projects': 'c-project', 'c-updates': 'c-updates',
+      'c-chat': 'c-chat', 'c-account': 'c-account',
+      // Tradesman
+      't-jobs': 't-jobs', 't-project': 't-jobs', 't-sent': 't-jobs', 't-calendar': 't-jobs',
+      't-crew': 't-crew', 't-messages': 't-messages', 't-account': 't-account',
+      // Apprentice
+      'a-today': 'a-today', 'a-pending': 'a-today', 'a-progress': 'a-account',
+      'a-crew': 'a-crew', 'a-messages': 'a-messages', 'a-account': 'a-account',
+    };
+    const SHARED_FALLBACK = {
+      customer: 'c-project', tradesman: 't-jobs', apprentice: 'a-today',
+    };
+    const tabId = TAB_FOR_SCREEN[id] || SHARED_FALLBACK[currentPersona];
+    if (tabId) {
+      const matchTab = document.querySelector('.persona-tabbar .tab[data-screen="' + tabId + '"]');
+      if (matchTab) matchTab.classList.add('active');
+    }
+    if (id.startsWith('t-')) _lastTradesmanScreen = id;
+  }
+
+  function lastTradesmanScreen() {
+    return _lastTradesmanScreen || 't-project';
+  }
+  function lastScreen() {
+    return _lastTradesmanScreen || 't-project';
+  }
+
+  // Boot
+  document.addEventListener('DOMContentLoaded', () => {
+    setPersona('tradesman');
+  });
+  // Run immediately too (in case DOMContentLoaded already fired)
+  if (document.readyState !== 'loading') setPersona('tradesman');
+</script>
+
+</body>
+</html>
