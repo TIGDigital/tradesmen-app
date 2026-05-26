@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/types/db';
@@ -15,12 +16,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
  * Single Supabase client for the app. Typed against the generated Database schema.
  * Import as: `import { supabase } from '@/services/supabase';`
  *
- * Auth integration is wired in a follow-up sprint. For now this client runs unauthenticated;
- * RLS policies will block reads until we ship auth + policies in Sprint 2.
+ * Session is persisted in AsyncStorage, so reopening the app keeps the user signed in.
+ * autoRefreshToken keeps the JWT fresh in the background.
  */
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Disable URL session detection — we're not using OAuth redirects in the simulator yet.
-    detectSessionInUrl: false,
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false, // React Native — no URL session detection
   },
 });

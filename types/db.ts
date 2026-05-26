@@ -1409,7 +1409,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: never; Returns: boolean }
+      is_project_crew: { Args: { p_id: string }; Returns: boolean }
+      is_project_participant: { Args: { p_id: string }; Returns: boolean }
+      is_project_tradesman: { Args: { p_id: string }; Returns: boolean }
     }
     Enums: {
       consent_purpose:

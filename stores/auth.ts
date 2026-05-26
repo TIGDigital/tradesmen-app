@@ -1,0 +1,69 @@
+import type { Session } from '@supabase/supabase-js';
+import { create } from 'zustand';
+
+import { getMyProfile } from '@/services/auth';
+import { supabase } from '@/services/supabase';
+import type { Database } from '@/types/db';
+
+type Profile = Pick<
+  Database['public']['Tables']['profiles']['Row'],
+  'id' | 'role' | 'full_name' | 'avatar_url' | 'email'
+>;
+
+type AuthState = {
+  session: Session | null;
+  profile: Profile | null;
+  /** True until the first auth state has been resolved (signed-in or out). */
+  initialising: boolean;
+};
+
+type AuthActions = {
+  /** Wire up the Supabase listener — call once on app start. Returns an unsubscribe fn. */
+  initialise: () => () => void;
+  /** Re-fetch profile from DB (after role-select, etc.). */
+  refreshProfile: () => Promise<void>;
+};
+
+export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
+  session: null,
+  profile: null,
+  initialising: true,
+
+  initialise: () => {
+    // Read current session synchronously from storage, then mark initialising=false.
+    void supabase.auth.getSession().then(async ({ data }) => {
+      const session = data.session ?? null;
+      let profile: Profile | null = null;
+      if (session) {
+        try {
+          profile = await getMyProfile();
+        } catch (e) {
+          // Profile might not exist yet (race with trigger). That's OK.
+          profile = null;
+        }
+      }
+      set({ session, profile, initialising: false });
+    });
+
+    // Subscribe to changes from then on.
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      let profile: Profile | null = null;
+      if (session) {
+        try { profile = await getMyProfile(); } catch { profile = null; }
+      }
+      set({ session, profile });
+    });
+
+    return () => sub.subscription.unsubscribe();
+  },
+
+  refreshProfile: async () => {
+    if (!get().session) return;
+    try {
+      const profile = await getMyProfile();
+      set({ profile });
+    } catch {
+      // ignore
+    }
+  },
+}));

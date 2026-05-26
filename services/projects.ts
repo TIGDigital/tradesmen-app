@@ -1,16 +1,14 @@
 import { supabase } from '@/services/supabase';
 
 /**
- * The demo project's hard-coded ID — matches the seed migration.
- * Replace with the real-current-project lookup once auth lands.
+ * Fetch the most recently-updated project the signed-in user participates in
+ * (either as customer or tradesman). Returns null if there are no projects.
+ * RLS already restricts the query to projects the user can see.
  */
-export const DEMO_PROJECT_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+export async function fetchMyCurrentProject() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
 
-/**
- * Fetch the project + its tradesman + its latest non-deleted update + author name.
- * One round-trip via Supabase's nested-select syntax.
- */
-export async function fetchProjectDetail(projectId: string) {
   const { data, error } = await supabase
     .from('projects')
     .select(`
@@ -23,8 +21,10 @@ export async function fetchProjectDetail(projectId: string) {
       tradesman:profiles!projects_tradesman_id_fkey ( id, full_name ),
       updates:project_updates ( id, body, created_at, author_id, deleted_at )
     `)
-    .eq('id', projectId)
-    .single();
+    .is('archived_at', null)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (error) throw error;
   return data;
