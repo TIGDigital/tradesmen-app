@@ -25,7 +25,7 @@ export async function fetchMyCurrentProject() {
       expected_end_date,
       actual_start_date,
       tradesman:profiles!projects_tradesman_id_fkey ( id, full_name ),
-      updates:project_updates ( id, body, created_at, author_id, deleted_at ),
+      updates:project_updates ( id, body, created_at, author_id, deleted_at, type, eta_at ),
       milestones:project_milestones ( id, title, status, sort_order, expected_date, completed_at )
     `)
     .is('archived_at', null)
@@ -76,7 +76,7 @@ export async function fetchProjectUpdates(projectId: string) {
   const { data, error } = await supabase
     .from('project_updates')
     .select(`
-      id, body, type, created_at, author_id,
+      id, body, type, created_at, author_id, eta_at,
       author:profiles!project_updates_author_id_fkey ( id, full_name )
     `)
     .eq('project_id', projectId)
@@ -84,6 +84,25 @@ export async function fetchProjectUpdates(projectId: string) {
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data ?? [];
+}
+
+/** Format an eta_at ISO string as "tomorrow at 8:00 AM" / "today at 8:00 AM". */
+export function formatEta(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const isTomorrow =
+    d.getDate() === now.getDate() + 1 &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear();
+  const isToday =
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear();
+  const time = d.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true });
+  if (isTomorrow) return `Back tomorrow at ${time}`;
+  if (isToday) return `Back today at ${time}`;
+  const day = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  return `Back ${day} at ${time}`;
 }
 
 /** Fetch milestones for a project, ordered by sort_order. */
@@ -162,6 +181,76 @@ export async function postUpdate(args: {
     .single();
   if (error) throw error;
   return data;
+}
+
+/**
+ * Post an End-of-Day update: type='eta', includes eta_at for tomorrow's start time.
+ * `notifyCustomer` is metadata for the eventual push job (no push yet — wire later).
+ */
+export async function postEndOfDay(args: {
+  project_id: string;
+  body: string;
+  eta_at: string | null;
+  notify_customer: boolean;
+}) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+
+  const { data, error } = await supabase
+    .from('project_updates')
+    .insert({
+      project_id: args.project_id,
+      author_id: user.id,
+      body: args.body,
+      type: 'eta',
+      eta_at: args.eta_at,
+      // notify_customer is not yet a column — placeholder for when push lands.
+      // For now it's only read client-side from the mutation's caller.
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Build a sensible default body for the End-of-Day card based on milestones.
+ * Tradesman edits inline — this is just the starting point.
+ */
+export function suggestEodBody(
+  milestones: Array<{ title: string; status: MilestoneStatus; sort_order: number }>
+): string {
+  const { current, next } = currentAndNextMilestone(milestones);
+  const lines: string[] = ['Wrapped up for today.'];
+  if (current) lines.push(`Today: ${current}.`);
+  if (next) lines.push(`Tomorrow: ${next}.`);
+  return lines.join(' ');
+}
+
+/**
+ * Parse a loose time string ("8:00 AM", "08:00", "8am") into tomorrow at that hour.
+ * Returns ISO string or null on bad input.
+ */
+export function parseEtaTomorrow(input: string): string | null {
+  const trimmed = input.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  // Match patterns like "8", "8:30", "8am", "8:30 am", "08:00"
+  const m = trimmed.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
+  if (!m) return null;
+
+  let hours = parseInt(m[1], 10);
+  const minutes = m[2] ? parseInt(m[2], 10) : 0;
+  const ampm = m[3];
+
+  if (ampm === 'pm' && hours < 12) hours += 12;
+  if (ampm === 'am' && hours === 12) hours = 0;
+  if (hours > 23 || minutes > 59) return null;
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(hours, minutes, 0, 0);
+  return tomorrow.toISOString();
 }
 
 // ============================================================

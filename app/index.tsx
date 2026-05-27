@@ -10,6 +10,7 @@ import {
   currentAndNextMilestone,
   dayOfProject,
   fetchMyCurrentProject,
+  formatEta,
   relativeTime,
   statusHeadline,
 } from '@/services/projects';
@@ -225,6 +226,20 @@ function ProjectContent({
             <Text style={[t.type.body, { color: t.colors.text.primary, marginTop: t.space[3] }]}>
               {latestUpdate.body}
             </Text>
+            {latestUpdate.type === 'eta' && latestUpdate.eta_at && (
+              <View
+                style={{
+                  marginTop: t.space[3],
+                  paddingTop: t.space[3],
+                  borderTopWidth: 1,
+                  borderTopColor: t.colors.border.subtle,
+                }}
+              >
+                <Text style={[t.type.footnote, { color: t.colors.text.secondary }]}>
+                  ⏰ {formatEta(latestUpdate.eta_at)}
+                </Text>
+              </View>
+            )}
           </View>
         </Pressable>
       ) : (

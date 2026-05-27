@@ -32,6 +32,10 @@ export default function RootLayout() {
               name="project/[id]/status"
               options={{ presentation: 'card' }}
             />
+            <Stack.Screen
+              name="project/[id]/end-of-day"
+              options={{ presentation: 'card' }}
+            />
           </Stack>
         </AuthGate>
         <StatusBar style="dark" />

@@ -21,6 +21,7 @@ import {
   fetchMilestones,
   fetchProject,
   fetchProjectUpdates,
+  formatEta,
   relativeTime,
   setMilestoneStatus,
   statusHeadline,
@@ -149,6 +150,7 @@ export default function ProjectDetailScreen() {
           milestones={milestonesQuery.data ?? []}
           isTradesman={isTradesman}
           onCompose={() => router.push({ pathname: '/project/[id]/compose', params: { id: id! } })}
+          onEndOfDay={() => router.push({ pathname: '/project/[id]/end-of-day', params: { id: id! } })}
           onManageMilestones={() => router.push({ pathname: '/project/[id]/milestones', params: { id: id! } })}
           onChangeStatus={() => router.push({ pathname: '/project/[id]/status', params: { id: id! } })}
           onMilestoneTap={onMilestoneTap}
@@ -164,6 +166,7 @@ function Content({
   milestones,
   isTradesman,
   onCompose,
+  onEndOfDay,
   onManageMilestones,
   onChangeStatus,
   onMilestoneTap,
@@ -173,6 +176,7 @@ function Content({
   milestones: Awaited<ReturnType<typeof fetchMilestones>>;
   isTradesman: boolean;
   onCompose: () => void;
+  onEndOfDay: () => void;
   onManageMilestones: () => void;
   onChangeStatus: () => void;
   onMilestoneTap: (milestone_id: string, current_status: string, title: string) => void;
@@ -270,9 +274,22 @@ function Content({
         </Card>
       )}
 
-      {/* Compose CTA for tradesman */}
+      {/* Tradesman CTAs: end-of-day primary, quick-post as ghost link */}
       {isTradesman && (
-        <PrimaryButton title="Post an update" onPress={onCompose} />
+        <View style={{ gap: t.space[2], alignItems: 'center' }}>
+          <View style={{ alignSelf: 'stretch' }}>
+            <PrimaryButton title="End my day" onPress={onEndOfDay} />
+          </View>
+          <Pressable
+            onPress={onCompose}
+            hitSlop={8}
+            style={{ paddingVertical: t.space[2] }}
+          >
+            <Text style={[t.type.body, { color: t.colors.text.link }]}>
+              Or post a quick update
+            </Text>
+          </Pressable>
+        </View>
       )}
 
       {/* Updates feed */}
@@ -306,6 +323,20 @@ function Content({
               <Text style={[t.type.body, { color: t.colors.text.primary, marginTop: t.space[3] }]}>
                 {u.body}
               </Text>
+            )}
+            {u.type === 'eta' && u.eta_at && (
+              <View
+                style={{
+                  marginTop: t.space[3],
+                  paddingTop: t.space[3],
+                  borderTopWidth: 1,
+                  borderTopColor: t.colors.border.subtle,
+                }}
+              >
+                <Text style={[t.type.footnote, { color: t.colors.text.secondary }]}>
+                  ⏰ {formatEta(u.eta_at)}
+                </Text>
+              </View>
             )}
           </Card>
         ))
