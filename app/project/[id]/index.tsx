@@ -5,6 +5,7 @@ import {
   Alert,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -16,6 +17,7 @@ import { Milestone } from '@/components/Milestone';
 import { ProjectHero } from '@/components/ProjectHero';
 import { Card } from '@/components/ui/Card';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { sendInviteSms } from '@/services/invites';
 import { logLeaveSite } from '@/services/location';
 import { fireLeaveSiteNudge } from '@/services/notifications';
 import {
@@ -171,6 +173,24 @@ export default function ProjectDetailScreen() {
           onManageMilestones={() => router.push({ pathname: '/project/[id]/milestones', params: { id: id! } })}
           onChangeStatus={() => router.push({ pathname: '/project/[id]/status', params: { id: id! } })}
           onMilestoneTap={onMilestoneTap}
+          onSendInviteSms={async () => {
+            try {
+              const res = await sendInviteSms(id!);
+              queryClient.invalidateQueries({ queryKey: ['project', id] });
+              Alert.alert('SMS sent', `Customer will get a text with code ${res.invite_code}.`);
+            } catch (e) {
+              Alert.alert("Couldn't send SMS", (e as Error).message);
+            }
+          }}
+          onShareInvite={async (code) => {
+            try {
+              await Share.share({
+                message: `Your project invite code: ${code}\n\nOpen the Tradesmen app and enter it on the home screen.`,
+              });
+            } catch {
+              // user cancelled
+            }
+          }}
         />
       )}
     </SafeAreaView>
@@ -187,6 +207,8 @@ function Content({
   onManageMilestones,
   onChangeStatus,
   onMilestoneTap,
+  onSendInviteSms,
+  onShareInvite,
 }: {
   project: NonNullable<Awaited<ReturnType<typeof fetchProject>>>;
   updates: Awaited<ReturnType<typeof fetchProjectUpdates>>;
@@ -197,6 +219,8 @@ function Content({
   onManageMilestones: () => void;
   onChangeStatus: () => void;
   onMilestoneTap: (milestone_id: string, current_status: string, title: string) => void;
+  onSendInviteSms: () => void;
+  onShareInvite: (code: string) => void;
 }) {
   const t = lightTheme;
 
@@ -249,6 +273,67 @@ function Content({
           {[project.address_line_1, project.city, project.postcode].filter(Boolean).join(', ') || '—'}
         </Text>
       </Card>
+
+      {/* Invite card — tradesman only, only while customer hasn't joined */}
+      {isTradesman && !project.customer_id && (
+        <Card>
+          <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
+            Invite {project.pending_customer_name ?? 'customer'}
+          </Text>
+          {project.invite_code ? (
+            <>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginTop: t.space[2],
+                  gap: t.space[3],
+                }}
+              >
+                <Text
+                  style={[
+                    t.type.title2,
+                    { color: t.colors.text.primary, letterSpacing: 2, flex: 1 },
+                  ]}
+                >
+                  {project.invite_code}
+                </Text>
+                <Pressable
+                  onPress={() => onShareInvite(project.invite_code!)}
+                  hitSlop={8}
+                >
+                  <Text style={[t.type.footnote, { color: t.colors.text.link }]}>Share</Text>
+                </Pressable>
+              </View>
+              <Text
+                style={[
+                  t.type.footnote,
+                  { color: t.colors.text.tertiary, marginTop: t.space[1] },
+                ]}
+              >
+                {project.invite_sent_at
+                  ? `SMS sent ${relativeTime(project.invite_sent_at)}`
+                  : 'Not sent yet'}
+              </Text>
+            </>
+          ) : (
+            <Text
+              style={[
+                t.type.body,
+                { color: t.colors.text.secondary, marginTop: t.space[2] },
+              ]}
+            >
+              No code yet — tap below to generate + send.
+            </Text>
+          )}
+          <View style={{ marginTop: t.space[3] }}>
+            <PrimaryButton
+              title={project.invite_code ? 'Re-send SMS' : 'Send SMS invite'}
+              onPress={onSendInviteSms}
+            />
+          </View>
+        </Card>
+      )}
 
       {/* Milestones */}
       <View style={styles.sectionHeader}>

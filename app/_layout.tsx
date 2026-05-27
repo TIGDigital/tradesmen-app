@@ -37,6 +37,10 @@ export default function RootLayout() {
               name="project/[id]/end-of-day"
               options={{ presentation: 'card' }}
             />
+            <Stack.Screen
+              name="invite/[code]"
+              options={{ presentation: 'card' }}
+            />
           </Stack>
         </AuthGate>
         <StatusBar style="dark" />
@@ -104,7 +108,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     // Signed in with a role — push out of the auth zone if we're stuck there.
-    if (inAuthZone) router.replace('/');
+    // Exception: stay on role-select if the user is explicitly there (post-signup
+    // confirmation step; the default 'customer' role from the DB trigger shouldn't
+    // count as a confirmed choice).
+    if (inAuthZone && segments.at(1) !== 'role-select') router.replace('/');
   }, [session, profile?.role, initialising, segments, router]);
 
   if (initialising) {

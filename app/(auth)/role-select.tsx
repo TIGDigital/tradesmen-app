@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,7 +29,9 @@ export default function RoleSelectScreen() {
     try {
       await setMyRole(selected);
       await refreshProfile();
-      // Root layout sees updated profile and routes to the right home.
+      // AuthGate whitelists role-select (so the default trigger role doesn't bounce
+      // the user past this screen), so we explicitly navigate home on confirm.
+      router.replace('/');
     } catch (e) {
       Alert.alert("Couldn't save your role", (e as Error).message);
     } finally {

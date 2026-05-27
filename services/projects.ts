@@ -11,7 +11,9 @@ type DelayReason = Database['public']['Enums']['delay_reason'];
 
 /**
  * Fetch the most recently-updated project the signed-in user participates in.
- * Includes milestones so the home Today/Next card can render real data.
+ * Explicit `or` filter on tradesman_id/customer_id — don't rely on RLS alone,
+ * because the invite-preview policy (Sprint 9) makes pending-invite projects
+ * readable to any signed-in user, which would leak unrelated projects here.
  */
 export async function fetchMyCurrentProject() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -33,6 +35,7 @@ export async function fetchMyCurrentProject() {
       ),
       milestones:project_milestones ( id, title, status, sort_order, expected_date, completed_at )
     `)
+    .or(`tradesman_id.eq.${user.id},customer_id.eq.${user.id}`)
     .is('archived_at', null)
     .order('updated_at', { ascending: false })
     .limit(1)
@@ -44,6 +47,9 @@ export async function fetchMyCurrentProject() {
 
 /** Fetch all non-archived projects the signed-in user owns or participates in. */
 export async function fetchMyProjects() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from('projects')
     .select(`
@@ -51,6 +57,7 @@ export async function fetchMyProjects() {
       expected_start_date, expected_end_date, actual_start_date,
       created_at, pending_customer_name, customer_id
     `)
+    .or(`tradesman_id.eq.${user.id},customer_id.eq.${user.id}`)
     .is('archived_at', null)
     .order('updated_at', { ascending: false });
 
@@ -67,6 +74,7 @@ export async function fetchProject(projectId: string) {
       address_line_1, address_line_2, city, postcode,
       expected_start_date, expected_end_date, actual_start_date, actual_end_date,
       pending_customer_name, pending_customer_phone,
+      customer_id, invite_code, invite_sent_at, invite_accepted_at,
       tradesman:profiles!projects_tradesman_id_fkey ( id, full_name, avatar_url ),
       customer:profiles!projects_customer_id_fkey ( id, full_name, avatar_url )
     `)

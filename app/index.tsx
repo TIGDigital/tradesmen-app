@@ -4,8 +4,12 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MediaThumbs } from '@/components/MediaThumbs';
+import { useState } from 'react';
+
 import { ProjectHero } from '@/components/ProjectHero';
 import { EventPill } from '@/components/ui/EventPill';
+import { InputField } from '@/components/ui/InputField';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { signOut, switchMyRole } from '@/services/auth';
 import { fireLocalTest } from '@/services/notifications';
 import {
@@ -109,18 +113,58 @@ export default function HomeScreen() {
 
 function EmptyState() {
   const t = lightTheme;
+  const [code, setCode] = useState('');
+
   return (
-    <View style={styles.center}>
-      <Text style={[t.type.title2, { color: t.colors.text.primary, textAlign: 'center' }]}>
-        No project yet
-      </Text>
+    <View style={[styles.center, { gap: t.space[4] }]}>
+      <View>
+        <Text style={[t.type.title2, { color: t.colors.text.primary, textAlign: 'center' }]}>
+          No project yet
+        </Text>
+        <Text
+          style={[
+            t.type.body,
+            {
+              color: t.colors.text.secondary,
+              textAlign: 'center',
+              marginTop: 8,
+              maxWidth: 320,
+            },
+          ]}
+        >
+          Got an invite code from your tradesman? Enter it below.
+        </Text>
+      </View>
+
+      <View style={{ width: '100%', maxWidth: 320, gap: t.space[3] }}>
+        <InputField
+          value={code}
+          onChangeText={setCode}
+          placeholder="ABC123"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          returnKeyType="done"
+          onSubmitEditing={() => {
+            const c = code.trim();
+            if (c) router.push({ pathname: '/invite/[code]', params: { code: c } });
+          }}
+        />
+        <PrimaryButton
+          title="Join project"
+          onPress={() =>
+            router.push({ pathname: '/invite/[code]', params: { code: code.trim() } })
+          }
+          disabled={!code.trim()}
+        />
+      </View>
+
       <Text
         style={[
-          t.type.body,
-          { color: t.colors.text.secondary, textAlign: 'center', marginTop: 8, maxWidth: 280 },
+          t.type.footnote,
+          { color: t.colors.text.tertiary, textAlign: 'center', marginTop: t.space[2] },
         ]}
       >
-        Your tradesman will invite you when your project is ready. Watch this space.
+        Or wait for your tradesman to send you one.
       </Text>
     </View>
   );
