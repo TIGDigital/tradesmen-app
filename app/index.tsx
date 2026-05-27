@@ -7,6 +7,7 @@ import { ProjectHero } from '@/components/ProjectHero';
 import { EventPill } from '@/components/ui/EventPill';
 import { signOut, switchMyRole } from '@/services/auth';
 import {
+  currentAndNextMilestone,
   dayOfProject,
   fetchMyCurrentProject,
   relativeTime,
@@ -139,6 +140,8 @@ function ProjectContent({
     .filter((u) => !u.deleted_at)
     .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())[0];
 
+  const { current, next } = currentAndNextMilestone(data.milestones ?? []);
+
   const tradesmanName = data.tradesman?.full_name ?? 'your tradesman';
   const tradesmanFirst = tradesmanName.split(' ')[0];
 
@@ -176,13 +179,13 @@ function ProjectContent({
         <View style={styles.metaRow}>
           <Text style={[t.type.body, { color: t.colors.text.secondary }]}>Today</Text>
           <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
-            First-fix electrics
+            {current ?? '—'}
           </Text>
         </View>
         <View style={[styles.metaRow, { marginTop: t.space[3] }]}>
           <Text style={[t.type.body, { color: t.colors.text.secondary }]}>Next</Text>
           <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
-            Worktops · Wed
+            {next ?? '—'}
           </Text>
         </View>
       </View>

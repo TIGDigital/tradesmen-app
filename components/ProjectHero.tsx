@@ -9,9 +9,11 @@ type Props = {
   headline: string;
   subhead: string;
   progressPct: number;
+  /** If provided, the StatusBadge becomes pressable (used by tradesman). */
+  onStatusPress?: () => void;
 };
 
-export function ProjectHero({ status, headline, subhead, progressPct }: Props) {
+export function ProjectHero({ status, headline, subhead, progressPct, onStatusPress }: Props) {
   const t = lightTheme;
 
   return (
@@ -27,7 +29,7 @@ export function ProjectHero({ status, headline, subhead, progressPct }: Props) {
       ]}
     >
       <View style={styles.left}>
-        <StatusBadge status={status} />
+        <StatusBadge status={status} onPress={onStatusPress} />
         <Text style={[t.type.title2, { color: t.colors.text.primary, marginTop: t.space[2] }]}>
           {headline}
         </Text>

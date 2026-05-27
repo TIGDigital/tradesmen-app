@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { lightTheme } from '@/theme/light';
 import type { ProjectStatus } from '@/theme/tokens';
@@ -8,32 +8,44 @@ type Props = {
   size?: 'sm' | 'md';
   withDot?: boolean;
   label?: string;
+  /** If provided, wraps the badge in a Pressable. Used by tradesman on the project hero. */
+  onPress?: () => void;
 };
 
-export function StatusBadge({ status, size = 'md', withDot = true, label }: Props) {
+export function StatusBadge({ status, size = 'md', withDot = true, label, onPress }: Props) {
   const t = lightTheme;
   const palette = t.status[status];
   const text = label ?? t.statusLabels[status];
 
-  return (
-    <View
-      style={[
-        styles.base,
-        size === 'sm' ? styles.sm : styles.md,
-        { backgroundColor: palette.bg, borderRadius: t.radius.sm },
-      ]}
-    >
+  const inner = (
+    <>
       {withDot && <View style={[styles.dot, { backgroundColor: palette.text }]} />}
-      <Text
-        style={[
-          t.type.caption,
-          { color: palette.text },
+      <Text style={[t.type.caption, { color: palette.text }]}>{text}</Text>
+    </>
+  );
+
+  const baseStyle = [
+    styles.base,
+    size === 'sm' ? styles.sm : styles.md,
+    { backgroundColor: palette.bg, borderRadius: t.radius.sm },
+  ];
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        hitSlop={6}
+        style={({ pressed }) => [
+          ...baseStyle,
+          pressed && { transform: [{ scale: 0.96 }], opacity: 0.85 },
         ]}
       >
-        {text}
-      </Text>
-    </View>
-  );
+        {inner}
+      </Pressable>
+    );
+  }
+
+  return <View style={baseStyle}>{inner}</View>;
 }
 
 const styles = StyleSheet.create({

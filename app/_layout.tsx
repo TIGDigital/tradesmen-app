@@ -22,7 +22,15 @@ export default function RootLayout() {
             <Stack.Screen name="project/[id]/index" options={{ presentation: 'card' }} />
             <Stack.Screen
               name="project/[id]/compose"
-              options={{ presentation: 'modal' }}
+              options={{ presentation: 'card' }}
+            />
+            <Stack.Screen
+              name="project/[id]/milestones"
+              options={{ presentation: 'card' }}
+            />
+            <Stack.Screen
+              name="project/[id]/status"
+              options={{ presentation: 'card' }}
             />
           </Stack>
         </AuthGate>

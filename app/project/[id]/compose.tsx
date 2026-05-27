@@ -11,7 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { postUpdate } from '@/services/projects';
@@ -19,6 +19,7 @@ import { lightTheme } from '@/theme/light';
 
 export default function ComposeUpdateScreen() {
   const t = lightTheme;
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [body, setBody] = useState('');
@@ -45,8 +46,8 @@ export default function ComposeUpdateScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['top', 'bottom']}>
-      <View style={styles.navBar}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['bottom']}>
+      <View style={[styles.navBar, { paddingTop: insets.top, height: 44 + insets.top }]}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Text style={[t.type.bodyLg, { color: t.colors.text.link }]}>Cancel</Text>
         </Pressable>

@@ -3,11 +3,13 @@ import type { Database } from '@/types/db';
 
 type TradeType = Database['public']['Enums']['trade_type'];
 type UpdateType = Database['public']['Enums']['update_type'];
+type ProjectStatus = Database['public']['Enums']['project_status'];
+type MilestoneStatus = Database['public']['Enums']['milestone_status'];
+type DelayReason = Database['public']['Enums']['delay_reason'];
 
 /**
- * Fetch the most recently-updated project the signed-in user participates in
- * (either as customer or tradesman). Returns null if there are no projects.
- * RLS already restricts the query to projects the user can see.
+ * Fetch the most recently-updated project the signed-in user participates in.
+ * Includes milestones so the home Today/Next card can render real data.
  */
 export async function fetchMyCurrentProject() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -23,7 +25,8 @@ export async function fetchMyCurrentProject() {
       expected_end_date,
       actual_start_date,
       tradesman:profiles!projects_tradesman_id_fkey ( id, full_name ),
-      updates:project_updates ( id, body, created_at, author_id, deleted_at )
+      updates:project_updates ( id, body, created_at, author_id, deleted_at ),
+      milestones:project_milestones ( id, title, status, sort_order, expected_date, completed_at )
     `)
     .is('archived_at', null)
     .order('updated_at', { ascending: false })
@@ -50,7 +53,7 @@ export async function fetchMyProjects() {
   return data ?? [];
 }
 
-/** Fetch one project + its tradesman + customer + ALL updates (no truncation). */
+/** Fetch one project + its tradesman + customer (milestones fetched separately). */
 export async function fetchProject(projectId: string) {
   const { data, error } = await supabase
     .from('projects')
@@ -79,6 +82,17 @@ export async function fetchProjectUpdates(projectId: string) {
     .eq('project_id', projectId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Fetch milestones for a project, ordered by sort_order. */
+export async function fetchMilestones(projectId: string) {
+  const { data, error } = await supabase
+    .from('project_milestones')
+    .select('id, title, description, status, sort_order, expected_date, completed_at')
+    .eq('project_id', projectId)
+    .order('sort_order', { ascending: true });
   if (error) throw error;
   return data ?? [];
 }
@@ -117,7 +131,6 @@ export async function createProject(args: {
     .single();
   if (error) throw error;
 
-  // Add self to project_crew as lead. (Doc 02 §2.3 notes this is auto-inserted on create.)
   const { error: crewError } = await supabase.from('project_crew').insert({
     project_id: project.id,
     user_id: user.id,
@@ -128,7 +141,7 @@ export async function createProject(args: {
   return project;
 }
 
-/** Post a new update to the timeline. */
+/** Post a new update to the timeline (text only for now). */
 export async function postUpdate(args: {
   project_id: string;
   body: string;
@@ -151,7 +164,194 @@ export async function postUpdate(args: {
   return data;
 }
 
-// ---- formatting helpers (unchanged from earlier sprint) ----
+// ============================================================
+// Milestones
+// ============================================================
+
+/** Append a new milestone at the end of the list (sort_order = max + 1). */
+export async function createMilestone(args: {
+  project_id: string;
+  title: string;
+  expected_date?: string;
+}) {
+  // Find the current max sort_order to append.
+  const { data: existing } = await supabase
+    .from('project_milestones')
+    .select('sort_order')
+    .eq('project_id', args.project_id)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+  const nextOrder = (existing?.[0]?.sort_order ?? -1) + 1;
+
+  const { data, error } = await supabase
+    .from('project_milestones')
+    .insert({
+      project_id: args.project_id,
+      title: args.title,
+      sort_order: nextOrder,
+      expected_date: args.expected_date,
+      status: 'pending',
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Set a milestone's status explicitly (forward OR back — supports undo).
+ * Posts a system update when entering in_progress or completed (not on revert).
+ */
+export async function setMilestoneStatus(args: {
+  milestone_id: string;
+  project_id: string;
+  current_status: MilestoneStatus;
+  new_status: MilestoneStatus;
+  title: string;
+}) {
+  if (args.new_status === args.current_status) return null;
+
+  const isRevert =
+    (args.current_status === 'completed' && args.new_status !== 'completed') ||
+    (args.current_status === 'in_progress' && args.new_status === 'pending');
+
+  const update: { status: MilestoneStatus; completed_at?: string | null } = {
+    status: args.new_status,
+  };
+  if (args.new_status === 'completed') update.completed_at = new Date().toISOString();
+  if (args.current_status === 'completed' && args.new_status !== 'completed') {
+    update.completed_at = null;
+  }
+
+  const { data, error } = await supabase
+    .from('project_milestones')
+    .update(update)
+    .eq('id', args.milestone_id)
+    .select()
+    .single();
+  if (error) throw error;
+
+  // Auto-post a system milestone update on forward motion only (not on revert).
+  if (!isRevert) {
+    if (args.new_status === 'completed') {
+      await postUpdate({
+        project_id: args.project_id,
+        body: `Milestone complete — ${args.title}`,
+        type: 'milestone',
+      });
+    } else if (args.new_status === 'in_progress') {
+      await postUpdate({
+        project_id: args.project_id,
+        body: `Started on ${args.title}`,
+        type: 'milestone',
+      });
+    }
+  }
+
+  return data;
+}
+
+/** Delete a milestone. (No reorder of remaining sort_orders — gaps are fine.) */
+export async function deleteMilestone(milestone_id: string) {
+  const { error } = await supabase
+    .from('project_milestones')
+    .delete()
+    .eq('id', milestone_id);
+  if (error) throw error;
+}
+
+/** Pure helper — given an ordered milestones list, return current (in_progress) + next (pending). */
+export function currentAndNextMilestone(
+  milestones: Array<{ title: string; status: MilestoneStatus; sort_order: number }>
+): { current: string | null; next: string | null } {
+  const sorted = [...milestones].sort((a, b) => a.sort_order - b.sort_order);
+  const current = sorted.find((m) => m.status === 'in_progress')?.title ?? null;
+  const next = sorted.find((m) => m.status === 'pending')?.title ?? null;
+  return { current, next };
+}
+
+// ============================================================
+// Project status
+// ============================================================
+
+/** Change project status. If delayed, requires a reason. Auto-posts a system update. */
+export async function updateProjectStatus(args: {
+  project_id: string;
+  new_status: ProjectStatus;
+  delay_reason?: DelayReason;
+  current_status: ProjectStatus;
+}) {
+  if (args.new_status === args.current_status) return null;
+
+  const update: {
+    status: ProjectStatus;
+    delay_reason?: DelayReason | null;
+    actual_start_date?: string | null;
+    actual_end_date?: string | null;
+  } = { status: args.new_status };
+
+  // Clear delay reason if moving away from delayed
+  if (args.current_status === 'delayed' && args.new_status !== 'delayed') {
+    update.delay_reason = null;
+  }
+  if (args.new_status === 'delayed') {
+    if (!args.delay_reason) throw new Error('A delay reason is required.');
+    update.delay_reason = args.delay_reason;
+  }
+
+  // Convenience: mark actual_start_date when moving into in_progress for the first time
+  if (args.new_status === 'in_progress') {
+    update.actual_start_date = new Date().toISOString().slice(0, 10);
+  }
+  if (args.new_status === 'completed') {
+    update.actual_end_date = new Date().toISOString().slice(0, 10);
+  }
+
+  const { data, error } = await supabase
+    .from('projects')
+    .update(update)
+    .eq('id', args.project_id)
+    .select()
+    .single();
+  if (error) throw error;
+
+  // Auto-post a system status update.
+  const statusBody = STATUS_LABELS[args.new_status] ?? args.new_status;
+  await postUpdate({
+    project_id: args.project_id,
+    body: args.new_status === 'delayed'
+      ? `Status: ${statusBody} — ${DELAY_REASON_LABELS[args.delay_reason!]}`
+      : `Status: ${statusBody}`,
+    type: 'status',
+  });
+
+  return data;
+}
+
+const STATUS_LABELS: Record<ProjectStatus, string> = {
+  quote_sent: 'Quote sent',
+  scheduled: 'Scheduled',
+  materials_ordered: 'Materials ordered',
+  in_progress: 'In progress',
+  delayed: 'Delayed',
+  awaiting_approval: 'Awaiting approval',
+  awaiting_inspection: 'Awaiting inspection',
+  completed: 'Completed',
+};
+
+export const DELAY_REASON_LABELS: Record<DelayReason, string> = {
+  weather: 'Weather',
+  materials: 'Waiting on materials',
+  other_trade: 'Waiting on another trade',
+  customer_change: 'Customer changed something',
+  illness: 'Illness',
+  inspection: 'Waiting on inspection',
+  other: 'Other',
+};
+
+// ============================================================
+// Formatting helpers
+// ============================================================
 
 export function dayOfProject(start?: string | null, end?: string | null): { day: number; total: number } | null {
   if (!start || !end) return null;
