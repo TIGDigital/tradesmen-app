@@ -15,8 +15,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MediaThumbs } from '@/components/MediaThumbs';
 import { Milestone } from '@/components/Milestone';
 import { ProjectHero } from '@/components/ProjectHero';
+import { Reactions } from '@/components/Reactions';
 import { Card } from '@/components/ui/Card';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { useRealtimeProject } from '@/hooks/useRealtimeProject';
 import { sendInviteSms } from '@/services/invites';
 import { logLeaveSite } from '@/services/location';
 import { fireLeaveSiteNudge } from '@/services/notifications';
@@ -40,6 +42,9 @@ export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const role = useAuthStore((s) => s.profile?.role);
   const queryClient = useQueryClient();
+
+  // Live updates: new posts, reactions, photos appear without manual reload.
+  useRealtimeProject(id ?? null);
 
   const projectQuery = useQuery({
     queryKey: ['project', id],
@@ -445,6 +450,7 @@ function Content({
                 </Text>
               </View>
             )}
+            <Reactions update_id={u.id} project_id={project.id} reactions={u.reactions} />
           </Card>
         ))
       )}

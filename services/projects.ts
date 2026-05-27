@@ -31,7 +31,8 @@ export async function fetchMyCurrentProject() {
       tradesman:profiles!projects_tradesman_id_fkey ( id, full_name ),
       updates:project_updates (
         id, body, created_at, author_id, deleted_at, type, eta_at,
-        media:project_update_media ( id, storage_path, sort_order )
+        media:project_update_media ( id, storage_path, sort_order ),
+        reactions:project_update_reactions ( kind, user_id )
       ),
       milestones:project_milestones ( id, title, status, sort_order, expected_date, completed_at )
     `)
@@ -91,7 +92,8 @@ export async function fetchProjectUpdates(projectId: string) {
     .select(`
       id, body, type, created_at, author_id, eta_at,
       author:profiles!project_updates_author_id_fkey ( id, full_name ),
-      media:project_update_media ( id, storage_path, sort_order )
+      media:project_update_media ( id, storage_path, sort_order ),
+      reactions:project_update_reactions ( kind, user_id )
     `)
     .eq('project_id', projectId)
     .is('deleted_at', null)

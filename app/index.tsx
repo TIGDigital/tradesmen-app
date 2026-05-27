@@ -3,13 +3,15 @@ import { Redirect, router } from 'expo-router';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { MediaThumbs } from '@/components/MediaThumbs';
 import { useState } from 'react';
 
+import { MediaThumbs } from '@/components/MediaThumbs';
 import { ProjectHero } from '@/components/ProjectHero';
+import { Reactions } from '@/components/Reactions';
 import { EventPill } from '@/components/ui/EventPill';
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { useRealtimeProject } from '@/hooks/useRealtimeProject';
 import { signOut, switchMyRole } from '@/services/auth';
 import { fireLocalTest } from '@/services/notifications';
 import {
@@ -31,11 +33,19 @@ export default function HomeScreen() {
 
   // All hooks must run on every render — put the query before any conditional return.
   const isCustomer = profile?.role !== 'tradesman';
+
+  // Live updates for the customer's project (no-op for tradesmen, who redirect away)
+  // — invalidates the home query so the Latest update card refreshes without reload.
+  // Subscription is keyed on the project id once data loads.
   const { data, isLoading, error } = useQuery({
     queryKey: ['my-current-project', profile?.id],
     queryFn: fetchMyCurrentProject,
     enabled: !!profile && isCustomer,
   });
+
+  // Subscribe to realtime changes for the loaded project. All hooks must run
+  // before any conditional return — pass null if data isn't loaded yet.
+  useRealtimeProject(data?.id ?? null);
 
   // Tradesman home is the jobs list, not the single-project view.
   if (profile?.role === 'tradesman') {
@@ -295,6 +305,11 @@ function ProjectContent({
                 </Text>
               </View>
             )}
+            <Reactions
+              update_id={latestUpdate.id}
+              project_id={data.id}
+              reactions={latestUpdate.reactions}
+            />
           </View>
         </Pressable>
       ) : (

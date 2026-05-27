@@ -191,36 +191,21 @@ export default function EndOfDayScreen() {
             </Card>
           )}
 
-          {/* ETA tomorrow — native iOS time wheel */}
+          {/* Next on site — native iOS date+time picker */}
           <Card>
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
-                  Back tomorrow at
-                </Text>
-                <Text
-                  style={[
-                    t.type.bodyLgEmphasis,
-                    { color: t.colors.text.primary, marginTop: 4 },
-                  ]}
-                >
-                  {etaDate.toLocaleDateString('en-GB', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                  })}
+                  Next on site
                 </Text>
               </View>
               <DateTimePicker
                 value={etaDate}
-                mode="time"
+                mode="datetime"
                 display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                minimumDate={new Date()}
                 onChange={(_e: DateTimePickerEvent, d?: Date) => {
-                  if (!d) return;
-                  // Keep the date part (tomorrow), update only hours/minutes
-                  const next = new Date(etaDate);
-                  next.setHours(d.getHours(), d.getMinutes(), 0, 0);
-                  setEtaDate(next);
+                  if (d) setEtaDate(d);
                 }}
               />
             </View>
