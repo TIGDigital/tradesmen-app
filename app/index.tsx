@@ -288,7 +288,7 @@ function ProjectContent({
             </Text>
             {latestUpdate.media && latestUpdate.media.length > 0 && (
               <View style={{ marginTop: t.space[3] }}>
-                <MediaThumbs media={latestUpdate.media} />
+                <MediaThumbs update_id={latestUpdate.id} media={latestUpdate.media} />
               </View>
             )}
             {latestUpdate.type === 'eta' && latestUpdate.eta_at && (

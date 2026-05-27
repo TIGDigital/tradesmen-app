@@ -433,7 +433,7 @@ function Content({
             )}
             {u.media && u.media.length > 0 && (
               <View style={{ marginTop: t.space[3] }}>
-                <MediaThumbs media={u.media} />
+                <MediaThumbs update_id={u.id} media={u.media} />
               </View>
             )}
             {u.type === 'eta' && u.eta_at && (

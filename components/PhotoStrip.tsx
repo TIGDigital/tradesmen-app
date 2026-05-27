@@ -10,11 +10,13 @@ type Props = {
   max?: number;
   /** Editable variant: shows "+" tile when uris.length < max. */
   onAdd?: () => void;
-  /** Editable variant: tap a thumb to remove it (long-press would conflict with iOS save image). */
+  /** Editable variant: tap a thumb to remove it. */
   onRemove?: (index: number) => void;
+  /** Read-only variant: tap a thumb to open it (e.g. fullscreen viewer). */
+  onPressThumb?: (index: number) => void;
 };
 
-export function PhotoStrip({ uris, max = 3, onAdd, onRemove }: Props) {
+export function PhotoStrip({ uris, max = 3, onAdd, onRemove, onPressThumb }: Props) {
   const t = lightTheme;
   const showAdd = !!onAdd && uris.length < max;
   const visible = uris.slice(0, max);
@@ -23,25 +25,36 @@ export function PhotoStrip({ uris, max = 3, onAdd, onRemove }: Props) {
 
   return (
     <View style={styles.row}>
-      {visible.map((uri, i) => (
-        <View key={`${uri}-${i}`} style={styles.thumbWrap}>
+      {visible.map((uri, i) => {
+        const ImageEl = (
           <Image
             source={{ uri }}
             style={styles.thumb}
             contentFit="cover"
             transition={120}
           />
-          {onRemove && (
-            <Pressable
-              onPress={() => onRemove(i)}
-              style={styles.removeBtn}
-              hitSlop={6}
-            >
-              <Text style={styles.removeBtnText}>×</Text>
-            </Pressable>
-          )}
-        </View>
-      ))}
+        );
+        return (
+          <View key={`${uri}-${i}`} style={styles.thumbWrap}>
+            {onPressThumb ? (
+              <Pressable onPress={() => onPressThumb(i)} style={({ pressed }) => pressed && { opacity: 0.85 }}>
+                {ImageEl}
+              </Pressable>
+            ) : (
+              ImageEl
+            )}
+            {onRemove && (
+              <Pressable
+                onPress={() => onRemove(i)}
+                style={styles.removeBtn}
+                hitSlop={6}
+              >
+                <Text style={styles.removeBtnText}>×</Text>
+              </Pressable>
+            )}
+          </View>
+        );
+      })}
       {showAdd && (
         <Pressable
           onPress={onAdd}

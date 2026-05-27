@@ -41,6 +41,10 @@ export default function RootLayout() {
               name="invite/[code]"
               options={{ presentation: 'card' }}
             />
+            <Stack.Screen
+              name="photo/[update_id]"
+              options={{ presentation: 'fullScreenModal', animation: 'fade' }}
+            />
           </Stack>
         </AuthGate>
         <StatusBar style="dark" />
