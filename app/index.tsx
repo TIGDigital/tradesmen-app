@@ -3,6 +3,7 @@ import { Redirect, router } from 'expo-router';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { MediaThumbs } from '@/components/MediaThumbs';
 import { ProjectHero } from '@/components/ProjectHero';
 import { EventPill } from '@/components/ui/EventPill';
 import { signOut, switchMyRole } from '@/services/auth';
@@ -226,6 +227,11 @@ function ProjectContent({
             <Text style={[t.type.body, { color: t.colors.text.primary, marginTop: t.space[3] }]}>
               {latestUpdate.body}
             </Text>
+            {latestUpdate.media && latestUpdate.media.length > 0 && (
+              <View style={{ marginTop: t.space[3] }}>
+                <MediaThumbs media={latestUpdate.media} />
+              </View>
+            )}
             {latestUpdate.type === 'eta' && latestUpdate.eta_at && (
               <View
                 style={{

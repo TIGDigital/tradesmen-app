@@ -15,16 +15,20 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PhotoStrip } from '@/components/PhotoStrip';
 import { Card } from '@/components/ui/Card';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Toggle } from '@/components/ui/Toggle';
+import { pickPhotos, type PickedPhoto } from '@/services/media';
 import {
   fetchMilestones,
   fetchProject,
   postEndOfDay,
   suggestEodBody,
 } from '@/services/projects';
+
+const MAX_PHOTOS = 3;
 import { lightTheme } from '@/theme/light';
 import type { ProjectStatus } from '@/theme/tokens';
 
@@ -55,6 +59,16 @@ export default function EndOfDayScreen() {
     return d;
   });
   const [notify, setNotify] = useState(true);
+  const [photos, setPhotos] = useState<PickedPhoto[]>([]);
+
+  async function onAddPhoto() {
+    const remaining = MAX_PHOTOS - photos.length;
+    if (remaining <= 0) return;
+    const picked = await pickPhotos(remaining);
+    if (picked.length > 0) {
+      setPhotos((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));
+    }
+  }
 
   // Pre-fill body from milestones once they load.
   useEffect(() => {
@@ -70,6 +84,7 @@ export default function EndOfDayScreen() {
         body: body.trim(),
         eta_at: etaDate.toISOString(),
         notify_customer: notify,
+        photos,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['updates', id] });
@@ -228,10 +243,18 @@ export default function EndOfDayScreen() {
             </View>
           </Card>
 
-          {/* Photo/voice placeholders (Sprint 6) */}
-          <Text style={[t.type.footnote, { color: t.colors.text.tertiary, textAlign: 'center' }]}>
-            Photos and voice notes coming next sprint.
-          </Text>
+          {/* Photos */}
+          <View>
+            <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginBottom: t.space[2] }]}>
+              Photos ({photos.length}/{MAX_PHOTOS})
+            </Text>
+            <PhotoStrip
+              uris={photos.map((p) => p.uri)}
+              max={MAX_PHOTOS}
+              onAdd={onAddPhoto}
+              onRemove={(i) => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
+            />
+          </View>
         </ScrollView>
 
         {/* Sticky bottom — Send + ghost dismiss */}

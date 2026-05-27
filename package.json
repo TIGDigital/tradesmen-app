@@ -12,6 +12,7 @@
     "expo-constants": "~56.0.16",
     "expo-haptics": "~56.0.3",
     "expo-image": "~56.0.9",
+    "expo-image-picker": "~56.0.14",
     "expo-linking": "~56.0.12",
     "expo-location": "~56.0.14",
     "expo-notifications": "~56.0.14",

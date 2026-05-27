@@ -1,3 +1,4 @@
+import { type PickedPhoto, uploadPhoto } from '@/services/media';
 import { supabase } from '@/services/supabase';
 import type { Database } from '@/types/db';
 
@@ -25,7 +26,10 @@ export async function fetchMyCurrentProject() {
       expected_end_date,
       actual_start_date,
       tradesman:profiles!projects_tradesman_id_fkey ( id, full_name ),
-      updates:project_updates ( id, body, created_at, author_id, deleted_at, type, eta_at ),
+      updates:project_updates (
+        id, body, created_at, author_id, deleted_at, type, eta_at,
+        media:project_update_media ( id, storage_path, sort_order )
+      ),
       milestones:project_milestones ( id, title, status, sort_order, expected_date, completed_at )
     `)
     .is('archived_at', null)
@@ -77,7 +81,8 @@ export async function fetchProjectUpdates(projectId: string) {
     .from('project_updates')
     .select(`
       id, body, type, created_at, author_id, eta_at,
-      author:profiles!project_updates_author_id_fkey ( id, full_name )
+      author:profiles!project_updates_author_id_fkey ( id, full_name ),
+      media:project_update_media ( id, storage_path, sort_order )
     `)
     .eq('project_id', projectId)
     .is('deleted_at', null)
@@ -160,16 +165,22 @@ export async function createProject(args: {
   return project;
 }
 
-/** Post a new update to the timeline (text only for now). */
+/**
+ * Post a new update + (optionally) attach photos.
+ * Flow: insert update -> upload each photo -> insert project_update_media rows.
+ * A partial failure (some photos uploaded, some not) leaves the update with the
+ * photos that succeeded; not transactional but acceptable for MVP.
+ */
 export async function postUpdate(args: {
   project_id: string;
   body: string;
   type?: UpdateType;
+  photos?: PickedPhoto[];
 }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not signed in');
 
-  const { data, error } = await supabase
+  const { data: update, error } = await supabase
     .from('project_updates')
     .insert({
       project_id: args.project_id,
@@ -180,23 +191,29 @@ export async function postUpdate(args: {
     .select()
     .single();
   if (error) throw error;
-  return data;
+
+  if (args.photos && args.photos.length > 0) {
+    await attachPhotos({ update_id: update.id, user_id: user.id, photos: args.photos });
+  }
+
+  return update;
 }
 
 /**
- * Post an End-of-Day update: type='eta', includes eta_at for tomorrow's start time.
- * `notifyCustomer` is metadata for the eventual push job (no push yet — wire later).
+ * Post an End-of-Day update (type='eta', with eta_at + optional photos).
+ * `notify_customer` is metadata for the eventual push job (no push yet — wire later).
  */
 export async function postEndOfDay(args: {
   project_id: string;
   body: string;
   eta_at: string | null;
   notify_customer: boolean;
+  photos?: PickedPhoto[];
 }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not signed in');
 
-  const { data, error } = await supabase
+  const { data: update, error } = await supabase
     .from('project_updates')
     .insert({
       project_id: args.project_id,
@@ -204,13 +221,40 @@ export async function postEndOfDay(args: {
       body: args.body,
       type: 'eta',
       eta_at: args.eta_at,
-      // notify_customer is not yet a column — placeholder for when push lands.
-      // For now it's only read client-side from the mutation's caller.
     })
     .select()
     .single();
   if (error) throw error;
-  return data;
+
+  if (args.photos && args.photos.length > 0) {
+    await attachPhotos({ update_id: update.id, user_id: user.id, photos: args.photos });
+  }
+
+  return update;
+}
+
+/** Internal: upload each picked photo, then insert one project_update_media row each. */
+async function attachPhotos(args: {
+  update_id: string;
+  user_id: string;
+  photos: PickedPhoto[];
+}) {
+  for (let i = 0; i < args.photos.length; i++) {
+    const photo = args.photos[i];
+    const storage_path = await uploadPhoto({
+      photo,
+      user_id: args.user_id,
+      update_id: args.update_id,
+      index: i,
+    });
+    const { error } = await supabase.from('project_update_media').insert({
+      update_id: args.update_id,
+      storage_path,
+      media_type: 'photo',
+      sort_order: i,
+    });
+    if (error) throw error;
+  }
 }
 
 /**

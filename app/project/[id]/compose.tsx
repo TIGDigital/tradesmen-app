@@ -13,9 +13,13 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PhotoStrip } from '@/components/PhotoStrip';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { pickPhotos, type PickedPhoto } from '@/services/media';
 import { postUpdate } from '@/services/projects';
 import { lightTheme } from '@/theme/light';
+
+const MAX_PHOTOS = 3;
 
 export default function ComposeUpdateScreen() {
   const t = lightTheme;
@@ -23,11 +27,11 @@ export default function ComposeUpdateScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [body, setBody] = useState('');
+  const [photos, setPhotos] = useState<PickedPhoto[]>([]);
 
   const mutation = useMutation({
-    mutationFn: () => postUpdate({ project_id: id!, body: body.trim() }),
+    mutationFn: () => postUpdate({ project_id: id!, body: body.trim(), photos }),
     onSuccess: () => {
-      // refresh the feed on the project detail screen behind this modal
       queryClient.invalidateQueries({ queryKey: ['updates', id] });
       queryClient.invalidateQueries({ queryKey: ['my-current-project'] });
       router.back();
@@ -38,11 +42,20 @@ export default function ComposeUpdateScreen() {
   });
 
   function onSend() {
-    if (!body.trim()) {
-      Alert.alert('Add a note', 'Even a short one.');
+    if (!body.trim() && photos.length === 0) {
+      Alert.alert('Add a note or photo', 'At least something for your customer.');
       return;
     }
     mutation.mutate();
+  }
+
+  async function onAddPhoto() {
+    const remaining = MAX_PHOTOS - photos.length;
+    if (remaining <= 0) return;
+    const picked = await pickPhotos(remaining);
+    if (picked.length > 0) {
+      setPhotos((prev) => [...prev, ...picked].slice(0, MAX_PHOTOS));
+    }
   }
 
   return (
@@ -81,17 +94,27 @@ export default function ComposeUpdateScreen() {
               },
             ]}
           />
+
+          <View style={{ marginTop: t.space[4] }}>
+            <PhotoStrip
+              uris={photos.map((p) => p.uri)}
+              max={MAX_PHOTOS}
+              onAdd={onAddPhoto}
+              onRemove={(i) => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
+            />
+          </View>
+
           <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: t.space[2] }]}>
-            Customer sees this on their Updates tab. Photos and voice notes come later.
+            Customer sees this on their Updates tab.
           </Text>
 
           <View style={{ flex: 1 }} />
 
           <PrimaryButton
-            title="Send"
+            title={photos.length > 0 ? `Send (${photos.length} photo${photos.length > 1 ? 's' : ''})` : 'Send'}
             onPress={onSend}
             loading={mutation.isPending}
-            disabled={!body.trim()}
+            disabled={!body.trim() && photos.length === 0}
           />
         </View>
       </KeyboardAvoidingView>

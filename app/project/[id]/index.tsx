@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { MediaThumbs } from '@/components/MediaThumbs';
 import { Milestone } from '@/components/Milestone';
 import { ProjectHero } from '@/components/ProjectHero';
 import { Card } from '@/components/ui/Card';
@@ -323,6 +324,11 @@ function Content({
               <Text style={[t.type.body, { color: t.colors.text.primary, marginTop: t.space[3] }]}>
                 {u.body}
               </Text>
+            )}
+            {u.media && u.media.length > 0 && (
+              <View style={{ marginTop: t.space[3] }}>
+                <MediaThumbs media={u.media} />
+              </View>
             )}
             {u.type === 'eta' && u.eta_at && (
               <View

@@ -9,7 +9,11 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tradesmen.app"
+      "bundleIdentifier": "com.tradesmen.app",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Tradesmen needs access to your photos so you can attach them to project updates for your customer.",
+        "NSCameraUsageDescription": "Tradesmen needs access to your camera so you can take photos for project updates."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -25,7 +29,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Tradesmen needs access to your photos so you can attach them to project updates for your customer.",
+          "cameraPermission": "Tradesmen needs access to your camera so you can take photos for project updates."
+        }
+      ]
     ]
   }
 }
