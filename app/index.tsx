@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Redirect, router } from 'expo-router';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useState } from 'react';
@@ -37,7 +37,7 @@ export default function HomeScreen() {
   // Live updates for the customer's project (no-op for tradesmen, who redirect away)
   // — invalidates the home query so the Latest update card refreshes without reload.
   // Subscription is keyed on the project id once data loads.
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['my-current-project', profile?.id],
     queryFn: fetchMyCurrentProject,
     enabled: !!profile && isCustomer,
@@ -115,6 +115,8 @@ export default function HomeScreen() {
         <ProjectContent
           data={data}
           onOpen={() => router.push({ pathname: '/project/[id]', params: { id: data.id } })}
+          onRefresh={refetch}
+          refreshing={isRefetching}
         />
       )}
     </SafeAreaView>
@@ -183,9 +185,13 @@ function EmptyState() {
 function ProjectContent({
   data,
   onOpen,
+  onRefresh,
+  refreshing,
 }: {
   data: NonNullable<Awaited<ReturnType<typeof fetchMyCurrentProject>>>;
   onOpen: () => void;
+  onRefresh: () => void;
+  refreshing: boolean;
 }) {
   const t = lightTheme;
 
@@ -210,6 +216,7 @@ function ProjectContent({
     <ScrollView
       contentContainerStyle={{ padding: t.space[5], gap: t.space[4] }}
       showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <Pressable onPress={onOpen}>
         <ProjectHero

@@ -2,6 +2,7 @@ import { type PickedPhoto, uploadPhoto } from '@/services/media';
 import { sendPush } from '@/services/notifications';
 import { supabase } from '@/services/supabase';
 import type { Database } from '@/types/db';
+import { devLog } from '@/utils/log';
 
 type TradeType = Database['public']['Enums']['trade_type'];
 type UpdateType = Database['public']['Enums']['update_type'];
@@ -321,7 +322,7 @@ async function notifyCounterparty(args: {
   title: string;
   body: string;
 }) {
-  console.log('[notify] start', { project_id: args.project_id, sender: args.sender_id });
+  devLog('[notify] start', { project_id: args.project_id, sender: args.sender_id });
   try {
     const { data: project } = await supabase
       .from('projects')
@@ -329,23 +330,23 @@ async function notifyCounterparty(args: {
       .eq('id', args.project_id)
       .single();
     if (!project) {
-      console.log('[notify] project not found');
+      devLog('[notify] project not found');
       return;
     }
-    console.log('[notify] project', project);
+    devLog('[notify] project', project);
 
     const recipient_id =
       project.tradesman_id === args.sender_id ? project.customer_id : project.tradesman_id;
 
     const target_user_id = recipient_id && recipient_id !== args.sender_id ? recipient_id : args.sender_id;
     const isSelfTest = target_user_id === args.sender_id;
-    console.log('[notify] target_user_id', target_user_id, 'isSelfTest', isSelfTest);
+    devLog('[notify] target_user_id', target_user_id, 'isSelfTest', isSelfTest);
 
     const { data: tokens } = await supabase
       .from('push_tokens')
       .select('token')
       .eq('user_id', target_user_id);
-    console.log('[notify] tokens found:', tokens?.length ?? 0);
+    devLog('[notify] tokens found:', tokens?.length ?? 0);
     if (!tokens || tokens.length === 0) return;
 
     await sendPush({
@@ -354,7 +355,7 @@ async function notifyCounterparty(args: {
       body: args.body,
       data: { project_id: args.project_id },
     });
-    console.log('[notify] sendPush returned');
+    devLog('[notify] sendPush returned');
   } catch (e) {
     console.warn('[notifyCounterparty] failed', e);
   }

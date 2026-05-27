@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,7 +27,7 @@ export default function JobsScreen() {
   const profile = useAuthStore((s) => s.profile);
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['my-projects', profile?.id],
     queryFn: fetchMyProjects,
     enabled: !!profile && profile.role === 'tradesman',
@@ -92,7 +93,7 @@ export default function JobsScreen() {
         <ScrollView
           contentContainerStyle={{ padding: t.space[5], gap: t.space[3], paddingBottom: t.space[16] }}
           showsVerticalScrollIndicator={false}
-          onScrollEndDrag={() => refetch()}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
         >
           {(data ?? []).length === 0 ? (
             <View style={{ alignItems: 'center', paddingVertical: t.space[12] }}>

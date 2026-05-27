@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
+  RefreshControl,
   ScrollView,
   Share,
   StyleSheet,
@@ -78,12 +79,36 @@ export default function ProjectDetailScreen() {
         new_status: args.new_status,
         title: args.title,
       }),
-    onSuccess: () => {
+    // Optimistic: flip the milestone in the local cache immediately so the tap
+    // feels instant. Snapshot the previous list; on error we roll back.
+    onMutate: async (args) => {
+      const key = ['milestones', id];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<any[]>(key);
+      if (previous) {
+        const next = previous.map((m: any) =>
+          m.id === args.milestone_id
+            ? {
+                ...m,
+                status: args.new_status,
+                completed_at: args.new_status === 'completed' ? new Date().toISOString() : null,
+              }
+            : m
+        );
+        queryClient.setQueryData(key, next);
+      }
+      return { previous };
+    },
+    onError: (e, _args, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(['milestones', id], ctx.previous);
+      Alert.alert("Couldn't update milestone", (e as Error).message);
+    },
+    onSettled: () => {
+      // Refetch authoritative state + side effects (auto-posted feed update).
       queryClient.invalidateQueries({ queryKey: ['milestones', id] });
       queryClient.invalidateQueries({ queryKey: ['updates', id] });
       queryClient.invalidateQueries({ queryKey: ['my-current-project'] });
     },
-    onError: (e) => Alert.alert("Couldn't update milestone", (e as Error).message),
   });
 
   /** Show an action sheet with the next-state options for a given milestone. */
@@ -117,6 +142,13 @@ export default function ProjectDetailScreen() {
   const isLoading = projectQuery.isLoading || updatesQuery.isLoading;
   const error = projectQuery.error || updatesQuery.error;
   const isTradesman = role === 'tradesman';
+  const isRefreshing =
+    projectQuery.isRefetching || updatesQuery.isRefetching || milestonesQuery.isRefetching;
+  const refreshAll = () => {
+    void projectQuery.refetch();
+    void updatesQuery.refetch();
+    void milestonesQuery.refetch();
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['top']}>
@@ -159,6 +191,8 @@ export default function ProjectDetailScreen() {
           updates={updatesQuery.data ?? []}
           milestones={milestonesQuery.data ?? []}
           isTradesman={isTradesman}
+          refreshing={isRefreshing}
+          onRefresh={refreshAll}
           onCompose={() => router.push({ pathname: '/project/[id]/compose', params: { id: id! } })}
           onEndOfDay={async () => {
             // Fire the leave-site nudge: logs the event, fires a local notification.
@@ -207,6 +241,8 @@ function Content({
   updates,
   milestones,
   isTradesman,
+  refreshing,
+  onRefresh,
   onCompose,
   onEndOfDay,
   onManageMilestones,
@@ -219,6 +255,8 @@ function Content({
   updates: Awaited<ReturnType<typeof fetchProjectUpdates>>;
   milestones: Awaited<ReturnType<typeof fetchMilestones>>;
   isTradesman: boolean;
+  refreshing: boolean;
+  onRefresh: () => void;
   onCompose: () => void;
   onEndOfDay: () => void;
   onManageMilestones: () => void;
@@ -246,6 +284,7 @@ function Content({
     <ScrollView
       contentContainerStyle={{ padding: t.space[5], gap: t.space[4], paddingBottom: t.space[16] }}
       showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <ProjectHero
         status={project.status as ProjectStatus}

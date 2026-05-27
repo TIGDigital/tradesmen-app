@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { supabase } from '@/services/supabase';
+import { devLog } from '@/utils/log';
 
 /**
  * Set the foreground behaviour: show banner + play sound when a push arrives
@@ -28,7 +29,7 @@ const PROJECT_ID =
  * Errors are logged + swallowed so a notification hiccup never blocks the app.
  */
 export async function registerForPush(): Promise<string | null> {
-  console.log('[notifications] registerForPush called');
+  devLog('[notifications] registerForPush called');
   try {
     if (Platform.OS === 'web') return null;
     if (!PROJECT_ID) {
@@ -37,25 +38,25 @@ export async function registerForPush(): Promise<string | null> {
     }
 
     const perm = await Notifications.getPermissionsAsync();
-    console.log('[notifications] current permission status:', perm.status);
+    devLog('[notifications] current permission status:', perm.status);
     let status = perm.status;
     if (status !== 'granted') {
       const req = await Notifications.requestPermissionsAsync();
-      console.log('[notifications] requested permission, new status:', req.status);
+      devLog('[notifications] requested permission, new status:', req.status);
       status = req.status;
     }
     if (status !== 'granted') {
-      console.log('[notifications] permission denied');
+      devLog('[notifications] permission denied');
       return null;
     }
 
     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId: PROJECT_ID });
     const token = tokenData.data;
-    console.log('[notifications] got token:', token);
+    devLog('[notifications] got token:', token);
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      console.log('[notifications] no user, skipping upsert');
+      devLog('[notifications] no user, skipping upsert');
       return token;
     }
 
@@ -71,7 +72,7 @@ export async function registerForPush(): Promise<string | null> {
         { onConflict: 'token' }
       );
     if (error) console.warn('[notifications] upsert failed', error.message);
-    else console.log('[notifications] upserted token for user', user.id);
+    else devLog('[notifications] upserted token for user', user.id);
 
     return token;
   } catch (e) {
@@ -104,7 +105,7 @@ export async function sendPush(args: {
   }));
 
   try {
-    console.log('[sendPush] POST', messages.length, 'messages');
+    devLog('[sendPush] POST', messages.length, 'messages');
     const res = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: {
@@ -115,7 +116,7 @@ export async function sendPush(args: {
       body: JSON.stringify(messages),
     });
     const text = await res.text();
-    console.log('[sendPush] response', res.status, text);
+    devLog('[sendPush] response', res.status, text);
     if (!res.ok) {
       console.warn('[notifications] push API non-ok', res.status, text);
     }
