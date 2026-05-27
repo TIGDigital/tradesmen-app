@@ -144,6 +144,14 @@ export default function NewProjectScreen() {
                   );
                 })}
               </ScrollView>
+              <Text
+                style={[
+                  t.type.footnote,
+                  { color: t.colors.text.tertiary, marginTop: 6 },
+                ]}
+              >
+                We'll add starter milestones for {TRADES.find((x) => x.value === trade)?.label.toLowerCase()} — you can edit them after.
+              </Text>
             </View>
 
             <InputField

@@ -173,7 +173,51 @@ export async function createProject(args: {
   });
   if (crewError) throw crewError;
 
+  // Auto-apply the default milestone template for this trade (silent — empty is fine).
+  await applyDefaultTemplate(project.id, args.trade_type).catch((e) => {
+    console.warn('[createProject] applyDefaultTemplate failed', e);
+  });
+
   return project;
+}
+
+/**
+ * Look up the default milestone template for a trade and insert its milestones
+ * on the project. Idempotent in spirit: if there are already milestones, we skip.
+ */
+export async function applyDefaultTemplate(project_id: string, trade_type: TradeType) {
+  // If project already has milestones, don't double-apply.
+  const { data: existing } = await supabase
+    .from('project_milestones')
+    .select('id')
+    .eq('project_id', project_id)
+    .limit(1);
+  if (existing && existing.length > 0) return;
+
+  const { data: template } = await supabase
+    .from('milestone_templates')
+    .select('milestones')
+    .eq('trade_type', trade_type)
+    .eq('is_default', true)
+    .maybeSingle();
+  if (!template) return;
+
+  const items = (template.milestones ?? []) as Array<{
+    title: string;
+    requires_approval?: boolean;
+  }>;
+  if (items.length === 0) return;
+
+  const rows = items.map((item, i) => ({
+    project_id,
+    title: item.title,
+    sort_order: i,
+    status: 'pending' as MilestoneStatus,
+    requires_customer_approval: item.requires_approval ?? false,
+  }));
+
+  const { error } = await supabase.from('project_milestones').insert(rows);
+  if (error) throw error;
 }
 
 /**
