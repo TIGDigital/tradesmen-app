@@ -45,6 +45,8 @@ export default function RootLayout() {
               name="photo/[update_id]"
               options={{ presentation: 'fullScreenModal', animation: 'fade' }}
             />
+            <Stack.Screen name="settings/index" options={{ presentation: 'card' }} />
+            <Stack.Screen name="settings/edit-name" options={{ presentation: 'card' }} />
           </Stack>
         </AuthGate>
         <StatusBar style="dark" />

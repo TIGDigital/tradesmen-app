@@ -37,6 +37,27 @@ export async function pickPhotos(maxCount: number): Promise<PickedPhoto[]> {
   });
 }
 
+/**
+ * Avatar-specific picker: square crop, lower quality, single photo.
+ * Skips the Library-vs-Camera action sheet — just opens the library.
+ * (Could add camera support later via a similar action sheet.)
+ */
+export async function pickAvatar(): Promise<PickedPhoto | null> {
+  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!perm.granted) {
+    Alert.alert('Photo access needed', 'Enable photo access in Settings to set an avatar.');
+    return null;
+  }
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 0.5, // half-quality JPG keeps avatars well under 1MB
+  });
+  if (result.canceled || result.assets.length === 0) return null;
+  return toPickedPhoto(result.assets[0]);
+}
+
 async function pickFromLibrary(maxCount: number): Promise<PickedPhoto[]> {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) {
@@ -107,4 +128,32 @@ export async function getSignedUrl(storage_path: string, expiresInSec = 3600): P
     .createSignedUrl(storage_path, expiresInSec);
   if (error) throw error;
   return data.signedUrl;
+}
+
+/**
+ * Upload an avatar to the public 'avatars' bucket at `{user_id}/avatar.{ext}`.
+ * Returns the public URL (no signing — bucket is public).
+ * Overwrites any existing avatar at the same path (upsert).
+ */
+export async function uploadAvatar(args: {
+  photo: PickedPhoto;
+  user_id: string;
+}): Promise<string> {
+  // Use a stable filename so re-uploads overwrite. Cache-bust via the URL.
+  const path = `${args.user_id}/avatar.${args.photo.ext}`;
+
+  const res = await fetch(args.photo.uri);
+  const arrayBuffer = await res.arrayBuffer();
+
+  const { error } = await supabase.storage
+    .from('avatars')
+    .upload(path, arrayBuffer, {
+      contentType: args.photo.mimeType,
+      upsert: true,
+    });
+  if (error) throw error;
+
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+  // Cache-busting query param so the new image actually loads in <Image>.
+  return `${data.publicUrl}?v=${Date.now()}`;
 }

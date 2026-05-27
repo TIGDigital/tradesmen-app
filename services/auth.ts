@@ -65,6 +65,17 @@ export async function setMyRole(role: Role) {
   if (error) throw error;
 }
 
+/** Update fields on the current user's profile (name, avatar_url, etc.). */
+export async function updateProfile(patch: {
+  full_name?: string;
+  avatar_url?: string | null;
+}) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+  const { error } = await supabase.from('profiles').update(patch).eq('id', user.id);
+  if (error) throw error;
+}
+
 /**
  * Dev helper: flip the current user's role without re-signing-up.
  * Removes the need to keep two test accounts.

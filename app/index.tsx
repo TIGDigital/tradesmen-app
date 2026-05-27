@@ -12,7 +12,7 @@ import { EventPill } from '@/components/ui/EventPill';
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useRealtimeProject } from '@/hooks/useRealtimeProject';
-import { signOut, switchMyRole } from '@/services/auth';
+import { switchMyRole } from '@/services/auth';
 import { fireLocalTest } from '@/services/notifications';
 import {
   currentAndNextMilestone,
@@ -55,6 +55,10 @@ export default function HomeScreen() {
   function onMenu() {
     Alert.alert('Menu', undefined, [
       {
+        text: 'Settings',
+        onPress: () => router.push('/settings'),
+      },
+      {
         text: 'Switch to tradesman view (dev)',
         onPress: async () => {
           try {
@@ -68,11 +72,6 @@ export default function HomeScreen() {
       {
         text: 'Send test notification (dev)',
         onPress: () => fireLocalTest(),
-      },
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: () => signOut(),
       },
       { text: 'Cancel', style: 'cancel' },
     ]);
