@@ -136,3 +136,24 @@ export async function fireLocalTest(): Promise<void> {
     trigger: null,
   });
 }
+
+/**
+ * Fire the leave-site nudge: a local notification that, when tapped, opens
+ * the End-of-Day card for the given project. In production the geofence
+ * handler fires this ~5min after a confirmed left_site event; for MVP it's
+ * fired by the manual "I'm leaving site" CTA.
+ */
+export async function fireLeaveSiteNudge(args: {
+  project_id: string;
+  customer_first_name: string;
+}): Promise<void> {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: `End your day for ${args.customer_first_name}?`,
+      body: 'Tap to send a quick update before you leave.',
+      data: { project_id: args.project_id, action: 'end_of_day' },
+      sound: 'default',
+    },
+    trigger: null,
+  });
+}

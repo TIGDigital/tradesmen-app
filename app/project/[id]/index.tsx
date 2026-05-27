@@ -16,6 +16,8 @@ import { Milestone } from '@/components/Milestone';
 import { ProjectHero } from '@/components/ProjectHero';
 import { Card } from '@/components/ui/Card';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { logLeaveSite } from '@/services/location';
+import { fireLeaveSiteNudge } from '@/services/notifications';
 import {
   currentAndNextMilestone,
   dayOfProject,
@@ -151,7 +153,21 @@ export default function ProjectDetailScreen() {
           milestones={milestonesQuery.data ?? []}
           isTradesman={isTradesman}
           onCompose={() => router.push({ pathname: '/project/[id]/compose', params: { id: id! } })}
-          onEndOfDay={() => router.push({ pathname: '/project/[id]/end-of-day', params: { id: id! } })}
+          onEndOfDay={async () => {
+            // Fire the leave-site nudge: logs the event, fires a local notification.
+            // Tapping the notification opens the EoD card. In production the geofence
+            // does this trigger automatically; the button is the in-app manual fallback.
+            try {
+              await logLeaveSite(id!);
+              const customerFirst =
+                projectQuery.data?.customer?.full_name?.split(' ')[0] ??
+                projectQuery.data?.pending_customer_name?.split(' ')[0] ??
+                'your customer';
+              await fireLeaveSiteNudge({ project_id: id!, customer_first_name: customerFirst });
+            } catch (e) {
+              Alert.alert("Couldn't end day", (e as Error).message);
+            }
+          }}
           onManageMilestones={() => router.push({ pathname: '/project/[id]/milestones', params: { id: id! } })}
           onChangeStatus={() => router.push({ pathname: '/project/[id]/status', params: { id: id! } })}
           onMilestoneTap={onMilestoneTap}

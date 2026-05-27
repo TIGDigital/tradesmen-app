@@ -68,12 +68,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, [initialise]);
 
-  // Notification tap → deep-link into the project the push came from.
-  // Also handles the case where the app was launched by tapping a notification.
+  // Notification tap → deep-link based on the payload.
+  // - action='end_of_day' → open the EoD card directly (leave-site nudge)
+  // - else if project_id present → open project detail
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const projectId = response.notification.request.content.data?.project_id;
-      if (typeof projectId === 'string') {
+      const data = response.notification.request.content.data ?? {};
+      const projectId = typeof data.project_id === 'string' ? data.project_id : null;
+      if (!projectId) return;
+      if (data.action === 'end_of_day') {
+        router.push({ pathname: '/project/[id]/end-of-day', params: { id: projectId } });
+      } else {
         router.push({ pathname: '/project/[id]', params: { id: projectId } });
       }
     });
