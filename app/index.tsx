@@ -7,6 +7,7 @@ import { MediaThumbs } from '@/components/MediaThumbs';
 import { ProjectHero } from '@/components/ProjectHero';
 import { EventPill } from '@/components/ui/EventPill';
 import { signOut, switchMyRole } from '@/services/auth';
+import { fireLocalTest } from '@/services/notifications';
 import {
   currentAndNextMilestone,
   dayOfProject,
@@ -49,6 +50,10 @@ export default function HomeScreen() {
             Alert.alert('Failed', (e as Error).message);
           }
         },
+      },
+      {
+        text: 'Send test notification (dev)',
+        onPress: () => fireLocalTest(),
       },
       {
         text: 'Sign out',

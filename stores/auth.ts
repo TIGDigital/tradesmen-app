@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
 import { getMyProfile } from '@/services/auth';
+import { registerForPush } from '@/services/notifications';
 import { supabase } from '@/services/supabase';
 import type { Database } from '@/types/db';
 
@@ -41,15 +42,18 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
           // Profile might not exist yet (race with trigger). That's OK.
           profile = null;
         }
+        // Fire-and-forget push registration. Failures don't block sign-in.
+        void registerForPush();
       }
       set({ session, profile, initialising: false });
     });
 
     // Subscribe to changes from then on.
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
       let profile: Profile | null = null;
       if (session) {
         try { profile = await getMyProfile(); } catch { profile = null; }
+        if (event === 'SIGNED_IN') void registerForPush();
       }
       set({ session, profile });
     });

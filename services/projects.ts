@@ -1,4 +1,5 @@
 import { type PickedPhoto, uploadPhoto } from '@/services/media';
+import { sendPush } from '@/services/notifications';
 import { supabase } from '@/services/supabase';
 import type { Database } from '@/types/db';
 
@@ -196,12 +197,24 @@ export async function postUpdate(args: {
     await attachPhotos({ update_id: update.id, user_id: user.id, photos: args.photos });
   }
 
+  // Fire-and-forget push to the counterparty. System updates (milestone/status)
+  // don't push — too noisy when a tradesman is ticking off milestones quickly.
+  if ((args.type ?? 'progress') === 'progress') {
+    const preview = args.body.length > 100 ? args.body.slice(0, 97) + '…' : args.body;
+    void notifyCounterparty({
+      project_id: args.project_id,
+      sender_id: user.id,
+      title: 'New update',
+      body: preview,
+    });
+  }
+
   return update;
 }
 
 /**
  * Post an End-of-Day update (type='eta', with eta_at + optional photos).
- * `notify_customer` is metadata for the eventual push job (no push yet — wire later).
+ * If notify_customer is true, fires a push to the customer.
  */
 export async function postEndOfDay(args: {
   project_id: string;
@@ -230,7 +243,67 @@ export async function postEndOfDay(args: {
     await attachPhotos({ update_id: update.id, user_id: user.id, photos: args.photos });
   }
 
+  if (args.notify_customer) {
+    const preview = args.body.length > 100 ? args.body.slice(0, 97) + '…' : args.body;
+    void notifyCounterparty({
+      project_id: args.project_id,
+      sender_id: user.id,
+      title: 'Update from your tradesman',
+      body: preview,
+    });
+  }
+
   return update;
+}
+
+/**
+ * Internal: send a push to the OTHER party on the project (sender does not push to self).
+ * Reads the recipient's push_tokens via RLS (counterparty policy added in Sprint 7).
+ * Fully non-blocking — any failure is logged inside sendPush; caller does not await.
+ */
+async function notifyCounterparty(args: {
+  project_id: string;
+  sender_id: string;
+  title: string;
+  body: string;
+}) {
+  console.log('[notify] start', { project_id: args.project_id, sender: args.sender_id });
+  try {
+    const { data: project } = await supabase
+      .from('projects')
+      .select('tradesman_id, customer_id')
+      .eq('id', args.project_id)
+      .single();
+    if (!project) {
+      console.log('[notify] project not found');
+      return;
+    }
+    console.log('[notify] project', project);
+
+    const recipient_id =
+      project.tradesman_id === args.sender_id ? project.customer_id : project.tradesman_id;
+
+    const target_user_id = recipient_id && recipient_id !== args.sender_id ? recipient_id : args.sender_id;
+    const isSelfTest = target_user_id === args.sender_id;
+    console.log('[notify] target_user_id', target_user_id, 'isSelfTest', isSelfTest);
+
+    const { data: tokens } = await supabase
+      .from('push_tokens')
+      .select('token')
+      .eq('user_id', target_user_id);
+    console.log('[notify] tokens found:', tokens?.length ?? 0);
+    if (!tokens || tokens.length === 0) return;
+
+    await sendPush({
+      tokens: tokens.map((t) => t.token),
+      title: isSelfTest ? `[Self-test] ${args.title}` : args.title,
+      body: args.body,
+      data: { project_id: args.project_id },
+    });
+    console.log('[notify] sendPush returned');
+  } catch (e) {
+    console.warn('[notifyCounterparty] failed', e);
+  }
 }
 
 /** Internal: upload each picked photo, then insert one project_update_media row each. */

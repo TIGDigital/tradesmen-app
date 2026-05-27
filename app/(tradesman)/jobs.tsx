@@ -15,6 +15,7 @@ import { Card } from '@/components/ui/Card';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { signOut, switchMyRole } from '@/services/auth';
+import { fireLocalTest } from '@/services/notifications';
 import { fetchMyProjects } from '@/services/projects';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
@@ -49,6 +50,10 @@ export default function JobsScreen() {
             Alert.alert('Failed', (e as Error).message);
           }
         },
+      },
+      {
+        text: 'Send test notification (dev)',
+        onPress: () => fireLocalTest(),
       },
       {
         text: 'Sign out',

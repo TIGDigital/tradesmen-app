@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -66,6 +67,18 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const unsubscribe = initialise();
     return unsubscribe;
   }, [initialise]);
+
+  // Notification tap → deep-link into the project the push came from.
+  // Also handles the case where the app was launched by tapping a notification.
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const projectId = response.notification.request.content.data?.project_id;
+      if (typeof projectId === 'string') {
+        router.push({ pathname: '/project/[id]', params: { id: projectId } });
+      }
+    });
+    return () => sub.remove();
+  }, [router]);
 
   // Route based on auth state any time it changes.
   useEffect(() => {

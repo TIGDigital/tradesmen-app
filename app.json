@@ -22,7 +22,10 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -36,7 +39,20 @@
           "photosPermission": "Tradesmen needs access to your photos so you can attach them to project updates for your customer.",
           "cameraPermission": "Tradesmen needs access to your camera so you can take photos for project updates."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1B4DD9"
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "be84b39b-c4b9-4f91-9894-8ad4a321fb4e"
+      }
+    },
+    "owner": "tig-digital"
   }
 }
