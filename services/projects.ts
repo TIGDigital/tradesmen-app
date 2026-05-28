@@ -1,4 +1,4 @@
-import { type PickedPhoto, uploadPhoto } from '@/services/media';
+import { type PickedPhoto, uploadPhoto, uploadVoice } from '@/services/media';
 import { sendPush } from '@/services/notifications';
 import { supabase } from '@/services/supabase';
 import type { Database } from '@/types/db';
@@ -32,7 +32,7 @@ export async function fetchMyCurrentProject() {
       tradesman:profiles!projects_tradesman_id_fkey ( id, full_name ),
       updates:project_updates (
         id, body, created_at, author_id, deleted_at, type, eta_at,
-        media:project_update_media ( id, storage_path, sort_order ),
+        media:project_update_media ( id, storage_path, sort_order, media_type ),
         reactions:project_update_reactions ( kind, user_id )
       ),
       milestones:project_milestones ( id, title, status, sort_order, expected_date, completed_at )
@@ -93,7 +93,7 @@ export async function fetchProjectUpdates(projectId: string) {
     .select(`
       id, body, type, created_at, author_id, eta_at,
       author:profiles!project_updates_author_id_fkey ( id, full_name ),
-      media:project_update_media ( id, storage_path, sort_order ),
+      media:project_update_media ( id, storage_path, sort_order, media_type ),
       reactions:project_update_reactions ( kind, user_id )
     `)
     .eq('project_id', projectId)
@@ -277,6 +277,7 @@ export async function postEndOfDay(args: {
   eta_at: string | null;
   notify_customer: boolean;
   photos?: PickedPhoto[];
+  voice?: { uri: string; durationMs: number } | null;
 }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not signed in');
@@ -296,6 +297,23 @@ export async function postEndOfDay(args: {
 
   if (args.photos && args.photos.length > 0) {
     await attachPhotos({ update_id: update.id, user_id: user.id, photos: args.photos });
+  }
+
+  if (args.voice) {
+    const path = await uploadVoice({
+      uri: args.voice.uri,
+      user_id: user.id,
+      update_id: update.id,
+    });
+    const { error: voiceError } = await supabase.from('project_update_media').insert({
+      update_id: update.id,
+      storage_path: path,
+      media_type: 'voice',
+      sort_order: 99, // after photos
+    });
+    if (voiceError) throw voiceError;
+    // Also stamp the update with the voice URL for direct access without joining media
+    await supabase.from('project_updates').update({ voice_note_url: path }).eq('id', update.id);
   }
 
   if (args.notify_customer) {

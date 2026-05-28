@@ -16,6 +16,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PhotoStrip } from '@/components/PhotoStrip';
+import { VoiceRecorder } from '@/components/VoiceRecorder';
 import { Card } from '@/components/ui/Card';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -60,6 +61,7 @@ export default function EndOfDayScreen() {
   });
   const [notify, setNotify] = useState(true);
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
+  const [voice, setVoice] = useState<{ uri: string; durationMs: number } | null>(null);
 
   async function onAddPhoto() {
     const remaining = MAX_PHOTOS - photos.length;
@@ -85,6 +87,7 @@ export default function EndOfDayScreen() {
         eta_at: etaDate.toISOString(),
         notify_customer: notify,
         photos,
+        voice,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['updates', id] });
@@ -238,6 +241,18 @@ export default function EndOfDayScreen() {
               max={MAX_PHOTOS}
               onAdd={onAddPhoto}
               onRemove={(i) => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
+            />
+          </View>
+
+          {/* Voice note */}
+          <View>
+            <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginBottom: t.space[2] }]}>
+              Voice note (max 60s)
+            </Text>
+            <VoiceRecorder
+              onRecorded={(args) => setVoice(args)}
+              attachedDurationMs={voice?.durationMs}
+              onClear={() => setVoice(null)}
             />
           </View>
         </ScrollView>

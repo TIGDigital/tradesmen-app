@@ -12,7 +12,8 @@
       "bundleIdentifier": "com.tradesmen.app",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Tradesmen needs access to your photos so you can attach them to project updates for your customer.",
-        "NSCameraUsageDescription": "Tradesmen needs access to your camera so you can take photos for project updates."
+        "NSCameraUsageDescription": "Tradesmen needs access to your camera so you can take photos for project updates.",
+        "NSMicrophoneUsageDescription": "Tradesmen needs access to your microphone so you can record voice notes on project updates."
       }
     },
     "android": {

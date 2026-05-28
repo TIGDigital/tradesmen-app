@@ -121,6 +121,30 @@ export async function uploadPhoto(args: {
   return path;
 }
 
+/**
+ * Upload a voice note (local .m4a from expo-av) to Storage at
+ * `{user_id}/{update_id}/voice.m4a`. Returns the storage path.
+ */
+export async function uploadVoice(args: {
+  uri: string;
+  user_id: string;
+  update_id: string;
+}): Promise<string> {
+  const path = `${args.user_id}/${args.update_id}/voice.m4a`;
+
+  const res = await fetch(args.uri);
+  const arrayBuffer = await res.arrayBuffer();
+
+  const { error } = await supabase.storage
+    .from('project-media')
+    .upload(path, arrayBuffer, {
+      contentType: 'audio/m4a',
+      upsert: false,
+    });
+  if (error) throw error;
+  return path;
+}
+
 /** Generate a short-lived signed URL for displaying a private object. */
 export async function getSignedUrl(storage_path: string, expiresInSec = 3600): Promise<string> {
   const { data, error } = await supabase.storage

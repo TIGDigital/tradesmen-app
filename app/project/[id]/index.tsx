@@ -17,6 +17,7 @@ import { MediaThumbs } from '@/components/MediaThumbs';
 import { Milestone } from '@/components/Milestone';
 import { ProjectHero } from '@/components/ProjectHero';
 import { Reactions } from '@/components/Reactions';
+import { VoicePlayer } from '@/components/VoicePlayer';
 import { Card } from '@/components/ui/Card';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useRealtimeProject } from '@/hooks/useRealtimeProject';
@@ -473,6 +474,13 @@ function Content({
             {u.media && u.media.length > 0 && (
               <View style={{ marginTop: t.space[3] }}>
                 <MediaThumbs update_id={u.id} media={u.media} />
+              </View>
+            )}
+            {u.media?.find((m) => m.media_type === 'voice') && (
+              <View style={{ marginTop: t.space[3] }}>
+                <VoicePlayer
+                  storage_path={u.media.find((m) => m.media_type === 'voice')!.storage_path}
+                />
               </View>
             )}
             {u.type === 'eta' && u.eta_at && (

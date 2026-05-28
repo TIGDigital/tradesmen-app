@@ -5,7 +5,12 @@ import { View } from 'react-native';
 import { PhotoStrip } from '@/components/PhotoStrip';
 import { getSignedUrl } from '@/services/media';
 
-type Media = { id: string; storage_path: string; sort_order: number };
+type Media = {
+  id: string;
+  storage_path: string;
+  sort_order: number;
+  media_type?: string | null;
+};
 
 type Props = {
   /** ID of the parent project_update — used to deep-link the fullscreen viewer. */
@@ -19,7 +24,9 @@ type Props = {
  * at that photo's index. Renders nothing if `media` is empty.
  */
 export function MediaThumbs({ update_id, media }: Props) {
+  // Photos only — voice notes render via VoicePlayer separately.
   const paths = (media ?? [])
+    .filter((m) => m.media_type !== 'voice')
     .slice()
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((m) => m.storage_path);

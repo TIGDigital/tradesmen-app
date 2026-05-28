@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { MediaThumbs } from '@/components/MediaThumbs';
 import { ProjectHero } from '@/components/ProjectHero';
 import { Reactions } from '@/components/Reactions';
+import { VoicePlayer } from '@/components/VoicePlayer';
 import { EventPill } from '@/components/ui/EventPill';
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
@@ -295,6 +296,15 @@ function ProjectContent({
             {latestUpdate.media && latestUpdate.media.length > 0 && (
               <View style={{ marginTop: t.space[3] }}>
                 <MediaThumbs update_id={latestUpdate.id} media={latestUpdate.media} />
+              </View>
+            )}
+            {latestUpdate.media?.find((m) => m.media_type === 'voice') && (
+              <View style={{ marginTop: t.space[3] }}>
+                <VoicePlayer
+                  storage_path={
+                    latestUpdate.media.find((m) => m.media_type === 'voice')!.storage_path
+                  }
+                />
               </View>
             )}
             {latestUpdate.type === 'eta' && latestUpdate.eta_at && (
