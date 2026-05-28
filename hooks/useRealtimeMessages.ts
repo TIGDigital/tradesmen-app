@@ -18,8 +18,13 @@ export function useRealtimeMessages(project_id: string | null | undefined) {
       void queryClient.invalidateQueries({ queryKey: ['messages', project_id] });
     };
 
+    // Unique channel name per mount — see useRealtimeProject for the long
+    // explanation. Short version: React StrictMode + async removeChannel
+    // = duplicate-name collisions in dev. Random suffix avoids it.
+    const channelName = `messages:${project_id}:${Math.random().toString(36).slice(2, 9)}`;
+
     const channel = supabase
-      .channel(`messages:${project_id}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {

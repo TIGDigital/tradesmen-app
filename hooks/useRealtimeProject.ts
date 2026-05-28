@@ -25,8 +25,15 @@ export function useRealtimeProject(projectId: string | null | undefined) {
       void queryClient.invalidateQueries({ queryKey: ['my-current-project'] });
     };
 
+    // Unique channel name per mount — React StrictMode runs effects twice in
+    // dev, and `removeChannel` is async. Without a unique suffix the second
+    // mount grabs the still-subscribed channel from the client's internal map
+    // and adding a `.on()` to it throws "Cannot add postgres_changes callbacks
+    // after subscribe()". A random suffix sidesteps the collision entirely.
+    const channelName = `project:${projectId}:${Math.random().toString(36).slice(2, 9)}`;
+
     const channel = supabase
-      .channel(`project:${projectId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
