@@ -325,6 +325,29 @@ function Content({
         </Text>
       </Card>
 
+      {/* Your tradesman — customer view only. Tap to see the public profile. */}
+      {!isTradesman && project.tradesman && (
+        <Card>
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/tradesman/[id]',
+                params: { id: project.tradesman!.id },
+              })
+            }
+            style={styles.metaRow}
+          >
+            <View>
+              <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Your tradesman</Text>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                {project.tradesman.full_name ?? '—'}
+              </Text>
+            </View>
+            <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+          </Pressable>
+        </Card>
+      )}
+
       {/* Invite card — tradesman only, only while customer hasn't joined */}
       {isTradesman && !project.customer_id && (
         <Card>

@@ -123,6 +123,40 @@ export default function SettingsScreen() {
           </Text>
         </Card>
 
+        {/* Tradesman-only entries */}
+        {profile?.role === 'tradesman' && (
+          <>
+            <Card>
+              <Pressable
+                onPress={() => router.push('/settings/business')}
+                style={styles.rowBetween}
+              >
+                <View>
+                  <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Business profile</Text>
+                  <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                    Bio, trades, service area
+                  </Text>
+                </View>
+                <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+              </Pressable>
+            </Card>
+            <Card>
+              <Pressable
+                onPress={() => router.push('/settings/verification')}
+                style={styles.rowBetween}
+              >
+                <View>
+                  <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Verification</Text>
+                  <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                    Certificates + insurance
+                  </Text>
+                </View>
+                <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+              </Pressable>
+            </Card>
+          </>
+        )}
+
         {/* Sign out */}
         <View style={{ marginTop: t.space[8] }}>
           <Pressable onPress={onSignOut} style={[styles.signOutBtn, { borderColor: t.colors.border.subtle }]}>
