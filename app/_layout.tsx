@@ -47,6 +47,7 @@ export default function RootLayout() {
             />
             <Stack.Screen name="settings/index" options={{ presentation: 'card' }} />
             <Stack.Screen name="settings/edit-name" options={{ presentation: 'card' }} />
+            <Stack.Screen name="project/[id]/chat" options={{ presentation: 'card' }} />
           </Stack>
         </AuthGate>
         <StatusBar style="dark" />

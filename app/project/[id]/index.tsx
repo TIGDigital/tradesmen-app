@@ -169,7 +169,13 @@ export default function ProjectDetailScreen() {
         >
           {projectQuery.data?.title ?? 'Loading…'}
         </Text>
-        <View style={styles.navIconBox} />
+        <Pressable
+          onPress={() => router.push({ pathname: '/project/[id]/chat', params: { id: id! } })}
+          hitSlop={12}
+          style={styles.navIconBox}
+        >
+          <Text style={{ fontSize: 22, color: t.colors.text.primary }}>💬</Text>
+        </Pressable>
       </View>
 
       {isLoading && (

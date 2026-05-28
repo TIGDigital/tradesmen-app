@@ -90,9 +90,19 @@ export default function HomeScreen() {
         >
           {data?.title ?? (isLoading ? 'Loading…' : 'No project yet')}
         </Text>
-        <View style={styles.navIconBox}>
-          <Text style={{ fontSize: 22, color: t.colors.text.primary }}>💬</Text>
-        </View>
+        {data ? (
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/project/[id]/chat', params: { id: data.id } })
+            }
+            hitSlop={12}
+            style={styles.navIconBox}
+          >
+            <Text style={{ fontSize: 22, color: t.colors.text.primary }}>💬</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.navIconBox} />
+        )}
       </View>
 
       {isLoading && (

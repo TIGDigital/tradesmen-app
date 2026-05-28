@@ -491,6 +491,7 @@ export type Database = {
           project_id: string
           read_at: string | null
           sender_id: string
+          sender_role: Database["public"]["Enums"]["user_role"] | null
           type: Database["public"]["Enums"]["message_type"]
         }
         Insert: {
@@ -504,6 +505,7 @@ export type Database = {
           project_id: string
           read_at?: string | null
           sender_id: string
+          sender_role?: Database["public"]["Enums"]["user_role"] | null
           type?: Database["public"]["Enums"]["message_type"]
         }
         Update: {
@@ -517,6 +519,7 @@ export type Database = {
           project_id?: string
           read_at?: string | null
           sender_id?: string
+          sender_role?: Database["public"]["Enums"]["user_role"] | null
           type?: Database["public"]["Enums"]["message_type"]
         }
         Relationships: [
