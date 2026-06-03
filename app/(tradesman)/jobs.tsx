@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect, router } from 'expo-router';
 import {
@@ -71,7 +72,14 @@ export default function JobsScreen() {
           <Text style={{ fontSize: 22, color: t.colors.text.primary }}>≡</Text>
         </Pressable>
         <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>Jobs</Text>
-        <View style={styles.navIconBox} />
+        <Pressable
+          onPress={() => router.push('/project/new')}
+          hitSlop={12}
+          style={styles.navIconBox}
+          accessibilityLabel="Create new project"
+        >
+          <Ionicons name="add-circle" size={28} color={t.colors.text.link} />
+        </Pressable>
       </View>
 
       {isLoading && (
