@@ -137,7 +137,7 @@ export default function JobsScreen() {
           <View style={{ marginTop: t.space[6] }}>
             <PrimaryButton
               title="Create new project"
-              onPress={() => router.push('/(tradesman)/projects/new')}
+              onPress={() => router.push('/project/new')}
             />
           </View>
         </ScrollView>

@@ -51,8 +51,6 @@ export default function TradesmanLayout() {
           ),
         }}
       />
-      {/* Nested folder — keep it routable but hide it from the tab bar. */}
-      <Tabs.Screen name="projects" options={{ href: null }} />
     </Tabs>
   );
 }
