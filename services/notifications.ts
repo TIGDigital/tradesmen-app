@@ -148,13 +148,110 @@ export async function fireLeaveSiteNudge(args: {
   project_id: string;
   customer_first_name: string;
 }): Promise<void> {
+  const title = `End your day for ${args.customer_first_name}?`;
+  const body = 'Tap to send a quick update before you leave.';
+  const data = { project_id: args.project_id, action: 'end_of_day' };
+
   await Notifications.scheduleNotificationAsync({
-    content: {
-      title: `End your day for ${args.customer_first_name}?`,
-      body: 'Tap to send a quick update before you leave.',
-      data: { project_id: args.project_id, action: 'end_of_day' },
-      sound: 'default',
-    },
+    content: { title, body, data, sound: 'default' },
     trigger: null,
   });
+
+  // Self-targeted inbox entry so the tradesman can find the nudge later
+  // if they missed the push.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    await recordNotification({
+      user_id: user.id,
+      kind: 'leave_site_nudge',
+      project_id: args.project_id,
+      title,
+      body,
+      data,
+    });
+  }
+}
+
+// ============================================================
+// Inbox API (Sprint 27)
+//
+// The /notifications tab reads the same `notifications` table that the
+// push pipeline writes to. RLS already scopes select/update to your own
+// rows. Insert is project-participant-scoped (migration 20260604000300).
+// ============================================================
+
+export type NotificationRow = {
+  id: string;
+  user_id: string;
+  kind: string;
+  project_id: string | null;
+  title: string;
+  body: string;
+  data: Record<string, unknown> | null;
+  read_at: string | null;
+  created_at: string;
+};
+
+/** Fetch the signed-in user's notifications, newest-first, capped at 100. */
+export async function fetchMyNotifications(): Promise<NotificationRow[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('id, user_id, kind, project_id, title, body, data, read_at, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  return (data as NotificationRow[]) ?? [];
+}
+
+/** Mark one notification as read. RLS enforces ownership. */
+export async function markNotificationRead(id: string) {
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+/** Mark every unread notification for the signed-in user as read. */
+export async function markAllNotificationsRead() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const { error } = await supabase
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('user_id', user.id)
+    .is('read_at', null);
+  if (error) throw error;
+}
+
+/**
+ * Persist a notification row for a recipient. Called alongside the push
+ * pipeline so an inbox entry exists whether or not the push was delivered.
+ * Errors are swallowed — same philosophy as sendPush; missing inbox row
+ * shouldn't block the underlying action.
+ */
+export async function recordNotification(args: {
+  user_id: string;
+  kind: string;
+  project_id?: string | null;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    const { error } = await supabase.from('notifications').insert({
+      user_id: args.user_id,
+      kind: args.kind as any,
+      project_id: args.project_id ?? null,
+      title: args.title,
+      body: args.body,
+      data: (args.data ?? {}) as never, // jsonb column accepts any JSON; cast appeases the generated types
+    });
+    if (error) console.warn('[recordNotification] failed', error.message);
+  } catch (e) {
+    console.warn('[recordNotification] threw', e);
+  }
 }

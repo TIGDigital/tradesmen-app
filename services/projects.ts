@@ -1,5 +1,5 @@
 import { type PickedPhoto, uploadPhoto, uploadVoice } from '@/services/media';
-import { sendPush } from '@/services/notifications';
+import { recordNotification, sendPush } from '@/services/notifications';
 import { supabase } from '@/services/supabase';
 import type { Database } from '@/types/db';
 import { devLog } from '@/utils/log';
@@ -364,6 +364,18 @@ async function notifyCounterparty(args: {
     const target_user_id = recipient_id && recipient_id !== args.sender_id ? recipient_id : args.sender_id;
     const isSelfTest = target_user_id === args.sender_id;
     devLog('[notify] target_user_id', target_user_id, 'isSelfTest', isSelfTest);
+
+    // Persist an inbox row regardless of whether the push goes out — Expo
+    // Go on simulator can't deliver pushes but we still want the recipient
+    // to see this in their /notifications tab.
+    await recordNotification({
+      user_id: target_user_id,
+      kind: 'new_update',
+      project_id: args.project_id,
+      title: args.title,
+      body: args.body,
+      data: { project_id: args.project_id },
+    });
 
     const { data: tokens } = await supabase
       .from('push_tokens')
