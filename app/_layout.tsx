@@ -52,6 +52,7 @@ export default function RootLayout() {
             <Stack.Screen name="settings/business" options={{ presentation: 'card' }} />
             <Stack.Screen name="settings/verification" options={{ presentation: 'card' }} />
             <Stack.Screen name="project/[id]/chat" options={{ presentation: 'card' }} />
+            <Stack.Screen name="project/[id]/photos" options={{ presentation: 'card' }} />
             <Stack.Screen name="tradesman/[id]" options={{ presentation: 'card' }} />
           </Stack>
         </AuthGate>

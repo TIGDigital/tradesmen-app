@@ -468,6 +468,35 @@ function Content({
         </View>
       )}
 
+      {/* Photos gallery entry — counts every non-voice attachment across all
+          updates. Hidden when zero so the project detail stays clean for
+          brand-new projects. */}
+      {(() => {
+        const photoCount = updates.reduce(
+          (n, u) => n + (u.media ?? []).filter((m) => m.media_type !== 'voice').length,
+          0,
+        );
+        if (photoCount === 0) return null;
+        return (
+          <Card>
+            <Pressable
+              onPress={() =>
+                router.push({ pathname: '/project/[id]/photos', params: { id: project.id } })
+              }
+              style={styles.metaRow}
+            >
+              <View>
+                <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Photos</Text>
+                <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                  {photoCount} photo{photoCount === 1 ? '' : 's'}
+                </Text>
+              </View>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+            </Pressable>
+          </Card>
+        );
+      })()}
+
       {/* Updates feed */}
       <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginTop: t.space[2] }]}>
         Updates · {updates.length}
