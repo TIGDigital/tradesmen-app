@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useState } from 'react';
@@ -9,9 +9,12 @@ import { MediaThumbs } from '@/components/MediaThumbs';
 import { ProjectHero } from '@/components/ProjectHero';
 import { Reactions } from '@/components/Reactions';
 import { VoicePlayer } from '@/components/VoicePlayer';
+import { Card } from '@/components/ui/Card';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { EventPill } from '@/components/ui/EventPill';
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { useRealtimeProject } from '@/hooks/useRealtimeProject';
 import { switchMyRole } from '@/services/auth';
 import { fireLocalTest } from '@/services/notifications';
@@ -104,17 +107,43 @@ export default function HomeScreen() {
       </View>
 
       {isLoading && (
-        <View style={styles.center}>
-          <ActivityIndicator />
+        <View style={{ padding: t.space[5], gap: t.space[3] }}>
+          {/* Hero skeleton */}
+          <Card>
+            <Skeleton width="60%" height={20} />
+            <View style={{ height: 12 }} />
+            <Skeleton width="90%" height={14} />
+            <View style={{ height: 16 }} />
+            <Skeleton width="100%" height={8} borderRadius={999} />
+          </Card>
+          {/* Today/Next skeleton */}
+          <Card>
+            <Skeleton width="40%" height={14} />
+            <View style={{ height: 8 }} />
+            <Skeleton width="70%" height={18} />
+          </Card>
+          {/* Latest update skeleton */}
+          <Card>
+            <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+              <Skeleton width={32} height={32} borderRadius={999} />
+              <View style={{ flex: 1, gap: 6 }}>
+                <Skeleton width="40%" height={14} />
+                <Skeleton width="25%" height={10} />
+              </View>
+            </View>
+            <View style={{ height: 12 }} />
+            <Skeleton width="100%" height={12} />
+            <View style={{ height: 6 }} />
+            <Skeleton width="80%" height={12} />
+          </Card>
         </View>
       )}
 
       {error && (
-        <View style={styles.center}>
-          <Text style={[t.type.body, { color: t.colors.destructive.text, textAlign: 'center' }]}>
-            Couldn't load.{'\n'}{(error as Error).message}
-          </Text>
-        </View>
+        <ErrorState
+          message={(error as Error).message}
+          onRetry={() => void refetch()}
+        />
       )}
 
       {!isLoading && !error && !data && <EmptyState />}

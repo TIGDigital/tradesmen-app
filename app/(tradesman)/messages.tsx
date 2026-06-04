@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +10,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { fetchMyProjects } from '@/services/projects';
 import { lightTheme } from '@/theme/light';
 
@@ -37,17 +38,27 @@ export default function TradesmanMessagesScreen() {
       </View>
 
       {isLoading && (
-        <View style={styles.center}>
-          <ActivityIndicator />
+        <View style={{ padding: t.space[5], gap: t.space[3] }}>
+          {[0, 1, 2].map((i) => (
+            <Card key={i}>
+              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                <Skeleton width={44} height={44} borderRadius={999} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <Skeleton width="55%" height={16} />
+                  <Skeleton width="35%" height={12} />
+                </View>
+              </View>
+            </Card>
+          ))}
         </View>
       )}
 
       {!isLoading && (projects?.length ?? 0) === 0 && (
-        <View style={styles.center}>
-          <Text style={[t.type.body, { color: t.colors.text.tertiary, textAlign: 'center' }]}>
-            No conversations yet.{'\n'}Create a project and invite a customer to start chatting.
-          </Text>
-        </View>
+        <ErrorState
+          tone="empty"
+          title="No conversations yet"
+          message="Create a project and invite a customer to start chatting."
+        />
       )}
 
       {projects && projects.length > 0 && (

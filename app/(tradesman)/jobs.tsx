@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Redirect, router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   RefreshControl,
@@ -15,7 +14,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
+import { ErrorState } from '@/components/ui/ErrorState';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { switchMyRole } from '@/services/auth';
 import { fireLocalTest } from '@/services/notifications';
@@ -141,17 +142,27 @@ export default function JobsScreen() {
       </View>
 
       {isLoading && (
-        <View style={styles.center}>
-          <ActivityIndicator />
+        <View style={{ padding: t.space[5], gap: t.space[3] }}>
+          {/* Three pretend project cards so the page already has shape. */}
+          {[0, 1, 2].map((i) => (
+            <Card key={i}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={{ flex: 1, gap: 6 }}>
+                  <Skeleton width="70%" height={18} />
+                  <Skeleton width="50%" height={12} />
+                </View>
+                <Skeleton width={64} height={20} borderRadius={999} />
+              </View>
+            </Card>
+          ))}
         </View>
       )}
 
       {error && (
-        <View style={styles.center}>
-          <Text style={[t.type.body, { color: t.colors.destructive.text, textAlign: 'center' }]}>
-            {(error as Error).message}
-          </Text>
-        </View>
+        <ErrorState
+          message={(error as Error).message}
+          onRetry={() => void refetch()}
+        />
       )}
 
       {!isLoading && !error && (
