@@ -54,6 +54,10 @@ export default function RootLayout() {
             <Stack.Screen name="project/[id]/chat" options={{ presentation: 'card' }} />
             <Stack.Screen name="project/[id]/photos" options={{ presentation: 'card' }} />
             <Stack.Screen name="project/[id]/documents" options={{ presentation: 'card' }} />
+            <Stack.Screen
+              name="document/[id]"
+              options={{ presentation: 'fullScreenModal', animation: 'fade' }}
+            />
             <Stack.Screen name="comments/[update_id]" options={{ presentation: 'card' }} />
             <Stack.Screen name="tradesman/[id]" options={{ presentation: 'card' }} />
           </Stack>

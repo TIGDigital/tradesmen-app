@@ -129,10 +129,7 @@ export default function DocumentsScreen() {
               <Card key={d.id}>
                 <Pressable
                   onPress={() =>
-                    Alert.alert(
-                      d.file_name,
-                      'In-app preview ships in the next sprint. For now, the file is safely stored on the project.',
-                    )
+                    router.push({ pathname: '/document/[id]', params: { id: d.id } })
                   }
                   style={styles.row}
                 >

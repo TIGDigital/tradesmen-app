@@ -121,3 +121,56 @@ export async function getDocumentSignedUrl(
   if (error) throw error;
   return data.signedUrl;
 }
+
+// Legacy import — the new namespace (Paths/File) is cleaner but the
+// download-to-URI flow we need below has more friction. Legacy gives us
+// cacheDirectory + downloadAsync in two lines.
+import * as FileSystem from 'expo-file-system/legacy';
+
+/** Fetch one document row by id, including uploader profile. */
+export async function fetchDocument(id: string): Promise<ProjectDocument | null> {
+  const { data, error } = await supabase
+    .from('project_documents')
+    .select(`
+      id, project_id, uploader_id, file_name, storage_path, mime_type,
+      size_bytes, created_at,
+      uploader:profiles!project_documents_uploader_id_fkey ( id, full_name, avatar_url )
+    `)
+    .eq('id', id)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (error) throw error;
+  return data as unknown as ProjectDocument | null;
+}
+
+/**
+ * Download the document at `storage_path` to the cache directory and
+ * return the local URI. Used as the input to the iOS share sheet — the
+ * share sheet needs a real on-disk file, not a remote URL.
+ */
+export async function downloadDocumentToCache(
+  storage_path: string,
+  file_name: string,
+): Promise<string> {
+  const signedUrl = await getDocumentSignedUrl(storage_path, 60 * 60);
+  const safeName = file_name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const localUri = `${FileSystem.cacheDirectory}${Date.now()}-${safeName}`;
+  const dl = await FileSystem.downloadAsync(signedUrl, localUri);
+  return dl.uri;
+}
+
+/**
+ * Hard delete: soft-mark the DB row AND remove the storage object so the
+ * bucket doesn't accumulate orphans. Only the uploader can do this (RLS).
+ */
+export async function deleteDocumentEverywhere(args: {
+  id: string;
+  storage_path: string;
+}): Promise<void> {
+  // Storage removal first so a failure here doesn't orphan the DB row.
+  // If the row remove succeeds but the object remove fails, we still soft
+  // delete so the UI hides it — the object becomes an orphan that a
+  // future cleanup job can sweep.
+  await supabase.storage.from('documents').remove([args.storage_path]);
+  await softDeleteDocument(args.id);
+}
