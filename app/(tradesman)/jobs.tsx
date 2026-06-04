@@ -19,6 +19,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { switchMyRole } from '@/services/auth';
 import { fireLocalTest } from '@/services/notifications';
 import { fetchMyProjects } from '@/services/projects';
+import { useLocationConsentNudge } from '@/hooks/useLocationConsentNudge';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 import type { ProjectStatus } from '@/theme/tokens';
@@ -27,6 +28,9 @@ export default function JobsScreen() {
   const t = lightTheme;
   const profile = useAuthStore((s) => s.profile);
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
+
+  // First-ever visit: warm-prompt the tradesman for location, then iOS asks.
+  useLocationConsentNudge();
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['my-projects', profile?.id],

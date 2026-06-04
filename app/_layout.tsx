@@ -21,6 +21,7 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tradesman)" />
             <Stack.Screen name="project/new" options={{ presentation: 'card' }} />
+            <Stack.Screen name="consent/location" options={{ presentation: 'card' }} />
             <Stack.Screen name="project/[id]/index" options={{ presentation: 'card' }} />
             <Stack.Screen
               name="project/[id]/compose"

@@ -13,7 +13,8 @@
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Tradesmen needs access to your photos so you can attach them to project updates for your customer.",
         "NSCameraUsageDescription": "Tradesmen needs access to your camera so you can take photos for project updates.",
-        "NSMicrophoneUsageDescription": "Tradesmen needs access to your microphone so you can record voice notes on project updates."
+        "NSMicrophoneUsageDescription": "Tradesmen needs access to your microphone so you can record voice notes on project updates.",
+        "NSLocationWhenInUseUsageDescription": "Tradesmen uses your location only when you're on a job to remind you to send your customer an end-of-day update when you leave site. We never track you continuously."
       }
     },
     "android": {
@@ -45,6 +46,12 @@
         "expo-notifications",
         {
           "color": "#1B4DD9"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Tradesmen uses your location only when you're on a job to remind you to send your customer an end-of-day update when you leave site. We never track you continuously."
         }
       ]
     ],
