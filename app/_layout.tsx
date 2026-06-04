@@ -53,6 +53,7 @@ export default function RootLayout() {
             <Stack.Screen name="settings/verification" options={{ presentation: 'card' }} />
             <Stack.Screen name="project/[id]/chat" options={{ presentation: 'card' }} />
             <Stack.Screen name="project/[id]/photos" options={{ presentation: 'card' }} />
+            <Stack.Screen name="project/[id]/documents" options={{ presentation: 'card' }} />
             <Stack.Screen name="comments/[update_id]" options={{ presentation: 'card' }} />
             <Stack.Screen name="tradesman/[id]" options={{ presentation: 'card' }} />
           </Stack>

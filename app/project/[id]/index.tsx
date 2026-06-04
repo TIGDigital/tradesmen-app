@@ -497,6 +497,25 @@ function Content({
         );
       })()}
 
+      {/* Documents — always visible so the upload affordance is one tap from
+          the project detail, even when zero docs exist. */}
+      <Card>
+        <Pressable
+          onPress={() =>
+            router.push({ pathname: '/project/[id]/documents', params: { id: project.id } })
+          }
+          style={styles.metaRow}
+        >
+          <View>
+            <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Documents</Text>
+            <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+              Quotes, certificates, plans
+            </Text>
+          </View>
+          <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+        </Pressable>
+      </Card>
+
       {/* Updates feed */}
       <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginTop: t.space[2] }]}>
         Updates · {updates.length}

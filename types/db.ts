@@ -822,6 +822,57 @@ export type Database = {
           },
         ]
       }
+      project_documents: {
+        Row: {
+          id: string
+          project_id: string
+          uploader_id: string
+          file_name: string
+          storage_path: string
+          mime_type: string
+          size_bytes: number
+          created_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          uploader_id: string
+          file_name: string
+          storage_path: string
+          mime_type: string
+          size_bytes: number
+          created_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          uploader_id?: string
+          file_name?: string
+          storage_path?: string
+          mime_type?: string
+          size_bytes?: number
+          created_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_documents_uploader_id_fkey"
+            columns: ["uploader_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_update_comments: {
         Row: {
           author_id: string
