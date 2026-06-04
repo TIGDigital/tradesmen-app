@@ -27,7 +27,7 @@ export default function CustomerMessagesScreen() {
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['my-current-project'],
-    queryFn: fetchMyCurrentProject,
+    queryFn: () => fetchMyCurrentProject(),
   });
 
   return (

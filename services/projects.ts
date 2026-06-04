@@ -16,11 +16,11 @@ type DelayReason = Database['public']['Enums']['delay_reason'];
  * because the invite-preview policy (Sprint 9) makes pending-invite projects
  * readable to any signed-in user, which would leak unrelated projects here.
  */
-export async function fetchMyCurrentProject() {
+export async function fetchMyCurrentProject(id?: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data, error } = await supabase
+  let q = supabase
     .from('projects')
     .select(`
       id,
@@ -33,15 +33,19 @@ export async function fetchMyCurrentProject() {
       updates:project_updates (
         id, body, created_at, author_id, deleted_at, type, eta_at,
         media:project_update_media ( id, storage_path, sort_order, media_type ),
-        reactions:project_update_reactions ( kind, user_id )
+        reactions:project_update_reactions ( kind, user_id ),
+        comments:project_update_comments ( id )
       ),
       milestones:project_milestones ( id, title, status, sort_order, expected_date, completed_at )
     `)
     .or(`tradesman_id.eq.${user.id},customer_id.eq.${user.id}`)
-    .is('archived_at', null)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .is('archived_at', null);
+
+  // If a specific project is requested, target it. Otherwise default to
+  // the most-recently-updated one (the existing "current project" semantic).
+  const { data, error } = id
+    ? await q.eq('id', id).maybeSingle()
+    : await q.order('updated_at', { ascending: false }).limit(1).maybeSingle();
 
   if (error) throw error;
   return data;

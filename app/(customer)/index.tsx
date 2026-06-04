@@ -22,6 +22,7 @@ import {
   currentAndNextMilestone,
   dayOfProject,
   fetchMyCurrentProject,
+  fetchMyProjects,
   formatEta,
   relativeTime,
   statusHeadline,
@@ -38,18 +39,44 @@ export default function HomeScreen() {
   // All hooks must run on every render — put the query before any conditional return.
   const isCustomer = profile?.role !== 'tradesman';
 
-  // Live updates for the customer's project (no-op for tradesmen, who redirect away)
-  // — invalidates the home query so the Latest update card refreshes without reload.
-  // Subscription is keyed on the project id once data loads.
+  // Lightweight list query just for the picker. Cheap fields only — same
+  // query is shared with other tabs and with the picker action sheet.
+  const projectsQuery = useQuery({
+    queryKey: ['my-projects', profile?.id],
+    queryFn: fetchMyProjects,
+    enabled: !!profile && isCustomer,
+  });
+  const projects = projectsQuery.data ?? [];
+  const isMulti = projects.length > 1;
+
+  // Selected project — null means "default to most recent". Once the list
+  // loads we render its title in the header.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const effectiveSelectedId = selectedId ?? projects[0]?.id ?? null;
+
+  // Live updates for the customer's project — invalidates the home query so
+  // the Latest update card refreshes without reload. Subscription is keyed
+  // on the project id once data loads.
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: ['my-current-project', profile?.id],
-    queryFn: fetchMyCurrentProject,
+    queryKey: ['my-current-project', profile?.id, effectiveSelectedId],
+    queryFn: () => fetchMyCurrentProject(effectiveSelectedId ?? undefined),
     enabled: !!profile && isCustomer,
   });
 
   // Subscribe to realtime changes for the loaded project. All hooks must run
   // before any conditional return — pass null if data isn't loaded yet.
   useRealtimeProject(data?.id ?? null);
+
+  function onSwitchProject() {
+    if (!isMulti) return;
+    Alert.alert('Switch project', undefined, [
+      ...projects.map((p) => ({
+        text: p.title,
+        onPress: () => setSelectedId(p.id),
+      })),
+      { text: 'Cancel', style: 'cancel' as const },
+    ]);
+  }
 
   // Role-based redirects live in `app/index.tsx`. By the time we're inside
   // the (customer) tab group, the user is a customer — no guard needed.
@@ -85,12 +112,29 @@ export default function HomeScreen() {
         <Pressable onPress={onMenu} hitSlop={12} style={styles.navIconBox}>
           <Text style={{ fontSize: 22, color: t.colors.text.primary }}>≡</Text>
         </Pressable>
-        <Text
-          style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}
-          numberOfLines={1}
-        >
-          {data?.title ?? (isLoading ? 'Loading…' : 'No project yet')}
-        </Text>
+        {isMulti ? (
+          <Pressable
+            onPress={onSwitchProject}
+            hitSlop={8}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}
+            accessibilityLabel="Switch project"
+          >
+            <Text
+              style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}
+              numberOfLines={1}
+            >
+              {data?.title ?? (isLoading ? 'Loading…' : 'No project yet')}
+            </Text>
+            <Text style={{ color: t.colors.text.tertiary, fontSize: 14 }}>▼</Text>
+          </Pressable>
+        ) : (
+          <Text
+            style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}
+            numberOfLines={1}
+          >
+            {data?.title ?? (isLoading ? 'Loading…' : 'No project yet')}
+          </Text>
+        )}
         {data ? (
           <Pressable
             onPress={() =>

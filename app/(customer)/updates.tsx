@@ -37,7 +37,7 @@ export default function CustomerUpdatesScreen() {
 
   const projectQuery = useQuery({
     queryKey: ['my-current-project'],
-    queryFn: fetchMyCurrentProject,
+    queryFn: () => fetchMyCurrentProject(),
   });
   const projectId = projectQuery.data?.id ?? null;
 
