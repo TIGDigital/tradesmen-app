@@ -15,7 +15,9 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TypingIndicator } from '@/components/TypingIndicator';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
+import { useTypingPresence } from '@/hooks/useTypingPresence';
 import { fetchMessages, type MessageRow, markChatRead, sendMessage } from '@/services/messages';
 import { fetchProject } from '@/services/projects';
 import { useAuthStore } from '@/stores/auth';
@@ -27,6 +29,7 @@ export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const myId = useAuthStore((s) => s.profile?.id);
   const myRole = useAuthStore((s) => s.profile?.role);
+  const myName = useAuthStore((s) => s.profile?.full_name);
   const queryClient = useQueryClient();
 
   const [draft, setDraft] = useState('');
@@ -46,6 +49,38 @@ export default function ChatScreen() {
 
   // Live updates from the other party.
   useRealtimeMessages(id ?? null);
+
+  // Presence channel for "is typing…" indicator.
+  const { whoIsTyping, setMyTyping } = useTypingPresence(
+    id ?? null,
+    myId ?? null,
+    myName ?? null,
+  );
+
+  // Debounce typing=false so the bubble doesn't flicker between keystrokes.
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleDraftChange = (text: string) => {
+    setDraft(text);
+    if (text.trim().length > 0) {
+      void setMyTyping(true);
+      if (typingTimer.current) clearTimeout(typingTimer.current);
+      typingTimer.current = setTimeout(() => {
+        void setMyTyping(false);
+      }, 1500);
+    } else {
+      // Empty input means we're definitely not typing — clear immediately.
+      if (typingTimer.current) clearTimeout(typingTimer.current);
+      void setMyTyping(false);
+    }
+  };
+
+  // Clean up the debounce timer on unmount so we don't broadcast after the
+  // component is gone.
+  useEffect(() => {
+    return () => {
+      if (typingTimer.current) clearTimeout(typingTimer.current);
+    };
+  }, []);
 
   // Mark anything the other party sent as read whenever we open or new arrives.
   useEffect(() => {
@@ -83,6 +118,9 @@ export default function ChatScreen() {
   function onSendPress() {
     const text = draft.trim();
     if (!text) return;
+    // Clear typing immediately on send — keystrokes are no longer in flight.
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    void setMyTyping(false);
     sendMutation.mutate(text);
   }
 
@@ -175,6 +213,10 @@ export default function ChatScreen() {
           />
         )}
 
+        {/* Typing indicator sits just above the composer so it's the last
+            thing you see before your own input. */}
+        {whoIsTyping.length > 0 && <TypingIndicator />}
+
         {/* Composer */}
         <View
           style={[
@@ -188,7 +230,7 @@ export default function ChatScreen() {
         >
           <TextInput
             value={draft}
-            onChangeText={setDraft}
+            onChangeText={handleDraftChange}
             placeholder="Message"
             placeholderTextColor={t.colors.text.tertiary}
             multiline
