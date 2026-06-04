@@ -556,6 +556,19 @@ function Content({
               </View>
             )}
             <Reactions update_id={u.id} project_id={project.id} reactions={u.reactions} />
+            <Pressable
+              onPress={() =>
+                router.push({ pathname: '/comments/[update_id]', params: { update_id: u.id } })
+              }
+              hitSlop={6}
+              style={{ paddingVertical: 8, marginTop: 4 }}
+            >
+              <Text style={[t.type.footnote, { color: t.colors.text.link }]}>
+                {(u.comments?.length ?? 0) === 0
+                  ? 'Add a comment'
+                  : `View ${u.comments!.length} comment${u.comments!.length === 1 ? '' : 's'} →`}
+              </Text>
+            </Pressable>
           </Card>
         ))
       )}

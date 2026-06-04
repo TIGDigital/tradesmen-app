@@ -94,7 +94,8 @@ export async function fetchProjectUpdates(projectId: string) {
       id, body, type, created_at, author_id, eta_at,
       author:profiles!project_updates_author_id_fkey ( id, full_name ),
       media:project_update_media ( id, storage_path, sort_order, media_type ),
-      reactions:project_update_reactions ( kind, user_id )
+      reactions:project_update_reactions ( kind, user_id ),
+      comments:project_update_comments ( id )
     `)
     .eq('project_id', projectId)
     .is('deleted_at', null)
