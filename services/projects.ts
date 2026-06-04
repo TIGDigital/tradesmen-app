@@ -57,7 +57,7 @@ export async function fetchMyProjects() {
     .select(`
       id, title, status, trade_type, city, postcode,
       expected_start_date, expected_end_date, actual_start_date,
-      created_at, pending_customer_name, customer_id
+      created_at, last_update_at, pending_customer_name, customer_id
     `)
     .or(`tradesman_id.eq.${user.id},customer_id.eq.${user.id}`)
     .is('archived_at', null)

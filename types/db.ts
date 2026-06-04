@@ -1042,6 +1042,7 @@ export type Database = {
           invite_accepted_at: string | null
           invite_code: string | null
           invite_sent_at: string | null
+          last_update_at: string | null
           pending_customer_name: string | null
           pending_customer_phone: string | null
           postcode: string | null
@@ -1071,6 +1072,7 @@ export type Database = {
           invite_accepted_at?: string | null
           invite_code?: string | null
           invite_sent_at?: string | null
+          last_update_at?: string | null
           pending_customer_name?: string | null
           pending_customer_phone?: string | null
           postcode?: string | null
@@ -1100,6 +1102,7 @@ export type Database = {
           invite_accepted_at?: string | null
           invite_code?: string | null
           invite_sent_at?: string | null
+          last_update_at?: string | null
           pending_customer_name?: string | null
           pending_customer_phone?: string | null
           postcode?: string | null
