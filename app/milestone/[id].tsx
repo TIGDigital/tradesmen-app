@@ -55,8 +55,6 @@ export default function MilestoneEditScreen() {
   const [status, setStatus] = useState<MilestoneStatus>('pending');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
 
   // Hydrate the form once when the milestone loads.
   useEffect(() => {
@@ -86,11 +84,9 @@ export default function MilestoneEditScreen() {
   });
 
   function onStartChange(_: DateTimePickerEvent, picked?: Date) {
-    if (Platform.OS === 'android') setShowStartPicker(false);
     if (picked) setStartDate(picked);
   }
   function onEndChange(_: DateTimePickerEvent, picked?: Date) {
-    if (Platform.OS === 'android') setShowEndPicker(false);
     if (picked) setEndDate(picked);
   }
 
@@ -184,14 +180,18 @@ export default function MilestoneEditScreen() {
             <Card>
               <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Dates</Text>
 
+              {/* Start date — `compact` is the native iOS pattern: a small
+                  pill that pops a popover calendar on tap and auto-dismisses
+                  after pick. No open/close state to manage. */}
               <View style={[styles.dateRow, { borderBottomColor: t.colors.border.subtle }]}>
                 <Text style={[t.type.body, { color: t.colors.text.primary }]}>Start</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <Pressable onPress={() => setShowStartPicker((v) => !v)} hitSlop={6}>
-                    <Text style={[t.type.body, { color: t.colors.text.link }]}>
-                      {startDate ? formatNice(startDate) : 'Not set'}
-                    </Text>
-                  </Pressable>
+                  <DateTimePicker
+                    value={startDate ?? new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                    onChange={onStartChange}
+                  />
                   {startDate && (
                     <Pressable onPress={() => setStartDate(null)} hitSlop={6}>
                       <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>Clear</Text>
@@ -199,23 +199,16 @@ export default function MilestoneEditScreen() {
                   )}
                 </View>
               </View>
-              {showStartPicker && (
-                <DateTimePicker
-                  value={startDate ?? new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                  onChange={onStartChange}
-                />
-              )}
 
               <View style={[styles.dateRow, { borderBottomWidth: 0 }]}>
                 <Text style={[t.type.body, { color: t.colors.text.primary }]}>End</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <Pressable onPress={() => setShowEndPicker((v) => !v)} hitSlop={6}>
-                    <Text style={[t.type.body, { color: t.colors.text.link }]}>
-                      {endDate ? formatNice(endDate) : 'Not set'}
-                    </Text>
-                  </Pressable>
+                  <DateTimePicker
+                    value={endDate ?? new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                    onChange={onEndChange}
+                  />
                   {endDate && (
                     <Pressable onPress={() => setEndDate(null)} hitSlop={6}>
                       <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>Clear</Text>
@@ -223,14 +216,9 @@ export default function MilestoneEditScreen() {
                   )}
                 </View>
               </View>
-              {showEndPicker && (
-                <DateTimePicker
-                  value={endDate ?? new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                  onChange={onEndChange}
-                />
-              )}
+              <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 8 }]}>
+                Tap a date to change it. Hit Save when both are set.
+              </Text>
             </Card>
           </ScrollView>
 
