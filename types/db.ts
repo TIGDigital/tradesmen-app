@@ -776,6 +776,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           expected_date: string | null
+          expected_start_date: string | null
           id: string
           project_id: string
           requires_customer_approval: boolean | null
@@ -790,6 +791,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           expected_date?: string | null
+          expected_start_date?: string | null
           id?: string
           project_id: string
           requires_customer_approval?: boolean | null
@@ -804,6 +806,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           expected_date?: string | null
+          expected_start_date?: string | null
           id?: string
           project_id?: string
           requires_customer_approval?: boolean | null

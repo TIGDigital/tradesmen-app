@@ -36,7 +36,7 @@ export async function fetchMyCurrentProject(id?: string) {
         reactions:project_update_reactions ( kind, user_id ),
         comments:project_update_comments ( id )
       ),
-      milestones:project_milestones ( id, title, status, sort_order, expected_date, completed_at )
+      milestones:project_milestones ( id, title, status, sort_order, expected_start_date, expected_date, completed_at )
     `)
     .or(`tradesman_id.eq.${user.id},customer_id.eq.${user.id}`)
     .is('archived_at', null);
@@ -131,7 +131,7 @@ export function formatEta(iso: string): string {
 export async function fetchMilestones(projectId: string) {
   const { data, error } = await supabase
     .from('project_milestones')
-    .select('id, title, description, status, sort_order, expected_date, completed_at')
+    .select('id, title, description, status, sort_order, expected_start_date, expected_date, completed_at')
     .eq('project_id', projectId)
     .order('sort_order', { ascending: true });
   if (error) throw error;

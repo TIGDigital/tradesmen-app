@@ -497,6 +497,27 @@ function Content({
         );
       })()}
 
+      {/* Schedule — only rendered when there's at least one milestone so the
+          empty case isn't misleading. */}
+      {milestones.length > 0 && (
+        <Card>
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/project/[id]/schedule', params: { id: project.id } })
+            }
+            style={styles.metaRow}
+          >
+            <View>
+              <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Schedule</Text>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                Visual milestone timeline
+              </Text>
+            </View>
+            <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+          </Pressable>
+        </Card>
+      )}
+
       {/* Documents — always visible so the upload affordance is one tap from
           the project detail, even when zero docs exist. */}
       <Card>

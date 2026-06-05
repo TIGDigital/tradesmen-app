@@ -56,6 +56,7 @@ export default function RootLayout() {
             <Stack.Screen name="project/[id]/documents" options={{ presentation: 'card' }} />
             <Stack.Screen name="project/[id]/snags" options={{ presentation: 'card' }} />
             <Stack.Screen name="project/[id]/snags/new" options={{ presentation: 'card' }} />
+            <Stack.Screen name="project/[id]/schedule" options={{ presentation: 'card' }} />
             <Stack.Screen name="snag/[id]" options={{ presentation: 'card' }} />
             <Stack.Screen
               name="document/[id]"
