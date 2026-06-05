@@ -127,6 +127,42 @@ export function formatEta(iso: string): string {
   return `Back ${day} at ${time}`;
 }
 
+/**
+ * Patch fields on one milestone (used by the schedule edit modal). For
+ * status changes that should auto-post to the feed, use the existing
+ * setMilestoneStatus — this is for "quiet" edits: dates, title, ad-hoc
+ * status rewrites. Returns the updated row.
+ */
+export async function updateMilestone(
+  id: string,
+  patch: Partial<{
+    title: string;
+    status: MilestoneStatus;
+    expected_start_date: string | null;
+    expected_date: string | null;
+  }>,
+) {
+  const { data, error } = await supabase
+    .from('project_milestones')
+    .update(patch)
+    .eq('id', id)
+    .select('id, title, description, status, sort_order, expected_start_date, expected_date, completed_at')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/** Fetch a single milestone by id. */
+export async function fetchMilestone(id: string) {
+  const { data, error } = await supabase
+    .from('project_milestones')
+    .select('id, project_id, title, description, status, sort_order, expected_start_date, expected_date, completed_at')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 /** Fetch milestones for a project, ordered by sort_order. */
 export async function fetchMilestones(projectId: string) {
   const { data, error } = await supabase

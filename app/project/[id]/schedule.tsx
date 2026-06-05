@@ -150,8 +150,11 @@ export default function ScheduleScreen() {
               const bar = barFor(m, range);
               const tone = colorFor(m.status);
               return (
-                <View
+                <Pressable
                   key={m.id}
+                  onPress={() =>
+                    router.push({ pathname: '/milestone/[id]', params: { id: m.id } })
+                  }
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -199,7 +202,7 @@ export default function ScheduleScreen() {
                       }}
                     />
                   </View>
-                </View>
+                </Pressable>
               );
             })}
           </View>
