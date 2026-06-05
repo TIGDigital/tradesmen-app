@@ -516,6 +516,24 @@ function Content({
         </Pressable>
       </Card>
 
+      {/* Snags — always visible. The list screen itself handles empty state. */}
+      <Card>
+        <Pressable
+          onPress={() =>
+            router.push({ pathname: '/project/[id]/snags', params: { id: project.id } })
+          }
+          style={styles.metaRow}
+        >
+          <View>
+            <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Snags</Text>
+            <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+              Flag an issue
+            </Text>
+          </View>
+          <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+        </Pressable>
+      </Card>
+
       {/* Updates feed */}
       <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginTop: t.space[2] }]}>
         Updates · {updates.length}

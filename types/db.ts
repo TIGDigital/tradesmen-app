@@ -873,6 +873,105 @@ export type Database = {
           },
         ]
       }
+      project_snags: {
+        Row: {
+          id: string
+          project_id: string
+          reporter_id: string
+          title: string
+          description: string | null
+          location_hint: string | null
+          status: Database["public"]["Enums"]["snag_status"]
+          resolved_at: string | null
+          resolved_by: string | null
+          resolution_note: string | null
+          created_at: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          reporter_id: string
+          title: string
+          description?: string | null
+          location_hint?: string | null
+          status?: Database["public"]["Enums"]["snag_status"]
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolution_note?: string | null
+          created_at?: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          reporter_id?: string
+          title?: string
+          description?: string | null
+          location_hint?: string | null
+          status?: Database["public"]["Enums"]["snag_status"]
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolution_note?: string | null
+          created_at?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_snags_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_snags_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_snags_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_snag_photos: {
+        Row: {
+          id: string
+          snag_id: string
+          storage_path: string
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          snag_id: string
+          storage_path: string
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          snag_id?: string
+          storage_path?: string
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_snag_photos_snag_id_fkey"
+            columns: ["snag_id"]
+            isOneToOne: false
+            referencedRelation: "project_snags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_update_comments: {
         Row: {
           author_id: string
@@ -1533,6 +1632,7 @@ export type Database = {
         | "awaiting_inspection"
         | "completed"
       reaction_kind: "thumbs_up" | "question" | "heart"
+      snag_status: "open" | "in_progress" | "resolved"
       trade_type:
         | "builder"
         | "kitchen_fitter"
@@ -1752,6 +1852,7 @@ export const Constants = {
         "completed",
       ],
       reaction_kind: ["thumbs_up", "question", "heart"],
+      snag_status: ["open", "in_progress", "resolved"],
       trade_type: [
         "builder",
         "kitchen_fitter",
