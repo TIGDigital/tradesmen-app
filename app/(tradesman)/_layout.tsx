@@ -43,6 +43,15 @@ export default function TradesmanLayout() {
         }}
       />
       <Tabs.Screen
+        name="crew"
+        options={{
+          title: 'Crew',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="notifications"
         options={{
           title: 'Alerts',

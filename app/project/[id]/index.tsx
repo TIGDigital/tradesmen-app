@@ -537,6 +537,25 @@ function Content({
         </Pressable>
       </Card>
 
+      {/* Crew — visible for everyone; the list screen handles empty state.
+          Lead can remove non-lead members from inside the screen. */}
+      <Card>
+        <Pressable
+          onPress={() =>
+            router.push({ pathname: '/project/[id]/crew', params: { id: project.id } })
+          }
+          style={styles.metaRow}
+        >
+          <View>
+            <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Crew</Text>
+            <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+              Lead, apprentices, helpers
+            </Text>
+          </View>
+          <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+        </Pressable>
+      </Card>
+
       {/* Snags — always visible. The list screen itself handles empty state. */}
       <Card>
         <Pressable
