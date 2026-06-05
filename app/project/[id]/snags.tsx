@@ -93,40 +93,43 @@ export default function SnagsScreen() {
         >
           {items.map((s) => (
             <Card key={s.id}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Pressable
+                onPress={() => router.push({ pathname: '/snag/[id]', params: { id: s.id } })}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
                     <Text
-                      style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary, flexShrink: 1 }]}
+                      style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}
                       numberOfLines={2}
                     >
                       {s.title}
                     </Text>
-                  </View>
-                  {s.location_hint && (
-                    <Text style={[t.type.footnote, { color: t.colors.text.secondary, marginTop: 2 }]}>
-                      📍 {s.location_hint}
+                    {s.location_hint && (
+                      <Text style={[t.type.footnote, { color: t.colors.text.secondary, marginTop: 2 }]}>
+                        📍 {s.location_hint}
+                      </Text>
+                    )}
+                    <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 4 }]}>
+                      {s.reporter?.full_name ?? 'Someone'} · {relativeTime(s.created_at)}
+                      {s.status === 'resolved' && s.confirmed_at ? ' · ✓ signed off' : ''}
                     </Text>
-                  )}
-                  <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 4 }]}>
-                    {s.reporter?.full_name ?? 'Someone'} · {relativeTime(s.created_at)}
+                  </View>
+                  <StatusPill status={s.status} />
+                </View>
+                {s.description && (
+                  <Text
+                    style={[t.type.body, { color: t.colors.text.primary, marginTop: 10 }]}
+                    numberOfLines={4}
+                  >
+                    {s.description}
                   </Text>
-                </View>
-                <StatusPill status={s.status} />
-              </View>
-              {s.description && (
-                <Text
-                  style={[t.type.body, { color: t.colors.text.primary, marginTop: 10 }]}
-                  numberOfLines={4}
-                >
-                  {s.description}
-                </Text>
-              )}
-              {s.photos.length > 0 && (
-                <View style={{ marginTop: 10 }}>
-                  <SnagPhotoStrip photos={s.photos} />
-                </View>
-              )}
+                )}
+                {s.photos.length > 0 && (
+                  <View style={{ marginTop: 10 }}>
+                    <SnagPhotoStrip photos={s.photos.filter((p) => p.kind !== 'resolution')} />
+                  </View>
+                )}
+              </Pressable>
             </Card>
           ))}
         </ScrollView>

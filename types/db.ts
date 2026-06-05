@@ -885,6 +885,8 @@ export type Database = {
           resolved_at: string | null
           resolved_by: string | null
           resolution_note: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           deleted_at: string | null
         }
@@ -899,6 +901,8 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           resolution_note?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           deleted_at?: string | null
         }
@@ -913,6 +917,8 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           resolution_note?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           deleted_at?: string | null
         }
@@ -946,6 +952,7 @@ export type Database = {
           snag_id: string
           storage_path: string
           sort_order: number
+          kind: string
           created_at: string
         }
         Insert: {
@@ -953,6 +960,7 @@ export type Database = {
           snag_id: string
           storage_path: string
           sort_order?: number
+          kind?: string
           created_at?: string
         }
         Update: {
@@ -960,6 +968,7 @@ export type Database = {
           snag_id?: string
           storage_path?: string
           sort_order?: number
+          kind?: string
           created_at?: string
         }
         Relationships: [
