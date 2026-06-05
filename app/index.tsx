@@ -14,7 +14,12 @@ import { useAuthStore } from '@/stores/auth';
 export default function Index() {
   const role = useAuthStore((s) => s.profile?.role);
 
-  if (role === 'tradesman') return <Redirect href="/(tradesman)/jobs" />;
+  if (role === 'tradesman' || role === 'apprentice') {
+    // Apprentices reuse the tradesman screens — same project list shape,
+    // just filtered through crew membership in fetchMyProjects. UI gates
+    // inside jobs.tsx hide the "Create project" affordance.
+    return <Redirect href="/(tradesman)/jobs" />;
+  }
   // customer (and any other role that slipped through) gets the customer tabs.
   return <Redirect href="/(customer)" />;
 }

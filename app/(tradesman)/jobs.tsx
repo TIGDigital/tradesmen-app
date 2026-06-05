@@ -83,11 +83,12 @@ export default function JobsScreen() {
     return list.filter((p) => p.status === 'delayed');
   }, [stats, filter]);
 
-  // If the role flipped to customer (e.g. via the dev switch), bounce out.
-  // All hooks above this line so React's hook ordering stays stable.
-  if (profile && profile.role !== 'tradesman') {
+  // Apprentices share these screens — they see the projects they're on as
+  // crew, but can't create new ones. Anyone else (customer) gets bounced.
+  if (profile && profile.role !== 'tradesman' && profile.role !== 'apprentice') {
     return <Redirect href="/" />;
   }
+  const isApprentice = profile?.role === 'apprentice';
 
   const firstName = (profile?.full_name ?? '').split(' ')[0] || 'there';
   const greeting = getGreeting();
@@ -131,14 +132,18 @@ export default function JobsScreen() {
           <Text style={{ fontSize: 22, color: t.colors.text.primary }}>≡</Text>
         </Pressable>
         <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>Jobs</Text>
-        <Pressable
-          onPress={() => router.push('/project/new')}
-          hitSlop={12}
-          style={styles.navIconBox}
-          accessibilityLabel="Create new project"
-        >
-          <Ionicons name="add-circle" size={28} color={t.colors.text.link} />
-        </Pressable>
+        {isApprentice ? (
+          <View style={styles.navIconBox} />
+        ) : (
+          <Pressable
+            onPress={() => router.push('/project/new')}
+            hitSlop={12}
+            style={styles.navIconBox}
+            accessibilityLabel="Create new project"
+          >
+            <Ionicons name="add-circle" size={28} color={t.colors.text.link} />
+          </Pressable>
+        )}
       </View>
 
       {isLoading && (
@@ -217,12 +222,14 @@ export default function JobsScreen() {
               >
                 Create your first project to get started.
               </Text>
-              <View style={{ marginTop: t.space[6], alignSelf: 'stretch' }}>
-                <PrimaryButton
-                  title="Create new project"
-                  onPress={() => router.push('/project/new')}
-                />
-              </View>
+              {!isApprentice && (
+                <View style={{ marginTop: t.space[6], alignSelf: 'stretch' }}>
+                  <PrimaryButton
+                    title="Create new project"
+                    onPress={() => router.push('/project/new')}
+                  />
+                </View>
+              )}
             </View>
           ) : filtered.length === 0 ? (
             <View style={{ paddingVertical: t.space[8], alignItems: 'center' }}>

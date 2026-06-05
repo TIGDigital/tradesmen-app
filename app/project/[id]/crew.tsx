@@ -2,29 +2,44 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
+import * as Sharing from 'expo-sharing';
+import { useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { listProjectCrew, removeCrewMember, type CrewMember } from '@/services/crew';
+import {
+  createCrewInvite,
+  listProjectCrew,
+  removeCrewMember,
+  type CrewInvite,
+  type CrewMember,
+} from '@/services/crew';
 import { lightTheme } from '@/theme/light';
 
 /**
- * Per-project crew screen. Lead can remove non-lead members; everyone
- * else sees the list read-only.
+ * Per-project crew screen. Lead can invite + remove non-lead members;
+ * everyone else sees the list read-only.
  *
- * Adding members ships in Sprint 37 (SMS invite flow) — for now the +
- * button shows a "coming soon" alert that points to the invite flow.
+ * Invite flow: tap + → inline form → enter invitee name → Generate.
+ * The screen flips to a "code ready" state with the 6-character code +
+ * an iOS Share button. No Twilio needed — tradesman picks WhatsApp /
+ * Messages / Email from the system share sheet.
  */
 export default function ProjectCrewScreen() {
   const t = lightTheme;
@@ -44,6 +59,37 @@ export default function ProjectCrewScreen() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project-crew', id] }),
     onError: (e) => Alert.alert("Couldn't remove", (e as Error).message),
   });
+
+  // Invite UI state: 'idle' (no form), 'form' (entering name), 'ready' (showing code + share).
+  const [inviteState, setInviteState] = useState<'idle' | 'form' | 'ready'>('idle');
+  const [inviteeName, setInviteeName] = useState('');
+  const [generatedInvite, setGeneratedInvite] = useState<CrewInvite | null>(null);
+
+  const inviteMutation = useMutation({
+    mutationFn: () =>
+      createCrewInvite({ project_id: id!, invitee_name: inviteeName }),
+    onSuccess: (row) => {
+      setGeneratedInvite(row);
+      setInviteState('ready');
+      setInviteeName('');
+    },
+    onError: (e) => Alert.alert("Couldn't create invite", (e as Error).message),
+  });
+
+  async function onShareInvite() {
+    if (!generatedInvite) return;
+    const projectTitle = generatedInvite.project?.title ?? 'a project';
+    const inviterName = generatedInvite.inviter?.full_name ?? 'your lead';
+    const message =
+      `${inviterName} has invited you to join ${projectTitle} on Tradesmen.\n\n` +
+      `Open the app and enter this code:\n${generatedInvite.invite_code}\n\n` +
+      `Expires in 14 days.`;
+    try {
+      await Share.share({ message });
+    } catch {
+      // user cancelled
+    }
+  }
 
   function confirmRemove(member: CrewMember) {
     Alert.alert(
@@ -70,12 +116,11 @@ export default function ProjectCrewScreen() {
         </Pressable>
         <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>Crew</Text>
         <Pressable
-          onPress={() =>
-            Alert.alert(
-              'Coming next sprint',
-              'SMS-invite an apprentice ships in Sprint 37.',
-            )
-          }
+          onPress={() => {
+            setGeneratedInvite(null);
+            setInviteeName('');
+            setInviteState('form');
+          }}
           hitSlop={12}
           accessibilityLabel="Invite crew"
         >
@@ -109,6 +154,92 @@ export default function ProjectCrewScreen() {
           title="No crew yet"
           message="The lead tradesman is shown here. Add an apprentice in Sprint 37."
         />
+      )}
+
+      {/* Invite form / generated-code panel sit ABOVE the crew list when active. */}
+      {inviteState === 'form' && (
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={{ padding: 20 }}>
+            <Card>
+              <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Invitee name</Text>
+              <TextInput
+                value={inviteeName}
+                onChangeText={setInviteeName}
+                placeholder="Sam Watkins"
+                placeholderTextColor={t.colors.text.tertiary}
+                autoCapitalize="words"
+                style={[
+                  t.type.bodyLg,
+                  {
+                    color: t.colors.text.primary,
+                    backgroundColor: t.colors.bg.surface2,
+                    borderColor: t.colors.border.strong,
+                    borderWidth: 1,
+                    borderRadius: 12,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    marginTop: 6,
+                  },
+                ]}
+              />
+              <View style={{ gap: 8, marginTop: 14 }}>
+                <PrimaryButton
+                  title="Generate invite code"
+                  onPress={() => inviteMutation.mutate()}
+                  loading={inviteMutation.isPending}
+                  disabled={!inviteeName.trim()}
+                />
+                <Pressable
+                  onPress={() => setInviteState('idle')}
+                  hitSlop={6}
+                  style={{ alignItems: 'center', paddingVertical: 8 }}
+                >
+                  <Text style={[t.type.body, { color: t.colors.text.link }]}>Cancel</Text>
+                </Pressable>
+              </View>
+            </Card>
+          </View>
+        </KeyboardAvoidingView>
+      )}
+
+      {inviteState === 'ready' && generatedInvite && (
+        <View style={{ padding: 20 }}>
+          <Card>
+            <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginBottom: 6 }]}>
+              Share with {generatedInvite.invitee_name}
+            </Text>
+            <Text
+              style={[
+                t.type.title1,
+                {
+                  color: t.colors.text.primary,
+                  letterSpacing: 4,
+                  textAlign: 'center',
+                  paddingVertical: 16,
+                  backgroundColor: t.colors.bg.surface2,
+                  borderRadius: 12,
+                },
+              ]}
+            >
+              {generatedInvite.invite_code}
+            </Text>
+            <Text
+              style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 6, textAlign: 'center' }]}
+            >
+              Code expires in 14 days
+            </Text>
+            <View style={{ gap: 8, marginTop: 14 }}>
+              <PrimaryButton title="Share via…" onPress={onShareInvite} />
+              <Pressable
+                onPress={() => setInviteState('idle')}
+                hitSlop={6}
+                style={{ alignItems: 'center', paddingVertical: 8 }}
+              >
+                <Text style={[t.type.body, { color: t.colors.text.link }]}>Done</Text>
+              </Pressable>
+            </View>
+          </Card>
+        </View>
       )}
 
       {items.length > 0 && (

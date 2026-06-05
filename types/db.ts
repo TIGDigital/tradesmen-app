@@ -133,6 +133,70 @@ export type Database = {
           },
         ]
       }
+      crew_invitations: {
+        Row: {
+          id: string
+          project_id: string
+          inviter_id: string
+          invitee_name: string
+          invite_code: string
+          role_on_project: string
+          created_at: string
+          accepted_at: string | null
+          accepted_by: string | null
+          expires_at: string
+          revoked_at: string | null
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          inviter_id: string
+          invitee_name: string
+          invite_code: string
+          role_on_project?: string
+          created_at?: string
+          accepted_at?: string | null
+          accepted_by?: string | null
+          expires_at?: string
+          revoked_at?: string | null
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          inviter_id?: string
+          invitee_name?: string
+          invite_code?: string
+          role_on_project?: string
+          created_at?: string
+          accepted_at?: string | null
+          accepted_by?: string | null
+          expires_at?: string
+          revoked_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_invitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_invitations_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_invitations_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_records: {
         Row: {
           created_at: string | null

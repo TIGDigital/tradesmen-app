@@ -56,6 +56,22 @@ export async function fetchMyProjects() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  // Step 1: find every project where I'm in the crew (apprentice / helper /
+  // lead — lead overlaps with tradesman_id but the OR de-dupes naturally).
+  const { data: crew } = await supabase
+    .from('project_crew')
+    .select('project_id')
+    .eq('user_id', user.id)
+    .is('removed_at', null);
+  const crewProjectIds = (crew ?? []).map((c) => c.project_id);
+
+  // Step 2: build the OR filter. Always include tradesman_id + customer_id;
+  // add `id.in.(...)` if there are any crew memberships.
+  let filter = `tradesman_id.eq.${user.id},customer_id.eq.${user.id}`;
+  if (crewProjectIds.length > 0) {
+    filter += `,id.in.(${crewProjectIds.join(',')})`;
+  }
+
   const { data, error } = await supabase
     .from('projects')
     .select(`
@@ -63,7 +79,7 @@ export async function fetchMyProjects() {
       expected_start_date, expected_end_date, actual_start_date,
       created_at, last_update_at, pending_customer_name, customer_id
     `)
-    .or(`tradesman_id.eq.${user.id},customer_id.eq.${user.id}`)
+    .or(filter)
     .is('archived_at', null)
     .order('updated_at', { ascending: false });
 
