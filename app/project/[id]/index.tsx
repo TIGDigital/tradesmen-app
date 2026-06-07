@@ -231,7 +231,7 @@ export default function ProjectDetailScreen() {
           onShareInvite={async (code) => {
             try {
               await Share.share({
-                message: `Your project invite code: ${code}\n\nOpen the Tradesmen app and enter it on the home screen.`,
+                message: `Your project invite code: ${code}\n\nOpen the Phase app and enter it on the home screen.`,
               });
             } catch {
               // user cancelled

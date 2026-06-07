@@ -41,7 +41,7 @@ export default function LocationConsentScreen() {
         // iOS won't re-prompt — open Settings so they can flip it manually.
         Alert.alert(
           'Already denied',
-          'iOS will only ask once. Open Tradesmen in Settings and turn on Location to enable the leave-site nudge.',
+          'iOS will only ask once. Open Phase in Settings and turn on Location to enable the leave-site nudge.',
           [
             { text: 'Not now', style: 'cancel' },
             { text: 'Open Settings', onPress: () => Linking.openSettings() },

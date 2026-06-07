@@ -103,7 +103,7 @@ export default function VerificationSettingsScreen() {
                 { color: verified ? '#197A4D' : t.colors.text.primary },
               ]}
             >
-              {verified ? '✓ Verified by Tradesmen' : 'Not verified yet'}
+              {verified ? '✓ Verified by Phase' : 'Not verified yet'}
             </Text>
             <Text
               style={[

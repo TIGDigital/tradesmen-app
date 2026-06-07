@@ -214,7 +214,7 @@ export default function TradesmanProfileScreen() {
                     },
                   ]}
                 >
-                  Self-reported. Tradesmen verifies these manually before issuing the blue tick.
+                  Self-reported. Phase verifies these manually before issuing the blue tick.
                 </Text>
               )}
             </View>

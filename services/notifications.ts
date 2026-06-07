@@ -129,7 +129,7 @@ export async function sendPush(args: {
 export async function fireLocalTest(): Promise<void> {
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: 'Test from Tradesmen',
+      title: 'Test from Phase',
       body: 'If you see this, the JS notification pipeline works.',
       data: { local_test: true },
       sound: 'default',

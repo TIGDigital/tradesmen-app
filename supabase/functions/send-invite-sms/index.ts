@@ -96,8 +96,8 @@ Deno.serve(async (req: Request) => {
     const customerFirst = (project.pending_customer_name ?? 'there').split(' ')[0];
     const messageBody =
       `Hi ${customerFirst}, ${tradesmanName} invited you to follow ` +
-      `your "${project.title}" project on Tradesmen.\n\n` +
-      `Open the Tradesmen app and enter invite code: ${invite_code}`;
+      `your "${project.title}" project on Phase.\n\n` +
+      `Open the Phase app and enter invite code: ${invite_code}`;
 
     // Twilio REST API: Basic auth = SID:AUTH, form body.
     const credentials = btoa(`${TWILIO_SID}:${TWILIO_AUTH}`);

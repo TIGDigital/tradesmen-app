@@ -81,7 +81,7 @@ export default function ProjectCrewScreen() {
     const projectTitle = generatedInvite.project?.title ?? 'a project';
     const inviterName = generatedInvite.inviter?.full_name ?? 'your lead';
     const message =
-      `${inviterName} has invited you to join ${projectTitle} on Tradesmen.\n\n` +
+      `${inviterName} has invited you to join ${projectTitle} on Phase.\n\n` +
       `Open the app and enter this code:\n${generatedInvite.invite_code}\n\n` +
       `Expires in 14 days.`;
     try {

@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Tradesmen",
-    "slug": "tradesmen-app",
+    "name": "Phase",
+    "slug": "phase-app",
     "version": "1.0.0",
-    "scheme": "tradesmen",
+    "scheme": "phase",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -14,16 +14,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.tradesmen.app",
+      "bundleIdentifier": "com.tigdigital.phase",
       "buildNumber": "1",
       "config": {
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Tradesmen needs access to your photos so you can attach them to project updates for your customer.",
-        "NSCameraUsageDescription": "Tradesmen needs access to your camera so you can take photos for project updates.",
-        "NSMicrophoneUsageDescription": "Tradesmen needs access to your microphone so you can record voice notes on project updates.",
-        "NSLocationWhenInUseUsageDescription": "Tradesmen uses your location only when you're on a job to remind you to send your customer an end-of-day update when you leave site. We never track you continuously.",
+        "NSPhotoLibraryUsageDescription": "Phase needs access to your photos so you can attach them to project updates for your customer.",
+        "NSCameraUsageDescription": "Phase needs access to your camera so you can take photos for project updates.",
+        "NSMicrophoneUsageDescription": "Phase needs access to your microphone so you can record voice notes on project updates.",
+        "NSLocationWhenInUseUsageDescription": "Phase uses your location only when you're on a job to remind you to send your customer an end-of-day update when you leave site. We never track you continuously.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "privacyManifests": {
@@ -134,8 +134,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Tradesmen needs access to your photos so you can attach them to project updates for your customer.",
-          "cameraPermission": "Tradesmen needs access to your camera so you can take photos for project updates."
+          "photosPermission": "Phase needs access to your photos so you can attach them to project updates for your customer.",
+          "cameraPermission": "Phase needs access to your camera so you can take photos for project updates."
         }
       ],
       [
@@ -147,7 +147,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Tradesmen uses your location only when you're on a job to remind you to send your customer an end-of-day update when you leave site. We never track you continuously."
+          "locationWhenInUsePermission": "Phase uses your location only when you're on a job to remind you to send your customer an end-of-day update when you leave site. We never track you continuously."
         }
       ],
       "expo-sharing",

@@ -209,7 +209,7 @@ export function AccountView() {
             { color: t.colors.text.tertiary, textAlign: 'center', marginTop: t.space[4] },
           ]}
         >
-          Tradesmen v1.0.0
+          Phase v1.0.0
         </Text>
       </ScrollView>
     </View>
