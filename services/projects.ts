@@ -112,6 +112,7 @@ export async function fetchProjectUpdates(projectId: string) {
     .from('project_updates')
     .select(`
       id, body, type, created_at, author_id, eta_at,
+      approval_status, approval_decided_at, rejection_reason,
       author:profiles!project_updates_author_id_fkey ( id, full_name ),
       media:project_update_media ( id, storage_path, sort_order, media_type ),
       reactions:project_update_reactions ( kind, user_id ),
@@ -122,6 +123,56 @@ export async function fetchProjectUpdates(projectId: string) {
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data ?? [];
+}
+
+/** Lead-only: list updates awaiting approval for a project. */
+export async function listPendingApprovals(projectId: string) {
+  const { data, error } = await supabase
+    .from('project_updates')
+    .select(`
+      id, body, type, created_at, author_id, eta_at,
+      author:profiles!project_updates_author_id_fkey ( id, full_name, avatar_url ),
+      media:project_update_media ( id, storage_path, sort_order, media_type )
+    `)
+    .eq('project_id', projectId)
+    .eq('approval_status', 'pending')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Approve a pending update. RLS gates writes to project participants. */
+export async function approveUpdate(id: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+  const { error } = await supabase
+    .from('project_updates')
+    .update({
+      approval_status: 'approved',
+      approval_decided_at: new Date().toISOString(),
+      approval_decided_by: user.id,
+    })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+/** Reject a pending update with a written reason. */
+export async function rejectUpdate(args: { id: string; reason: string }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+  const trimmed = args.reason.trim();
+  if (!trimmed) throw new Error('Reason required');
+  const { error } = await supabase
+    .from('project_updates')
+    .update({
+      approval_status: 'rejected',
+      approval_decided_at: new Date().toISOString(),
+      approval_decided_by: user.id,
+      rejection_reason: trimmed,
+    })
+    .eq('id', args.id);
+  if (error) throw error;
 }
 
 /** Format an eta_at ISO string as "tomorrow at 8:00 AM" / "today at 8:00 AM". */

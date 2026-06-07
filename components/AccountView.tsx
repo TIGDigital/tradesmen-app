@@ -160,6 +160,40 @@ export function AccountView() {
           </>
         )}
 
+        {/* Enter a crew invite code — open to any signed-in user. */}
+        <Card>
+          <Pressable
+            onPress={() => {
+              Alert.prompt(
+                'Enter invite code',
+                'Paste the 6-character code your tradesman shared with you.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Go',
+                    onPress: (input?: string) => {
+                      const code = (input ?? '').trim().toUpperCase();
+                      if (code.length === 6) {
+                        router.push({ pathname: '/crew-invite/[code]', params: { code } });
+                      }
+                    },
+                  },
+                ],
+                'plain-text',
+              );
+            }}
+            style={styles.rowBetween}
+          >
+            <View>
+              <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Have an invite?</Text>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                Enter a crew invite code
+              </Text>
+            </View>
+            <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+          </Pressable>
+        </Card>
+
         {/* Sign out */}
         <View style={{ marginTop: t.space[8] }}>
           <Pressable onPress={onSignOut} style={[styles.signOutBtn, { borderColor: t.colors.border.subtle }]}>

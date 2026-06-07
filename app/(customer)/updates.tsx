@@ -49,7 +49,12 @@ export default function CustomerUpdatesScreen() {
     enabled: !!projectId,
   });
 
-  const updates = updatesQuery.data ?? [];
+  // Customers only see approved updates — pending ones are hidden until
+  // the lead signs off (Sprint 38 approval queue).
+  const updates = (updatesQuery.data ?? []).filter(
+    (u) => (u as { approval_status?: string }).approval_status !== 'pending'
+       && (u as { approval_status?: string }).approval_status !== 'rejected',
+  );
   const isRefreshing = projectQuery.isRefetching || updatesQuery.isRefetching;
   const refresh = () => {
     void projectQuery.refetch();

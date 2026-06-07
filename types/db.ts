@@ -1190,6 +1190,10 @@ export type Database = {
           type: Database["public"]["Enums"]["update_type"]
           voice_note_transcript: string | null
           voice_note_url: string | null
+          approval_status: Database["public"]["Enums"]["update_approval_status"]
+          approval_decided_at: string | null
+          approval_decided_by: string | null
+          rejection_reason: string | null
         }
         Insert: {
           author_id: string
@@ -1207,6 +1211,10 @@ export type Database = {
           type?: Database["public"]["Enums"]["update_type"]
           voice_note_transcript?: string | null
           voice_note_url?: string | null
+          approval_status?: Database["public"]["Enums"]["update_approval_status"]
+          approval_decided_at?: string | null
+          approval_decided_by?: string | null
+          rejection_reason?: string | null
         }
         Update: {
           author_id?: string
@@ -1224,6 +1232,10 @@ export type Database = {
           type?: Database["public"]["Enums"]["update_type"]
           voice_note_transcript?: string | null
           voice_note_url?: string | null
+          approval_status?: Database["public"]["Enums"]["update_approval_status"]
+          approval_decided_at?: string | null
+          approval_decided_by?: string | null
+          rejection_reason?: string | null
         }
         Relationships: [
           {
@@ -1709,6 +1721,7 @@ export type Database = {
         | "completed"
       reaction_kind: "thumbs_up" | "question" | "heart"
       snag_status: "open" | "in_progress" | "resolved"
+      update_approval_status: "pending" | "approved" | "rejected"
       trade_type:
         | "builder"
         | "kitchen_fitter"
@@ -1929,6 +1942,7 @@ export const Constants = {
       ],
       reaction_kind: ["thumbs_up", "question", "heart"],
       snag_status: ["open", "in_progress", "resolved"],
+      update_approval_status: ["pending", "approved", "rejected"],
       trade_type: [
         "builder",
         "kitchen_fitter",

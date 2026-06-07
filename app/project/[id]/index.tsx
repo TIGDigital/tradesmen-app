@@ -537,6 +537,34 @@ function Content({
         </Pressable>
       </Card>
 
+      {/* Approvals card — only visible to the lead when there's pending
+          work to review. Apprentice updates queue here before reaching
+          the customer. */}
+      {isTradesman && (() => {
+        const pending = updates.filter(
+          (u) => (u as { approval_status?: string }).approval_status === 'pending',
+        ).length;
+        if (pending === 0) return null;
+        return (
+          <Card>
+            <Pressable
+              onPress={() =>
+                router.push({ pathname: '/project/[id]/approvals', params: { id: project.id } })
+              }
+              style={styles.metaRow}
+            >
+              <View>
+                <Text style={[t.type.caption, { color: '#8A5A00' }]}>Approvals</Text>
+                <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                  {pending} update{pending === 1 ? '' : 's'} need your sign-off
+                </Text>
+              </View>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+            </Pressable>
+          </Card>
+        );
+      })()}
+
       {/* Crew — visible for everyone; the list screen handles empty state.
           Lead can remove non-lead members from inside the screen. */}
       <Card>
@@ -574,9 +602,15 @@ function Content({
         </Pressable>
       </Card>
 
-      {/* Updates feed */}
+      {/* Updates feed — customer view hides pending + rejected. Lead +
+          author both see them; pending get a badge in the card. */}
       <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginTop: t.space[2] }]}>
-        Updates · {updates.length}
+        Updates · {updates.filter((u) => {
+          const s = (u as { approval_status?: string }).approval_status;
+          if (s === 'rejected') return false;
+          if (s === 'pending') return isTradesman;
+          return true;
+        }).length}
       </Text>
 
       {updates.length === 0 ? (
@@ -584,8 +618,31 @@ function Content({
           No updates yet.
         </Text>
       ) : (
-        updates.map((u) => (
+        updates
+          .filter((u) => {
+            const s = (u as { approval_status?: string }).approval_status;
+            if (s === 'rejected') return false;
+            if (s === 'pending') return isTradesman; // hide from non-lead
+            return true;
+          })
+          .map((u) => (
           <Card key={u.id}>
+            {(u as { approval_status?: string }).approval_status === 'pending' && (
+              <View
+                style={{
+                  alignSelf: 'flex-start',
+                  paddingVertical: 4,
+                  paddingHorizontal: 10,
+                  borderRadius: 999,
+                  backgroundColor: '#FFF3D6',
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={[t.type.footnote, { color: '#8A5A00', fontWeight: '600' }]}>
+                  Awaiting approval
+                </Text>
+              </View>
+            )}
             <View style={styles.updateHead}>
               <View style={[styles.avatar, { backgroundColor: '#A04A1C' }]}>
                 <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>
