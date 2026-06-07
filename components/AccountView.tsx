@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PhaseLogo } from '@/components/PhaseLogo';
 import { Card } from '@/components/ui/Card';
 import { signOut, updateProfile } from '@/services/auth';
 import { pickAvatar, uploadAvatar } from '@/services/media';
@@ -203,14 +204,12 @@ export function AccountView() {
           </Pressable>
         </View>
 
-        <Text
-          style={[
-            t.type.footnote,
-            { color: t.colors.text.tertiary, textAlign: 'center', marginTop: t.space[4] },
-          ]}
-        >
-          Phase v1.0.0
-        </Text>
+        <View style={{ alignItems: 'center', marginTop: t.space[6], gap: 8 }}>
+          <PhaseLogo size={28} />
+          <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
+            Phase v1.0.0
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );

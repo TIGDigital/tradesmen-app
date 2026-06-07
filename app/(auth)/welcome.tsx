@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PhaseLogo } from '@/components/PhaseLogo';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { lightTheme } from '@/theme/light';
 
@@ -12,7 +13,21 @@ export default function WelcomeScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['top', 'bottom']}>
       <View style={[styles.container, { padding: t.space[5] }]}>
         <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-          <Text style={[t.type.display, { color: t.colors.text.primary }]}>
+          <PhaseLogo size={72} />
+          <Text
+            style={[
+              t.type.caption,
+              { color: t.colors.text.tertiary, marginTop: t.space[5] },
+            ]}
+          >
+            Phase
+          </Text>
+          <Text
+            style={[
+              t.type.display,
+              { color: t.colors.text.primary, marginTop: t.space[2] },
+            ]}
+          >
             We'll never{'\n'}leave you{'\n'}wondering.
           </Text>
           <Text
@@ -21,7 +36,7 @@ export default function WelcomeScreen() {
               { color: t.colors.text.secondary, marginTop: t.space[4] },
             ]}
           >
-            The shared workspace for tradesmen and their customers.
+            The shared workspace for tradespeople and their customers.
           </Text>
         </View>
 

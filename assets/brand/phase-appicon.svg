@@ -1,0 +1,15 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Phase app icon">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2a59e0"></stop>
+      <stop offset="1" stop-color="#163fb6"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="27" fill="url(#tile)"></rect>
+  <g transform="translate(10 10)" stroke-width="12" stroke-linecap="round" fill="none">
+    <path d="M55.63 14.44 A36 36 0 0 1 85.56 44.37" stroke="#ffffff"></path>
+    <path d="M85.56 55.63 A36 36 0 0 1 55.63 85.56" stroke="#ffffff"></path>
+    <path d="M44.37 85.56 A36 36 0 0 1 14.44 55.63" stroke="#ffffff"></path>
+    <path d="M14.44 44.37 A36 36 0 0 1 44.37 14.44" stroke="#ffffff" stroke-opacity="0.45"></path>
+  </g>
+</svg>

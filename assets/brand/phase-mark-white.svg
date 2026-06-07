@@ -1,0 +1,8 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Phase">
+  <g stroke-width="12" stroke-linecap="round" fill="none">
+    <path d="M55.63 14.44 A36 36 0 0 1 85.56 44.37" stroke="#ffffff"></path>
+    <path d="M85.56 55.63 A36 36 0 0 1 55.63 85.56" stroke="#ffffff"></path>
+    <path d="M44.37 85.56 A36 36 0 0 1 14.44 55.63" stroke="#ffffff"></path>
+    <path d="M14.44 44.37 A36 36 0 0 1 44.37 14.44" stroke="#ffffff" stroke-opacity="0.5"></path>
+  </g>
+</svg>

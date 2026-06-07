@@ -1,86 +1,98 @@
 /**
  * Design tokens — single source of truth.
- * Ported from 03_Design_System_and_Screen_Specs.md Part B.
- * Every color has a light + dark pair. Resolve via theme/light.ts or theme/dark.ts.
+ *
+ * Ported from the Phase Design System (Jun 2026):
+ *   - "Stone" warm-neutral scale (paper, not stark white)
+ *   - Phase Blue #1B4DD9 as the single brand colour
+ *   - Tool semantics: muted green/amber/brick — never neon
+ *   - Warm-tinted soft shadows (rgba(29,27,22,…))
+ *   - Geist for body/headings, Geist Mono for stamped labels + numbers
+ *   - Moderate radii: 6/10/14/20/28
+ *
+ * Every colour has a light + dark pair. Resolve via theme/light.ts or
+ * theme/dark.ts. The dark mode is a warm graphite night, not pure black.
  */
 
 type ColorPair = { light: string; dark: string };
 
 export const colors = {
   bg: {
-    canvas: { light: '#FBFAF7', dark: '#0E0E10' } as ColorPair,
-    surface: { light: '#FFFFFF', dark: '#19191C' } as ColorPair,
-    surface2: { light: '#F4F2EE', dark: '#222226' } as ColorPair,
-    scrim: { light: 'rgba(11,11,12,0.35)', dark: 'rgba(0,0,0,0.55)' } as ColorPair,
+    // surface-page / surface-card / surface-sunken / scrim
+    canvas:   { light: '#FBFAF7', dark: '#121211' } as ColorPair, // stone-25 / warm graphite night
+    surface:  { light: '#FFFFFF', dark: '#1B1A17' } as ColorPair, // stone-0 / surface-card dark
+    surface2: { light: '#F6F4EE', dark: '#161512' } as ColorPair, // stone-50 / surface-sunken dark
+    scrim:    { light: 'rgba(29,27,22,0.35)', dark: 'rgba(0,0,0,0.55)' } as ColorPair,
   },
   border: {
-    subtle: { light: '#ECEAE4', dark: '#2A2A30' } as ColorPair,
-    strong: { light: '#D8D5CE', dark: '#3A3A42' } as ColorPair,
+    subtle: { light: '#ECE8DF', dark: '#262420' } as ColorPair, // stone-100
+    strong: { light: '#DDD8CC', dark: '#322F29' } as ColorPair, // stone-200
   },
   text: {
-    primary: { light: '#0B0B0C', dark: '#FAFAF7' } as ColorPair,
-    secondary: { light: '#52524F', dark: '#A8A8A2' } as ColorPair,
-    tertiary: { light: '#8B8A85', dark: '#6D6D67' } as ColorPair,
-    inverse: { light: '#FFFFFF', dark: '#0B0B0C' } as ColorPair,
-    link: { light: '#1B4DD9', dark: '#7FA4FF' } as ColorPair,
+    primary:   { light: '#1D1B16', dark: '#F4F1EA' } as ColorPair, // stone-900 / dark text-strong
+    secondary: { light: '#494539', dark: '#D3CDC0' } as ColorPair, // stone-700 / dark text-body
+    tertiary:  { light: '#7E7768', dark: '#968F7F' } as ColorPair, // stone-500 / dark text-muted
+    inverse:   { light: '#FBFAF7', dark: '#1D1B16' } as ColorPair,
+    link:      { light: '#1A3FB0', dark: '#91A8F6' } as ColorPair, // blue-700 / blue-300
   },
   brand: {
-    primary: { light: '#1B4DD9', dark: '#1B4DD9' } as ColorPair,
-    primaryPressed: { light: '#143BAA', dark: '#143BAA' } as ColorPair,
-    tint: { light: '#EAF0FF', dark: '#0F1F45' } as ColorPair,
+    primary:        { light: '#1B4DD9', dark: '#3257E4' } as ColorPair, // blue-600 / blue-500
+    primaryPressed: { light: '#1A3FB0', dark: '#1B4DD9' } as ColorPair, // blue-700 / blue-600
+    tint:           { light: '#EEF2FE', dark: '#1B336E' } as ColorPair, // blue-50 / blue-900-ish
   },
   destructive: {
-    text: { light: '#B5301A', dark: '#F47A65' } as ColorPair,
-    bg: { light: '#FBE1DC', dark: '#3A150E' } as ColorPair,
+    text: { light: '#A13A23', dark: '#E07A5F' } as ColorPair, // brick-600
+    bg:   { light: '#F7E9E4', dark: '#3A1A12' } as ColorPair, // brick-50 / warm shade
   },
 } as const;
 
 /**
- * Status colors — keyed by project_status enum from the architecture doc.
- * Each entry has a text and bg pair in both modes.
- * Critical: `delayed` is warm amber, never red.
+ * Status colours — keyed by project_status enum.
+ *
+ * Phase Design System rule: muted, tool-like, never neon. Delayed is warm
+ * brick (not fire-alarm red); awaiting/scheduled use the same family.
  */
 export const statusColors = {
   quote_sent: {
-    text: { light: '#8B6F2A', dark: '#F4D58B' } as ColorPair,
-    bg: { light: '#FBF3DC', dark: '#3A2F11' } as ColorPair,
+    // attention / awaiting
+    text: { light: '#855818', dark: '#E0A951' } as ColorPair, // amber-700
+    bg:   { light: '#F8EFDD', dark: '#2A2113' } as ColorPair, // amber-50
   },
   scheduled: {
-    text: { light: '#1B4DD9', dark: '#7FA4FF' } as ColorPair,
-    bg: { light: '#EAF0FF', dark: '#0F1F45' } as ColorPair,
+    // info
+    text: { light: '#1A3FB0', dark: '#91A8F6' } as ColorPair, // blue-700
+    bg:   { light: '#EEF2FE', dark: '#1B2545' } as ColorPair, // blue-50
   },
   materials_ordered: {
-    text: { light: '#1B4DD9', dark: '#7FA4FF' } as ColorPair,
-    bg: { light: '#EAF0FF', dark: '#0F1F45' } as ColorPair,
+    text: { light: '#1A3FB0', dark: '#91A8F6' } as ColorPair,
+    bg:   { light: '#EEF2FE', dark: '#1B2545' } as ColorPair,
   },
   in_progress: {
-    text: { light: '#197A4D', dark: '#62D69B' } as ColorPair,
-    bg: { light: '#E2F5EA', dark: '#0F2A1D' } as ColorPair,
+    // on-track
+    text: { light: '#19724B', dark: '#4CB583' } as ColorPair, // green-600
+    bg:   { light: '#E8F3EC', dark: '#16291F' } as ColorPair, // green-50
   },
   delayed: {
-    text: { light: '#A04A1C', dark: '#F4A872' } as ColorPair,
-    bg: { light: '#FBE9DC', dark: '#3A1F0E' } as ColorPair,
+    // blocked — warm brick, not red
+    text: { light: '#A13A23', dark: '#E07A5F' } as ColorPair, // brick-600
+    bg:   { light: '#F7E9E4', dark: '#3A1A12' } as ColorPair, // brick-50
   },
   awaiting_approval: {
-    text: { light: '#8B6F2A', dark: '#F4D58B' } as ColorPair,
-    bg: { light: '#FBF3DC', dark: '#3A2F11' } as ColorPair,
+    text: { light: '#855818', dark: '#E0A951' } as ColorPair,
+    bg:   { light: '#F8EFDD', dark: '#2A2113' } as ColorPair,
   },
   awaiting_inspection: {
-    text: { light: '#5B4A8B', dark: '#B5A2F4' } as ColorPair,
-    bg: { light: '#EFEAFB', dark: '#221A38' } as ColorPair,
+    text: { light: '#855818', dark: '#E0A951' } as ColorPair,
+    bg:   { light: '#F8EFDD', dark: '#2A2113' } as ColorPair,
   },
   completed: {
-    text: { light: '#0B0B0C', dark: '#FAFAF7' } as ColorPair,
-    bg: { light: '#F4F2EE', dark: '#222226' } as ColorPair,
+    // strong neutral — like a stamp
+    text: { light: '#1D1B16', dark: '#F4F1EA' } as ColorPair,
+    bg:   { light: '#F6F4EE', dark: '#2F2C25' } as ColorPair,
   },
 } as const;
 
 export type ProjectStatus = keyof typeof statusColors;
 
-/**
- * Status copy map — humanised labels for StatusBadge.
- * Headlines (e.g. "On track for Friday") live with the screen, not here.
- */
 export const statusLabels: Record<ProjectStatus, string> = {
   quote_sent: 'Quote sent',
   scheduled: 'Scheduled',
@@ -93,19 +105,19 @@ export const statusLabels: Record<ProjectStatus, string> = {
 };
 
 /**
- * Elevation — RN-friendly shadow descriptors.
- * Use on the View's style as a spread: `{...elevation.light[2]}`.
- * Android elevation prop is included for parity.
+ * Elevation — RN-friendly shadow descriptors using Phase's warm-tinted
+ * shadow base (#1D1B16 / rgba(29,27,22,…)) so shadows feel like the
+ * room they're in, not generic black.
  */
 export const elevation = {
   light: {
-    1: { shadowColor: '#0B0B0C', shadowOpacity: 0.04, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-    2: { shadowColor: '#0B0B0C', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
-    3: { shadowColor: '#0B0B0C', shadowOpacity: 0.08, shadowRadius: 32, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
-    sheet: { shadowColor: '#0B0B0C', shadowOpacity: 0.10, shadowRadius: 32, shadowOffset: { width: 0, height: -8 }, elevation: 8 },
+    1: { shadowColor: '#1D1B16', shadowOpacity: 0.06, shadowRadius: 2,  shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+    2: { shadowColor: '#1D1B16', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 }, // shadow-sm
+    3: { shadowColor: '#1D1B16', shadowOpacity: 0.10, shadowRadius: 28, shadowOffset: { width: 0, height: 12 }, elevation: 8 }, // shadow-lg
+    sheet: { shadowColor: '#1D1B16', shadowOpacity: 0.12, shadowRadius: 32, shadowOffset: { width: 0, height: -8 }, elevation: 8 },
   },
   dark: {
-    1: { shadowColor: '#000000', shadowOpacity: 0.4, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+    1: { shadowColor: '#000000', shadowOpacity: 0.4, shadowRadius: 2,  shadowOffset: { width: 0, height: 1 }, elevation: 1 },
     2: { shadowColor: '#000000', shadowOpacity: 0.5, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
     3: { shadowColor: '#000000', shadowOpacity: 0.6, shadowRadius: 32, shadowOffset: { width: 0, height: 12 }, elevation: 8 },
     sheet: { shadowColor: '#000000', shadowOpacity: 0.6, shadowRadius: 32, shadowOffset: { width: 0, height: -8 }, elevation: 8 },
@@ -113,21 +125,28 @@ export const elevation = {
 } as const;
 
 /**
- * Typography — SF Pro by default on iOS (no fontFamily needed),
- * Inter as Android fallback (V1, not configured yet).
- * Letter spacing applied per spec hierarchy rules.
+ * Typography — Geist for everything, Geist Mono for "stamped" mono labels
+ * (status codes, dates, metrics).
+ *
+ * Phase rule: display + headings get tight negative tracking; mono labels
+ * uppercase with 0.12em tracking (~12% letter-spacing) — the "Fluke
+ * instrument" register.
+ *
+ * Font family names match what @expo-google-fonts/geist registers when
+ * loaded via useFonts() in app/_layout.tsx.
  */
 export const type = {
-  display: { fontSize: 34, lineHeight: 41, fontWeight: '700', letterSpacing: -0.3 },
-  title1: { fontSize: 28, lineHeight: 34, fontWeight: '700' },
-  title2: { fontSize: 22, lineHeight: 28, fontWeight: '700' },
-  title3: { fontSize: 20, lineHeight: 25, fontWeight: '600' },
-  bodyLg: { fontSize: 17, lineHeight: 24, fontWeight: '400' },
-  bodyLgEmphasis: { fontSize: 17, lineHeight: 24, fontWeight: '600' },
-  body: { fontSize: 15, lineHeight: 22, fontWeight: '400' },
-  footnote: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
-  caption: { fontSize: 11, lineHeight: 14, fontWeight: '500', letterSpacing: 0.4, textTransform: 'uppercase' as const },
-  mono: { fontSize: 14, lineHeight: 20, fontWeight: '500', fontFamily: 'Menlo' },
+  display:        { fontSize: 34, lineHeight: 41, fontWeight: '600', letterSpacing: -0.85, fontFamily: 'Geist_600SemiBold' },
+  title1:         { fontSize: 28, lineHeight: 34, fontWeight: '600', letterSpacing: -0.5,  fontFamily: 'Geist_600SemiBold' },
+  title2:         { fontSize: 22, lineHeight: 28, fontWeight: '600', letterSpacing: -0.35, fontFamily: 'Geist_600SemiBold' },
+  title3:         { fontSize: 20, lineHeight: 25, fontWeight: '600', letterSpacing: -0.2,  fontFamily: 'Geist_600SemiBold' },
+  bodyLg:         { fontSize: 17, lineHeight: 24, fontWeight: '400', fontFamily: 'Geist_400Regular' },
+  bodyLgEmphasis: { fontSize: 17, lineHeight: 24, fontWeight: '600', fontFamily: 'Geist_600SemiBold' },
+  body:           { fontSize: 15, lineHeight: 22, fontWeight: '400', fontFamily: 'Geist_400Regular' },
+  footnote:       { fontSize: 13, lineHeight: 18, fontWeight: '400', fontFamily: 'Geist_400Regular' },
+  // "Tool stamp" — uppercase mono labels with wide tracking. Signature Phase move.
+  caption:        { fontSize: 11, lineHeight: 14, fontWeight: '500', letterSpacing: 1.32, textTransform: 'uppercase' as const, fontFamily: 'GeistMono_500Medium' },
+  mono:           { fontSize: 14, lineHeight: 20, fontWeight: '500', fontFamily: 'GeistMono_500Medium' },
 } as const;
 
 export const space = {
@@ -145,37 +164,36 @@ export const space = {
   20: 80,
 } as const;
 
+/**
+ * Corner radii — Phase prescribes 6 / 10 / 14 / 20 / 28. We don't
+ * pill-everything; pills are reserved for status + toggles via `full`.
+ */
 export const radius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  '2xl': 32,
+  sm: 6,   // small chip
+  md: 10,  // default control (input, button)
+  lg: 14,  // card
+  xl: 20,  // sheet / large panel
+  '2xl': 28, // app-icon-scale tile
   full: 9999,
 } as const;
 
 /**
- * Motion — for use with Reanimated's withTiming / withSpring.
- * Curves expressed as cubic bezier control points; supply via Easing.bezier.
+ * Motion — Phase rule: calm and dependable, no bounce, no overshoot.
+ * Quick ease-out, 120-180ms.
  */
 export const motion = {
-  fast: { duration: 150, easing: [0.2, 0, 0, 1] as const },
-  normal: { duration: 240, easing: [0.25, 1, 0.5, 1] as const },
-  slow: { duration: 360, easing: [0.25, 1, 0.5, 1] as const },
-  springSnappy: { damping: 18, stiffness: 220 },
-  springGentle: { damping: 22, stiffness: 140 },
+  fast:        { duration: 120, easing: [0.2, 0, 0, 1] as const },
+  normal:      { duration: 180, easing: [0.2, 0, 0, 1] as const },
+  slow:        { duration: 260, easing: [0.16, 1, 0.3, 1] as const },
+  springSnappy:{ damping: 22, stiffness: 240 },
+  springGentle:{ damping: 26, stiffness: 160 },
 } as const;
 
-/**
- * Haptics — descriptor strings map to expo-haptics calls.
- * Call site converts these to Haptics.* invocations.
- * Rule: never fire more often than every 2s on average.
- */
 export const haptics = {
-  primaryPress: 'impactLight',
-  selection: 'selection',
-  statusCompleted: 'notificationSuccess',
-  milestoneTick: 'impactMedium',
-  destructiveConfirm: 'notificationWarning',
-  error: 'notificationError',
+  primaryPress:        'impactLight',
+  selection:           'selection',
+  statusCompleted:     'notificationSuccess',
+  milestoneTick:       'impactMedium',
+  destructiveConfirm:  'notificationWarning',
+  error:               'notificationError',
 } as const;
