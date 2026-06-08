@@ -1,5 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PhaseLogo } from '@/components/PhaseLogo';
@@ -33,6 +35,14 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['top', 'bottom']}>
+      <Pressable
+        onPress={() => router.back()}
+        hitSlop={12}
+        style={styles.backBtn}
+        accessibilityLabel="Back"
+      >
+        <Ionicons name="chevron-back" size={26} color={t.colors.text.primary} />
+      </Pressable>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={[styles.content, { padding: t.space[6] }]} keyboardShouldPersistTaps="handled">
           {/* Brand cluster — same cadence as the welcome screen. */}
@@ -90,4 +100,5 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   content: { flexGrow: 1 },
+  backBtn: { paddingHorizontal: 16, paddingVertical: 8, alignSelf: 'flex-start' },
 });
