@@ -6,12 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 
 import { MediaThumbs } from '@/components/MediaThumbs';
-import { ProjectHero } from '@/components/ProjectHero';
+import { PhaseProgressRing } from '@/components/PhaseProgressRing';
 import { Reactions } from '@/components/Reactions';
 import { VoicePlayer } from '@/components/VoicePlayer';
 import { Card } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { EventPill } from '@/components/ui/EventPill';
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -19,13 +18,11 @@ import { useRealtimeProject } from '@/hooks/useRealtimeProject';
 import { switchMyRole } from '@/services/auth';
 import { fireLocalTest } from '@/services/notifications';
 import {
-  currentAndNextMilestone,
   dayOfProject,
   fetchMyCurrentProject,
   fetchMyProjects,
   formatEta,
   relativeTime,
-  statusHeadline,
 } from '@/services/projects';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
@@ -210,6 +207,7 @@ export default function HomeScreen() {
       {data && (
         <ProjectContent
           data={data}
+          firstName={profile?.full_name?.split(' ')[0] ?? 'there'}
           onOpen={() => router.push({ pathname: '/project/[id]', params: { id: data.id } })}
           onRefresh={refetch}
           refreshing={isRefetching}
@@ -280,156 +278,340 @@ function EmptyState() {
 
 function ProjectContent({
   data,
+  firstName,
   onOpen,
   onRefresh,
   refreshing,
 }: {
   data: NonNullable<Awaited<ReturnType<typeof fetchMyCurrentProject>>>;
+  firstName: string;
   onOpen: () => void;
   onRefresh: () => void;
   refreshing: boolean;
 }) {
   const t = lightTheme;
 
-  const range = dayOfProject(data.actual_start_date ?? data.expected_start_date, data.expected_end_date);
-  const { headline, subhead } = statusHeadline(data.status, {
-    endDate: data.expected_end_date,
-    day: range?.day,
-    total: range?.total,
-  });
+  // ─── Project metrics ─────────────────────────────────────────────
+  const range = dayOfProject(
+    data.actual_start_date ?? data.expected_start_date,
+    data.expected_end_date,
+  );
   const progressPct = range ? Math.round((range.day / range.total) * 100) : 0;
 
-  const latestUpdate = (data.updates ?? [])
-    .filter((u) => !u.deleted_at)
+  const updates = (data.updates ?? []).filter((u) => !u.deleted_at);
+  const latestUpdate = updates
+    .slice()
     .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())[0];
 
-  const { current, next } = currentAndNextMilestone(data.milestones ?? []);
+  // ─── "This week" instrument readouts ─────────────────────────────
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  const cutoff = Date.now() - weekMs;
+  const recentUpdates = updates.filter(
+    (u) => u.created_at && new Date(u.created_at).getTime() >= cutoff,
+  );
+  const photosThisWeek = recentUpdates.reduce(
+    (n, u) => n + (u.media?.filter((m) => m.media_type !== 'voice').length ?? 0),
+    0,
+  );
+  const updatesThisWeek = recentUpdates.length;
+  const daysLeft = data.expected_end_date
+    ? Math.max(
+        0,
+        Math.ceil((new Date(data.expected_end_date).getTime() - Date.now()) / 86_400_000),
+      )
+    : null;
 
   const tradesmanName = data.tradesman?.full_name ?? 'your tradesman';
   const tradesmanFirst = tradesmanName.split(' ')[0];
 
+  // Status copy lives next to the ring.
+  const statusText = t.statusLabels[data.status as ProjectStatus] ?? 'In progress';
+
   return (
     <ScrollView
-      contentContainerStyle={{ padding: t.space[5], gap: t.space[4] }}
+      contentContainerStyle={{ padding: t.space[5], gap: t.space[5], paddingBottom: t.space[10] }}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
+      {/* ── Greeting ─────────────────────────────────────────────── */}
+      <Text style={[t.type.title1, { color: t.colors.text.primary }]}>
+        Hello, {firstName}
+      </Text>
+
+      {/* ── Hero card: ring + status + project + day stamp ──────── */}
       <Pressable onPress={onOpen}>
-        <ProjectHero
-          status={data.status as ProjectStatus}
-          headline={headline}
-          subhead={subhead}
-          progressPct={progressPct}
-        />
+        <View
+          style={[
+            t.elevation[1],
+            {
+              backgroundColor: t.colors.bg.surface,
+              borderColor: t.colors.border.subtle,
+              borderWidth: 1,
+              borderRadius: t.radius.lg,
+              padding: t.space[5],
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: t.space[4],
+            },
+          ]}
+        >
+          <PhaseProgressRing pct={progressPct} size={84} />
+          <View style={{ flex: 1 }}>
+            <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
+              Your project
+            </Text>
+            <Text
+              style={[t.type.title2, { color: t.colors.text.primary, marginTop: 4 }]}
+              numberOfLines={1}
+            >
+              {data.title}
+            </Text>
+            <Text style={[t.type.body, { color: t.colors.text.secondary, marginTop: 4 }]}>
+              {statusText}
+            </Text>
+            {range && (
+              <Text
+                style={[
+                  t.type.caption,
+                  { color: t.colors.text.tertiary, marginTop: t.space[3] },
+                ]}
+              >
+                Day {range.day} of {range.total}
+              </Text>
+            )}
+          </View>
+        </View>
       </Pressable>
 
-      <EventPill
-        kind="arrival"
-        title={`${tradesmanFirst} is on site`}
-        timestamp="Arrived 8:14 AM"
-      />
-
-      <View
-        style={[
-          styles.metaCard,
-          {
-            backgroundColor: t.colors.bg.surface,
-            borderColor: t.colors.border.subtle,
-            borderRadius: t.radius.lg,
-            padding: t.space[4],
-          },
-        ]}
-      >
-        <View style={styles.metaRow}>
-          <Text style={[t.type.body, { color: t.colors.text.secondary }]}>Today</Text>
-          <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
-            {current ?? '—'}
-          </Text>
-        </View>
-        <View style={[styles.metaRow, { marginTop: t.space[3] }]}>
-          <Text style={[t.type.body, { color: t.colors.text.secondary }]}>Next</Text>
-          <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
-            {next ?? '—'}
-          </Text>
+      {/* ── This week — three instrument readouts ──────────────── */}
+      <View>
+        <Text
+          style={[
+            t.type.caption,
+            { color: t.colors.text.tertiary, marginBottom: t.space[3] },
+          ]}
+        >
+          This week
+        </Text>
+        <View style={{ flexDirection: 'row', gap: t.space[3] }}>
+          <Stat label="Photos" value={photosThisWeek.toString()} />
+          <Stat label="Updates" value={updatesThisWeek.toString()} />
+          <Stat
+            label="Days left"
+            value={daysLeft != null ? daysLeft.toString() : '—'}
+          />
         </View>
       </View>
 
-      <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginTop: t.space[2] }]}>
-        Latest update
-      </Text>
-
-      {latestUpdate ? (
-        <Pressable onPress={onOpen}>
-          <View
-            style={[
-              styles.updateCard,
-              t.elevation[1],
-              {
-                backgroundColor: t.colors.bg.surface,
-                borderRadius: t.radius.lg,
-                padding: t.space[4],
-              },
-            ]}
-          >
-            <View style={styles.updateHead}>
-              <View style={[styles.avatar, { backgroundColor: '#A04A1C' }]}>
-                <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>
-                  {tradesmanFirst[0]?.toUpperCase() ?? '?'}
-                </Text>
-              </View>
-              <View>
-                <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
-                  {tradesmanName}
-                </Text>
-                <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>
-                  {relativeTime(latestUpdate.created_at!)}
-                </Text>
-              </View>
-            </View>
-            <Text style={[t.type.body, { color: t.colors.text.primary, marginTop: t.space[3] }]}>
-              {latestUpdate.body}
-            </Text>
-            {latestUpdate.media && latestUpdate.media.length > 0 && (
-              <View style={{ marginTop: t.space[3] }}>
-                <MediaThumbs update_id={latestUpdate.id} media={latestUpdate.media} />
-              </View>
-            )}
-            {latestUpdate.media?.find((m) => m.media_type === 'voice') && (
-              <View style={{ marginTop: t.space[3] }}>
-                <VoicePlayer
-                  storage_path={
-                    latestUpdate.media.find((m) => m.media_type === 'voice')!.storage_path
-                  }
-                />
-              </View>
-            )}
-            {latestUpdate.type === 'eta' && latestUpdate.eta_at && (
-              <View
-                style={{
-                  marginTop: t.space[3],
-                  paddingTop: t.space[3],
-                  borderTopWidth: 1,
-                  borderTopColor: t.colors.border.subtle,
-                }}
-              >
-                <Text style={[t.type.footnote, { color: t.colors.text.secondary }]}>
-                  ⏰ {formatEta(latestUpdate.eta_at)}
-                </Text>
-              </View>
-            )}
-            <Reactions
-              update_id={latestUpdate.id}
-              project_id={data.id}
-              reactions={latestUpdate.reactions}
-            />
-          </View>
-        </Pressable>
-      ) : (
-        <Text style={[t.type.body, { color: t.colors.text.tertiary }]}>
-          No updates yet.
+      {/* ── Latest update — quiet preview ──────────────────────── */}
+      <View>
+        <Text
+          style={[
+            t.type.caption,
+            { color: t.colors.text.tertiary, marginBottom: t.space[3] },
+          ]}
+        >
+          Latest from {tradesmanFirst}
         </Text>
-      )}
+        {latestUpdate ? (
+          <Pressable onPress={onOpen}>
+            <View
+              style={[
+                t.elevation[1],
+                {
+                  backgroundColor: t.colors.bg.surface,
+                  borderColor: t.colors.border.subtle,
+                  borderWidth: 1,
+                  borderRadius: t.radius.lg,
+                  padding: t.space[4],
+                },
+              ]}
+            >
+              <View style={styles.updateHead}>
+                <View style={[styles.avatar, { backgroundColor: t.colors.brand.primary }]}>
+                  <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>
+                    {tradesmanFirst[0]?.toUpperCase() ?? '?'}
+                  </Text>
+                </View>
+                <View>
+                  <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
+                    {tradesmanName}
+                  </Text>
+                  <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>
+                    {relativeTime(latestUpdate.created_at!)}
+                  </Text>
+                </View>
+              </View>
+              {latestUpdate.body && (
+                <Text
+                  style={[
+                    t.type.body,
+                    { color: t.colors.text.primary, marginTop: t.space[3], lineHeight: 22 },
+                  ]}
+                  numberOfLines={3}
+                >
+                  {latestUpdate.body}
+                </Text>
+              )}
+              {latestUpdate.media && latestUpdate.media.length > 0 && (
+                <View style={{ marginTop: t.space[3] }}>
+                  <MediaThumbs update_id={latestUpdate.id} media={latestUpdate.media} />
+                </View>
+              )}
+              {latestUpdate.media?.find((m) => m.media_type === 'voice') && (
+                <View style={{ marginTop: t.space[3] }}>
+                  <VoicePlayer
+                    storage_path={
+                      latestUpdate.media.find((m) => m.media_type === 'voice')!.storage_path
+                    }
+                  />
+                </View>
+              )}
+              {latestUpdate.type === 'eta' && latestUpdate.eta_at && (
+                <View
+                  style={{
+                    marginTop: t.space[3],
+                    paddingTop: t.space[3],
+                    borderTopWidth: 1,
+                    borderTopColor: t.colors.border.subtle,
+                  }}
+                >
+                  <Text style={[t.type.footnote, { color: t.colors.text.secondary }]}>
+                    ⏰ {formatEta(latestUpdate.eta_at)}
+                  </Text>
+                </View>
+              )}
+              <Reactions
+                update_id={latestUpdate.id}
+                project_id={data.id}
+                reactions={latestUpdate.reactions}
+              />
+            </View>
+          </Pressable>
+        ) : (
+          <View
+            style={{
+              backgroundColor: t.colors.bg.surface,
+              borderColor: t.colors.border.subtle,
+              borderWidth: 1,
+              borderRadius: t.radius.lg,
+              padding: t.space[4],
+            }}
+          >
+            <Text style={[t.type.body, { color: t.colors.text.tertiary }]}>
+              No updates yet — they'll land here when {tradesmanFirst} posts.
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* ── Quick actions ───────────────────────────────────────── */}
+      <View>
+        <Text
+          style={[
+            t.type.caption,
+            { color: t.colors.text.tertiary, marginBottom: t.space[3] },
+          ]}
+        >
+          Jump to
+        </Text>
+        <View
+          style={[
+            t.elevation[1],
+            {
+              backgroundColor: t.colors.bg.surface,
+              borderColor: t.colors.border.subtle,
+              borderWidth: 1,
+              borderRadius: t.radius.lg,
+              overflow: 'hidden',
+            },
+          ]}
+        >
+          <QuickRow
+            label="See full project"
+            onPress={onOpen}
+            divider
+          />
+          <QuickRow
+            label="Open chat"
+            onPress={() =>
+              router.push({ pathname: '/project/[id]/chat', params: { id: data.id } })
+            }
+            divider
+          />
+          <QuickRow
+            label="View schedule"
+            onPress={() =>
+              router.push({ pathname: '/project/[id]/schedule', params: { id: data.id } })
+            }
+          />
+        </View>
+      </View>
     </ScrollView>
+  );
+}
+
+// ── Small dashboard primitives ─────────────────────────────────────
+function Stat({ label, value }: { label: string; value: string }) {
+  const t = lightTheme;
+  return (
+    <View
+      style={[
+        t.elevation[1],
+        {
+          flex: 1,
+          backgroundColor: t.colors.bg.surface,
+          borderColor: t.colors.border.subtle,
+          borderWidth: 1,
+          borderRadius: t.radius.lg,
+          padding: t.space[4],
+        },
+      ]}
+    >
+      <Text
+        style={{
+          fontFamily: 'GeistMono_500Medium',
+          fontSize: 28,
+          color: t.colors.text.primary,
+          letterSpacing: -0.5,
+        }}
+      >
+        {value}
+      </Text>
+      <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginTop: 4 }]}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function QuickRow({
+  label,
+  onPress,
+  divider,
+}: {
+  label: string;
+  onPress: () => void;
+  divider?: boolean;
+}) {
+  const t = lightTheme;
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        paddingVertical: t.space[4],
+        paddingHorizontal: t.space[4],
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottomWidth: divider ? 1 : 0,
+        borderBottomColor: t.colors.border.subtle,
+        backgroundColor: pressed ? t.colors.bg.surface2 : 'transparent',
+      })}
+    >
+      <Text style={[t.type.bodyLg, { color: t.colors.text.primary }]}>{label}</Text>
+      <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+    </Pressable>
   );
 }
 
