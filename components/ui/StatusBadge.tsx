@@ -24,10 +24,13 @@ export function StatusBadge({ status, size = 'md', withDot = true, label, onPres
     </>
   );
 
+  // Phase DS: pill-shaped status reads as a "stamped tool label".
+  // The caption type token already supplies uppercase Geist Mono + the
+  // 0.12em tracked spacing — so the look comes for free here.
   const baseStyle = [
     styles.base,
     size === 'sm' ? styles.sm : styles.md,
-    { backgroundColor: palette.bg, borderRadius: t.radius.sm },
+    { backgroundColor: palette.bg, borderRadius: t.radius.full },
   ];
 
   if (onPress) {

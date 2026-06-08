@@ -18,9 +18,17 @@ export default function CustomerLayout() {
         tabBarInactiveTintColor: t.colors.text.tertiary,
         tabBarStyle: {
           borderTopColor: t.colors.border.subtle,
+          borderTopWidth: 1,
           backgroundColor: t.colors.bg.canvas,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
+        // Phase DS labels: Geist Mono uppercase with wide tracking — the
+        // "stamped tool name" treatment, sized to fit the tab bar.
+        tabBarLabelStyle: {
+          fontFamily: 'GeistMono_500Medium',
+          fontSize: 10,
+          letterSpacing: 0.9,
+          textTransform: 'uppercase',
+        },
       }}
     >
       <Tabs.Screen

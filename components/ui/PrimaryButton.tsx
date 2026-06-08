@@ -39,7 +39,14 @@ export function PrimaryButton({ title, onPress, loading, disabled, size = 'large
           borderRadius: t.radius.md,
           paddingHorizontal: t.space[5],
           opacity: isDisabled && !loading ? 0.4 : 1,
-          transform: [{ scale: pressed && !isDisabled ? 0.96 : 1 }],
+          // Per Phase DS: primary actions get a warm brand-tinted lift —
+          // shadow-brand. Suppressed on press and when disabled.
+          shadowColor: '#1B4DD9',
+          shadowOpacity: pressed || isDisabled ? 0 : 0.28,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: pressed || isDisabled ? 0 : 4,
+          transform: [{ scale: pressed && !isDisabled ? 0.985 : 1 }],
         },
       ]}
     >

@@ -8,8 +8,15 @@ type Props = ViewProps & {
 };
 
 /**
- * Card per spec C.5: bg/surface, radius/lg, optional shadow, padding/4–5.
- * If `onPress` is provided, the whole card becomes pressable with subtle scale.
+ * Card — Phase DS:
+ *   - surface-card (white) on the warm Stone page
+ *   - 1px subtle warm border (Phase: the structural hairline that does
+ *     most of the work)
+ *   - 14px radius
+ *   - soft warm-tinted shadow at elevation 1
+ *   - padding 16
+ * If `onPress` is provided, the whole card becomes pressable with a
+ * subtle lift on press.
  */
 export function Card({ children, style, onPress, elevation = 1, ...rest }: Props) {
   const t = lightTheme;
@@ -19,6 +26,8 @@ export function Card({ children, style, onPress, elevation = 1, ...rest }: Props
     {
       backgroundColor: t.colors.bg.surface,
       borderRadius: t.radius.lg,
+      borderWidth: 1,
+      borderColor: t.colors.border.subtle,
       padding: t.space[4],
     },
     style,

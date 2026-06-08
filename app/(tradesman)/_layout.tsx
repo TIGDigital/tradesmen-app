@@ -19,9 +19,15 @@ export default function TradesmanLayout() {
         tabBarInactiveTintColor: t.colors.text.tertiary,
         tabBarStyle: {
           borderTopColor: t.colors.border.subtle,
+          borderTopWidth: 1,
           backgroundColor: t.colors.bg.canvas,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
+        tabBarLabelStyle: {
+          fontFamily: 'GeistMono_500Medium',
+          fontSize: 10,
+          letterSpacing: 0.9,
+          textTransform: 'uppercase',
+        },
       }}
     >
       <Tabs.Screen
