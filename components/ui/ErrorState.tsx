@@ -1,14 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { PhaseLogo } from '@/components/PhaseLogo';
 import { lightTheme } from '@/theme/light';
 
 /**
- * Friendly fallback for query / mutation errors. Used everywhere we'd
- * otherwise dump raw error.message into a Text node.
+ * Empty / error states — Phase DS register.
  *
- * Distinguishes between "nothing to show" and "something went wrong"
- * via the `tone` prop; default is the error tone.
+ *   - Empty tone leans on a faded Phase ring rather than a generic
+ *     sparkles icon — the brand mark IS the empty-state visual.
+ *   - Error tone uses an alert-circle in brick (Phase's muted warm red).
+ *   - Eyebrow caption above the title gives the stamped-label register
+ *     ("NOTHING HERE YET" / "SOMETHING'S OFF").
+ *   - Retry sits as a soft Phase-tint pill — quiet, primary blue text.
  */
 export function ErrorState({
   title = 'Something went wrong',
@@ -22,27 +26,54 @@ export function ErrorState({
   tone?: 'error' | 'empty';
 }) {
   const t = lightTheme;
-  const iconName = tone === 'error' ? 'alert-circle-outline' : 'sparkles-outline';
-  const iconColor = tone === 'error' ? '#C0392B' : t.colors.text.tertiary;
+
+  const eyebrow = tone === 'error' ? "Something's off" : 'Nothing here yet';
 
   return (
     <View style={styles.wrap}>
-      <Ionicons name={iconName} size={56} color={iconColor} />
-      <Text style={[t.type.title2, { color: t.colors.text.primary, textAlign: 'center', marginTop: 12 }]}>
+      {tone === 'empty' ? (
+        <View style={{ opacity: 0.35 }}>
+          <PhaseLogo size={56} />
+        </View>
+      ) : (
+        <Ionicons name="alert-circle-outline" size={48} color="#A13A23" />
+      )}
+      <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginTop: 16 }]}>
+        {eyebrow}
+      </Text>
+      <Text
+        style={[
+          t.type.title3,
+          { color: t.colors.text.primary, textAlign: 'center', marginTop: 4 },
+        ]}
+      >
         {title}
       </Text>
       {message && (
         <Text
           style={[
             t.type.body,
-            { color: t.colors.text.secondary, textAlign: 'center', marginTop: 8, maxWidth: 320 },
+            {
+              color: t.colors.text.secondary,
+              textAlign: 'center',
+              marginTop: 6,
+              maxWidth: 320,
+              lineHeight: 22,
+            },
           ]}
         >
           {message}
         </Text>
       )}
       {onRetry && (
-        <Pressable onPress={onRetry} style={[styles.retry, { borderColor: t.colors.border.subtle }]} hitSlop={6}>
+        <Pressable
+          onPress={onRetry}
+          style={({ pressed }) => [
+            styles.retry,
+            { backgroundColor: t.colors.brand.tint, opacity: pressed ? 0.7 : 1 },
+          ]}
+          hitSlop={6}
+        >
           <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.link }]}>
             Try again
           </Text>
@@ -60,10 +91,9 @@ const styles = StyleSheet.create({
     padding: 32,
   },
   retry: {
-    marginTop: 16,
+    marginTop: 20,
     paddingVertical: 10,
-    paddingHorizontal: 22,
-    borderWidth: 1,
+    paddingHorizontal: 24,
     borderRadius: 999,
   },
 });
