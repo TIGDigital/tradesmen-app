@@ -17,7 +17,7 @@ export default function SignInScreen() {
 
   async function onSubmit() {
     if (!email.trim() || !password) {
-      Alert.alert('Check your details', 'Email and password please.');
+      Alert.alert('Missing something', 'Email and password please.');
       return;
     }
     setSubmitting(true);
@@ -25,7 +25,7 @@ export default function SignInScreen() {
       await signInWithEmail(email.trim(), password);
       // Root layout handles redirect on auth state change.
     } catch (e) {
-      Alert.alert('Sign in failed', (e as Error).message);
+      Alert.alert("Couldn't sign in", (e as Error).message);
     } finally {
       setSubmitting(false);
     }

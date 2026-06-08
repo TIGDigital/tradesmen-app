@@ -19,7 +19,7 @@ export default function SignUpScreen() {
 
   async function onSubmit() {
     if (!fullName.trim() || !email.trim() || password.length < 6) {
-      Alert.alert('Check your details', 'Name, email, and a 6+ character password please.');
+      Alert.alert('Missing something', 'Name, email, and a 6+ character password please.');
       return;
     }
     setSubmitting(true);
@@ -34,7 +34,7 @@ export default function SignUpScreen() {
       // On success, the auth store picks up the new session and root layout redirects.
       router.replace('/(auth)/role-select');
     } catch (e) {
-      Alert.alert('Sign up failed', (e as Error).message);
+      Alert.alert("Couldn't sign up", (e as Error).message);
     } finally {
       setSubmitting(false);
     }

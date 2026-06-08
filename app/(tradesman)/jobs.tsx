@@ -125,8 +125,23 @@ export default function JobsScreen() {
     ]);
   }
 
+  // Date stamp — UK English, uppercase, like a tool brand stamping its name.
+  // Renders e.g. "MON · 8 JUN" via Geist Mono with wide tracking. Same
+  // register as the customer dashboard so Phase reads consistently from
+  // any role's home.
+  const now = new Date();
+  const dateStamp = now
+    .toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+    .toUpperCase()
+    .replace(',', ' ·');
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['top']}>
+      <View style={{ alignItems: 'center', paddingTop: 6 }}>
+        <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
+          {dateStamp}
+        </Text>
+      </View>
       <View style={styles.navBar}>
         <Pressable onPress={onMenu} hitSlop={12} style={styles.navIconBox}>
           <Text style={{ fontSize: 22, color: t.colors.text.primary }}>≡</Text>
@@ -199,7 +214,7 @@ export default function JobsScreen() {
               <Chip label="All" count={stats.counts.all} active={filter === 'all'} onPress={() => setFilter('all')} />
               <Chip label="On track" count={stats.counts.on_track} active={filter === 'on_track'} onPress={() => setFilter('on_track')} />
               <Chip label="Delayed" count={stats.counts.delayed} active={filter === 'delayed'} onPress={() => setFilter('delayed')} accent="amber" />
-              <Chip label="Needs update" count={stats.counts.needs_update} active={filter === 'needs_update'} onPress={() => setFilter('needs_update')} accent="red" />
+              <Chip label="Quiet a while" count={stats.counts.needs_update} active={filter === 'needs_update'} onPress={() => setFilter('needs_update')} accent="red" />
             </ScrollView>
           )}
 

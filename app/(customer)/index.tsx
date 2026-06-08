@@ -66,7 +66,7 @@ export default function HomeScreen() {
 
   function onSwitchProject() {
     if (!isMulti) return;
-    Alert.alert('Switch project', undefined, [
+    Alert.alert('Your projects', undefined, [
       ...projects.map((p) => ({
         text: p.title,
         onPress: () => setSelectedId(p.id),
@@ -225,7 +225,7 @@ function EmptyState() {
     <View style={[styles.center, { gap: t.space[4] }]}>
       <View>
         <Text style={[t.type.title2, { color: t.colors.text.primary, textAlign: 'center' }]}>
-          No project yet
+          No project yet — got a code?
         </Text>
         <Text
           style={[
@@ -238,7 +238,7 @@ function EmptyState() {
             },
           ]}
         >
-          Got an invite code from your tradesman? Enter it below.
+          Pop in the invite code your tradesman sent and you'll be straight in.
         </Text>
       </View>
 
@@ -292,10 +292,15 @@ function ProjectContent({
   const t = lightTheme;
 
   // ─── Project metrics ─────────────────────────────────────────────
-  const range = dayOfProject(
-    data.actual_start_date ?? data.expected_start_date,
-    data.expected_end_date,
-  );
+  // Day count: prefer actual start → expected start. When the tradesman
+  // hasn't set an end date yet, we still want to surface "Day 3" so the
+  // hero card never feels empty. Only when there's NO start at all do
+  // we fall back to a soft "Just started" line.
+  const startIso = data.actual_start_date ?? data.expected_start_date;
+  const range = dayOfProject(startIso, data.expected_end_date);
+  const dayOnly = !range && startIso
+    ? Math.max(1, Math.floor((Date.now() - new Date(startIso).getTime()) / 86_400_000) + 1)
+    : null;
   const progressPct = range ? Math.round((range.day / range.total) * 100) : 0;
 
   const updates = (data.updates ?? []).filter((u) => !u.deleted_at);
@@ -369,7 +374,7 @@ function ProjectContent({
             <Text style={[t.type.body, { color: t.colors.text.secondary, marginTop: 4 }]}>
               {statusText}
             </Text>
-            {range && (
+            {range ? (
               <Text
                 style={[
                   t.type.caption,
@@ -377,6 +382,24 @@ function ProjectContent({
                 ]}
               >
                 Day {range.day} of {range.total}
+              </Text>
+            ) : dayOnly ? (
+              <Text
+                style={[
+                  t.type.caption,
+                  { color: t.colors.text.tertiary, marginTop: t.space[3] },
+                ]}
+              >
+                Day {dayOnly}
+              </Text>
+            ) : (
+              <Text
+                style={[
+                  t.type.caption,
+                  { color: t.colors.text.tertiary, marginTop: t.space[3] },
+                ]}
+              >
+                Just started
               </Text>
             )}
           </View>
