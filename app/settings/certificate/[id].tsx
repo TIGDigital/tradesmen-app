@@ -54,7 +54,9 @@ export default function CertificateEditScreen() {
   });
   const existing = !isNew ? certsQuery.data?.find((c) => c.id === id) : undefined;
 
-  const [kind, setKind] = useState<CertificateKind>('gas_safe');
+  // null on a fresh add → prompts the picker via "Please select".
+  // Once edited or loaded from an existing row it's always set.
+  const [kind, setKind] = useState<CertificateKind | null>(null);
   const [customName, setCustomName] = useState('');
   const [number, setNumber] = useState('');
   const [issued, setIssued] = useState<Date | null>(null);
@@ -78,8 +80,9 @@ export default function CertificateEditScreen() {
   }, [existing]);
 
   const addMutation = useMutation({
-    mutationFn: () =>
-      addCertificate({
+    mutationFn: () => {
+      if (!kind) throw new Error('Pick a card type first');
+      return addCertificate({
         kind,
         custom_name: kind === 'other' ? customName : null,
         number: number || null,
@@ -89,7 +92,8 @@ export default function CertificateEditScreen() {
         photo_uri: pickedPhoto?.uri ?? null,
         photo_mime_type: pickedPhoto?.mimeType,
         photo_ext: pickedPhoto?.ext,
-      }),
+      });
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['my-certificates'] });
       router.back();
@@ -98,15 +102,17 @@ export default function CertificateEditScreen() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: () =>
-      updateCertificate(id, {
+    mutationFn: () => {
+      if (!kind) throw new Error('Pick a card type first');
+      return updateCertificate(id, {
         kind,
         custom_name: kind === 'other' ? customName : null,
         number: number || null,
         issued_at: issued ? issued.toISOString().slice(0, 10) : null,
         expires_at: expires ? expires.toISOString().slice(0, 10) : null,
         notes: notes || null,
-      }),
+      });
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['my-certificates'] });
       router.back();
@@ -205,8 +211,13 @@ export default function CertificateEditScreen() {
                 },
               ]}
             >
-              <Text style={[t.type.bodyLg, { color: t.colors.text.primary }]}>
-                {kind === 'other' ? 'Other' : CERTIFICATE_LABELS[kind]}
+              <Text
+                style={[
+                  t.type.bodyLg,
+                  { color: kind ? t.colors.text.primary : t.colors.text.tertiary },
+                ]}
+              >
+                {kind ? CERTIFICATE_LABELS[kind] : 'Please select'}
               </Text>
               <Text style={{ color: t.colors.text.tertiary, fontSize: 14 }}>▼</Text>
             </Pressable>
@@ -310,7 +321,7 @@ export default function CertificateEditScreen() {
             title="Save"
             onPress={() => (isNew ? addMutation.mutate() : updateMutation.mutate())}
             loading={addMutation.isPending || updateMutation.isPending}
-            disabled={kind === 'other' && !customName.trim()}
+            disabled={!kind || (kind === 'other' && !customName.trim())}
           />
         </View>
       </KeyboardAvoidingView>
