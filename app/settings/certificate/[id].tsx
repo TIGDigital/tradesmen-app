@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  ActionSheetIOS,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -123,11 +124,31 @@ export default function CertificateEditScreen() {
   });
 
   function onPickKind() {
-    const opts = (Object.keys(CERTIFICATE_LABELS) as CertificateKind[]).map((k) => ({
-      text: CERTIFICATE_LABELS[k],
-      onPress: () => setKind(k),
-    }));
-    Alert.alert('Which card?', undefined, [...opts, { text: 'Cancel', style: 'cancel' as const }]);
+    // ActionSheetIOS — taps-outside dismisses, scrolls naturally for the
+    // 12 card kinds. Alert.alert with this many buttons is unmanageable.
+    // On Android (no production target yet) fall back to a basic Alert.
+    const kinds = Object.keys(CERTIFICATE_LABELS) as CertificateKind[];
+    const labels = kinds.map((k) => CERTIFICATE_LABELS[k]);
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: 'Which card?',
+          options: [...labels, 'Cancel'],
+          cancelButtonIndex: labels.length,
+        },
+        (selected) => {
+          if (selected !== undefined && selected < kinds.length) {
+            setKind(kinds[selected]);
+          }
+        },
+      );
+    } else {
+      Alert.alert('Which card?', undefined, [
+        ...kinds.map((k) => ({ text: CERTIFICATE_LABELS[k], onPress: () => setKind(k) })),
+        { text: 'Cancel', style: 'cancel' as const },
+      ]);
+    }
   }
 
   async function onPickPhoto() {
