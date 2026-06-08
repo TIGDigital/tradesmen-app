@@ -12,7 +12,12 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
-import { getPublicTradesmanProfile } from '@/services/tradesman';
+import {
+  CERTIFICATE_LABELS,
+  daysUntilExpiry,
+  getPublicTradesmanProfile,
+  type TradesmanCertificate,
+} from '@/services/tradesman';
 import { lightTheme } from '@/theme/light';
 
 const TRADE_LABELS: Record<string, string> = {
@@ -55,18 +60,18 @@ export default function TradesmanProfileScreen() {
     .join('')
     .toUpperCase();
 
-  const certificates = tradesman
-    ? [
-        { key: 'gas_safe', label: 'Gas Safe', value: tradesman.gas_safe_number },
-        { key: 'niceic', label: 'NICEIC', value: tradesman.niceic_number },
-        { key: 'cscs', label: 'CSCS', value: tradesman.cscs_card_number },
-        {
-          key: 'insurance',
-          label: 'Public liability insurance',
-          value: tradesman.insurance_provider,
-        },
-      ].filter((c) => c.value)
-    : [];
+  // Multi-certificate list — replaces the old flat gas_safe/niceic/cscs
+  // columns. Each card has its own expiry; we hide expired ones from
+  // public view (customer doesn't need to see a stale Gas Safe number).
+  const liveCertificates = (data?.certificates ?? []).filter((c) => {
+    const days = daysUntilExpiry(c.expires_at);
+    return days == null || days >= 0;
+  });
+
+  // Insurance is still flat — it's not multi-valued.
+  const insurance = tradesman?.insurance_provider
+    ? { provider: tradesman.insurance_provider, expiry: tradesman.insurance_expiry }
+    : null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['bottom']}>
@@ -166,8 +171,8 @@ export default function TradesmanProfileScreen() {
             </Card>
           )}
 
-          {/* Verification cards */}
-          {certificates.length > 0 && (
+          {/* Verification cards — list of certs + insurance */}
+          {(liveCertificates.length > 0 || insurance) && (
             <View>
               <Text
                 style={[
@@ -175,33 +180,37 @@ export default function TradesmanProfileScreen() {
                   { color: t.colors.text.tertiary, marginBottom: t.space[3] },
                 ]}
               >
-                Verified credentials
+                Cards on file
               </Text>
               <View style={{ gap: t.space[2] }}>
-                {certificates.map((c) => (
+                {liveCertificates.map((c) => (
+                  <PublicCertRow key={c.id} cert={c} />
+                ))}
+                {insurance && (
                   <View
-                    key={c.key}
                     style={[
                       styles.certRow,
                       {
-                        backgroundColor: '#E2F5EA',
+                        backgroundColor: t.colors.bg.surface,
+                        borderColor: t.colors.border.subtle,
                         borderRadius: t.radius.md,
+                        borderWidth: 1,
                       },
                     ]}
                   >
-                    <View style={[styles.checkCircle, { backgroundColor: '#197A4D' }]}>
+                    <View style={[styles.checkCircle, { backgroundColor: t.colors.brand.primary }]}>
                       <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>✓</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[t.type.bodyLgEmphasis, { color: '#197A4D' }]}>
-                        {c.label}
+                      <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
+                        Public liability insurance
                       </Text>
-                      <Text style={[t.type.footnote, { color: '#197A4D', opacity: 0.85 }]}>
-                        {c.value}
+                      <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>
+                        {insurance.provider}
                       </Text>
                     </View>
                   </View>
-                ))}
+                )}
               </View>
               {!verified && (
                 <Text
@@ -220,7 +229,7 @@ export default function TradesmanProfileScreen() {
             </View>
           )}
 
-          {certificates.length === 0 && !tradesman?.bio && (
+          {liveCertificates.length === 0 && !insurance && !tradesman?.bio && (
             <Card>
               <Text style={[t.type.body, { color: t.colors.text.tertiary, textAlign: 'center' }]}>
                 This tradesman hasn't filled in their profile yet.
@@ -244,6 +253,51 @@ export default function TradesmanProfileScreen() {
         </ScrollView>
       )}
     </SafeAreaView>
+  );
+}
+
+/**
+ * Single certificate row on the public profile. Phase voice: nudges
+ * gently with a soft amber chip when expiry is within 30 days,
+ * neutral grey for the routine "still valid for ages" case. No red.
+ */
+function PublicCertRow({ cert }: { cert: TradesmanCertificate }) {
+  const t = lightTheme;
+  const label = cert.kind === 'other' ? cert.custom_name ?? 'Other' : CERTIFICATE_LABELS[cert.kind];
+  const days = daysUntilExpiry(cert.expires_at);
+  const expiringSoon = days != null && days >= 0 && days <= 30;
+
+  return (
+    <View
+      style={[
+        styles.certRow,
+        {
+          backgroundColor: t.colors.bg.surface,
+          borderColor: t.colors.border.subtle,
+          borderRadius: t.radius.md,
+          borderWidth: 1,
+        },
+      ]}
+    >
+      <View style={[styles.checkCircle, { backgroundColor: t.colors.brand.primary }]}>
+        <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>✓</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
+          {label}
+        </Text>
+        {cert.number && (
+          <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>
+            {cert.number}
+          </Text>
+        )}
+      </View>
+      {expiringSoon && (
+        <View style={{ backgroundColor: '#FBEED2', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 }}>
+          <Text style={[t.type.caption, { color: '#8A6A1C' }]}>{`Expires in ${days}d`}</Text>
+        </View>
+      )}
+    </View>
   );
 }
 
