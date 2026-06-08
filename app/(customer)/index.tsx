@@ -106,8 +106,23 @@ export default function HomeScreen() {
     ]);
   }
 
+  // Date stamp — UK English, uppercase, like a tool brand stamping its name.
+  // Renders e.g. "MON · 8 JUN" via Geist Mono with wide tracking.
+  const now = new Date();
+  const dateStamp = now
+    .toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+    .toUpperCase()
+    .replace(',', ' ·');
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['top']}>
+      {/* Date stamp strip — the Fluke instrument register, top of every
+          customer session. Reads as part of the chrome, not as content. */}
+      <View style={{ alignItems: 'center', paddingTop: 6 }}>
+        <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
+          {dateStamp}
+        </Text>
+      </View>
       <View style={styles.navBar}>
         <Pressable onPress={onMenu} hitSlop={12} style={styles.navIconBox}>
           <Text style={{ fontSize: 22, color: t.colors.text.primary }}>≡</Text>

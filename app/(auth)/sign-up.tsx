@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PhaseLogo } from '@/components/PhaseLogo';
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { signUpWithEmail } from '@/services/auth';
@@ -42,13 +43,27 @@ export default function SignUpScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={[styles.content, { padding: t.space[5] }]} keyboardShouldPersistTaps="handled">
-          <Text style={[t.type.title1, { color: t.colors.text.primary }]}>
-            Create your account
-          </Text>
-          <Text style={[t.type.body, { color: t.colors.text.secondary, marginTop: t.space[2] }]}>
-            One account, one project workspace.
-          </Text>
+        <ScrollView contentContainerStyle={[styles.content, { padding: t.space[6] }]} keyboardShouldPersistTaps="handled">
+          {/* Brand cluster — matches the welcome + sign-in cadence. */}
+          <View style={{ alignItems: 'center', marginTop: t.space[4] }}>
+            <PhaseLogo size={44} />
+            <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginTop: t.space[3] }]}>
+              Phase
+            </Text>
+          </View>
+
+          {/* Hero */}
+          <View style={{ marginTop: t.space[10] }}>
+            <Text style={[t.type.caption, { color: t.colors.brand.primary, marginBottom: t.space[3] }]}>
+              Create account
+            </Text>
+            <Text style={[t.type.title1, { color: t.colors.text.primary }]}>
+              Start your project
+            </Text>
+            <Text style={[t.type.body, { color: t.colors.text.secondary, marginTop: t.space[2], lineHeight: 22 }]}>
+              One account, one project workspace.
+            </Text>
+          </View>
 
           <View style={{ gap: t.space[4], marginTop: t.space[8] }}>
             <InputField
