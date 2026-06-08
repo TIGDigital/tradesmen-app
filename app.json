@@ -158,7 +158,8 @@
       "router": {},
       "eas": {
         "projectId": "be84b39b-c4b9-4f91-9894-8ad4a321fb4e"
-      }
+      },
+      "privacyPolicyUrl": "https://tigdigital.github.io/tradesmen-app/privacy.html"
     },
     "owner": "tig-digital"
   }
