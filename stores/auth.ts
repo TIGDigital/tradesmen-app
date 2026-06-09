@@ -16,6 +16,13 @@ type AuthState = {
   profile: Profile | null;
   /** True until the first auth state has been resolved (signed-in or out). */
   initialising: boolean;
+  /**
+   * True after the welcome / promise screen has been tapped through once
+   * this app session. Used by AuthGate to land cold-launch users on the
+   * welcome screen first, then route them onwards. In-memory only —
+   * every cold app launch resets it to false.
+   */
+  welcomeShown: boolean;
 };
 
 type AuthActions = {
@@ -23,12 +30,17 @@ type AuthActions = {
   initialise: () => () => void;
   /** Re-fetch profile from DB (after role-select, etc.). */
   refreshProfile: () => Promise<void>;
+  /** Mark the welcome screen as having been seen this app session. */
+  markWelcomeShown: () => void;
 };
 
 export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   session: null,
   profile: null,
   initialising: true,
+  welcomeShown: false,
+
+  markWelcomeShown: () => set({ welcomeShown: true }),
 
   initialise: () => {
     // Read current session synchronously from storage, then mark initialising=false.

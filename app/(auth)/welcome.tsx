@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PhaseLogo } from '@/components/PhaseLogo';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
 /**
@@ -22,6 +23,24 @@ import { lightTheme } from '@/theme/light';
  */
 export default function WelcomeScreen() {
   const t = lightTheme;
+  const session = useAuthStore((s) => s.session);
+  const markWelcomeShown = useAuthStore((s) => s.markWelcomeShown);
+  const isSignedIn = !!session;
+
+  // Every CTA marks the welcome screen as passed for this app session so the
+  // AuthGate stops routing the user back here on subsequent navigations.
+  function onOpen() {
+    markWelcomeShown();
+    router.replace('/');
+  }
+  function onSignUp() {
+    markWelcomeShown();
+    router.push('/(auth)/sign-up');
+  }
+  function onSignIn() {
+    markWelcomeShown();
+    router.push('/(auth)/sign-in');
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['top', 'bottom']}>
@@ -75,16 +94,24 @@ export default function WelcomeScreen() {
 
         {/* ── Actions ─────────────────────────────────────────────── */}
         <View style={{ gap: t.space[2] }}>
-          <PrimaryButton title="Sign up" onPress={() => router.push('/(auth)/sign-up')} />
-          <Pressable
-            onPress={() => router.push('/(auth)/sign-in')}
-            hitSlop={12}
-            style={{ alignItems: 'center', paddingVertical: t.space[3] }}
-          >
-            <Text style={[t.type.bodyLg, { color: t.colors.text.link, fontWeight: '600' }]}>
-              I have an account
-            </Text>
-          </Pressable>
+          {isSignedIn ? (
+            // Already-signed-in user landing on welcome as cold-launch homepage.
+            // One CTA — the promise has been read, now open the workspace.
+            <PrimaryButton title="Open Phase" onPress={onOpen} />
+          ) : (
+            <>
+              <PrimaryButton title="Sign up" onPress={onSignUp} />
+              <Pressable
+                onPress={onSignIn}
+                hitSlop={12}
+                style={{ alignItems: 'center', paddingVertical: t.space[3] }}
+              >
+                <Text style={[t.type.bodyLg, { color: t.colors.text.link, fontWeight: '600' }]}>
+                  I have an account
+                </Text>
+              </Pressable>
+            </>
+          )}
           <Text
             style={[
               t.type.caption,

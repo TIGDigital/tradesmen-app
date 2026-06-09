@@ -124,6 +124,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const session = useAuthStore((s) => s.session);
   const profile = useAuthStore((s) => s.profile);
   const initialising = useAuthStore((s) => s.initialising);
+  const welcomeShown = useAuthStore((s) => s.welcomeShown);
   const initialise = useAuthStore((s) => s.initialise);
   const router = useRouter();
   const segments = useSegments();
@@ -156,6 +157,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     if (initialising) return;
 
     const inAuthZone = segments[0] === '(auth)';
+    const onWelcome = inAuthZone && segments.at(1) === 'welcome';
 
     if (!session) {
       if (!inAuthZone) router.replace('/(auth)/welcome');
@@ -169,12 +171,20 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Signed in with a role — push out of the auth zone if we're stuck there.
-    // Exception: stay on role-select if the user is explicitly there (post-signup
-    // confirmation step; the default 'customer' role from the DB trigger shouldn't
-    // count as a confirmed choice).
+    // Signed in with a role. The welcome / promise screen is the homepage —
+    // every cold app launch routes here first, regardless of session state.
+    // The screen sets welcomeShown=true on any CTA tap, after which we bounce
+    // out of the auth zone like a normal app.
+    if (!welcomeShown) {
+      if (!onWelcome) router.replace('/(auth)/welcome');
+      return;
+    }
+
+    // Welcome already passed this session — push out of the auth zone if we're
+    // stuck there. Exception: stay on role-select if the user is explicitly
+    // there (post-signup confirmation step).
     if (inAuthZone && segments.at(1) !== 'role-select') router.replace('/');
-  }, [session, profile?.role, initialising, segments, router]);
+  }, [session, profile?.role, initialising, welcomeShown, segments, router]);
 
   if (initialising) {
     return (
