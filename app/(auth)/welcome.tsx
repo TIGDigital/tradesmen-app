@@ -1,135 +1,125 @@
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PhaseLogo } from '@/components/PhaseLogo';
-import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
 /**
- * Welcome screen — Phase DS treatment.
+ * Welcome / promise — Phase's homepage.
  *
- * Layout follows the "marketing hero" hierarchy from the design system:
- *   1. Brand cluster up top: ring mark + the PHASE tool-stamp caption.
- *   2. Hero headline + supporting body, anchored mid-screen with
- *      generous breathing room.
- *   3. Sticky bottom: primary CTA + the "I have an account" affordance,
- *      with a mono micro-stamp underneath ("V1 · JUN 2026") that gives
- *      the page its Fluke-instrument signature.
+ * Per the design system 01-PROMISE spec:
+ *   - Full-bleed Phase blue canvas
+ *   - App-icon plate centered (slightly brighter blue, soft shadow)
+ *   - White ring mark inside the plate
+ *   - White headline "We'll never leave you wondering."
+ *   - Softer-white body line
+ *   - Geist Mono stamp at the bottom of the cluster: PHASE · BUILT IN THE UK
  *
- * The screen sits on the warm Stone paper canvas. No gradients or
- * decorative chrome — the brand promise carries the weight.
+ * No visible CTAs — the whole canvas is tappable. Tap routes onwards
+ * based on auth state. Sign-in / sign-up cross-link from the sign-up
+ * screen handles the "I already have an account" case for cold-launch
+ * users who hit the promise screen with no session.
  */
 export default function WelcomeScreen() {
-  const t = lightTheme;
   const session = useAuthStore((s) => s.session);
   const markWelcomeShown = useAuthStore((s) => s.markWelcomeShown);
   const isSignedIn = !!session;
 
-  // Every CTA marks the welcome screen as passed for this app session so the
-  // AuthGate stops routing the user back here on subsequent navigations.
-  function onOpen() {
+  function onTap() {
     markWelcomeShown();
-    router.replace('/');
-  }
-  function onSignUp() {
-    markWelcomeShown();
-    router.push('/(auth)/sign-up');
-  }
-  function onSignIn() {
-    markWelcomeShown();
-    router.push('/(auth)/sign-in');
+    if (isSignedIn) {
+      router.replace('/');
+    } else {
+      router.push('/(auth)/sign-up');
+    }
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['top', 'bottom']}>
-      <View style={[styles.container, { padding: t.space[6] }]}>
-        {/* ── Brand cluster ───────────────────────────────────────── */}
-        <View style={{ alignItems: 'center', marginTop: t.space[6] }}>
-          <PhaseLogo size={56} />
-          <Text
-            style={[
-              t.type.caption,
-              { color: t.colors.text.tertiary, marginTop: t.space[3] },
-            ]}
-          >
-            Phase
-          </Text>
-        </View>
+    <Pressable
+      onPress={onTap}
+      style={{ flex: 1, backgroundColor: PHASE_BLUE }}
+      accessibilityLabel="Open Phase"
+    >
+      {/* Force light status bar over the dark canvas. */}
+      <StatusBar style="light" />
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <View style={styles.center}>
+          {/* App-icon plate — slightly lighter than the background, soft shadow. */}
+          <View style={styles.plate}>
+            <PhaseLogo size={48} reversed />
+          </View>
 
-        {/* ── Hero ────────────────────────────────────────────────── */}
-        <View>
-          <Text
-            style={[
-              t.type.caption,
-              { color: t.colors.brand.primary, marginBottom: t.space[3] },
-            ]}
-          >
-            For the life of a build
+          <Text style={styles.headline}>
+            We'll never leave{'\n'}you wondering.
           </Text>
-          <Text
-            style={[
-              t.type.display,
-              { color: t.colors.text.primary },
-            ]}
-          >
-            We'll never{'\n'}leave you{'\n'}wondering.
-          </Text>
-          <Text
-            style={[
-              t.type.bodyLg,
-              {
-                color: t.colors.text.secondary,
-                marginTop: t.space[4],
-                maxWidth: 320,
-                lineHeight: 26,
-              },
-            ]}
-          >
-            The shared workspace for tradespeople and their customers — updates,
-            photos, schedule and snags, all in one place.
-          </Text>
-        </View>
 
-        {/* ── Actions ─────────────────────────────────────────────── */}
-        <View style={{ gap: t.space[2] }}>
-          {isSignedIn ? (
-            // Already-signed-in user landing on welcome as cold-launch homepage.
-            // One CTA — the promise has been read, now open the workspace.
-            <PrimaryButton title="Open Phase" onPress={onOpen} />
-          ) : (
-            <>
-              <PrimaryButton title="Sign up" onPress={onSignUp} />
-              <Pressable
-                onPress={onSignIn}
-                hitSlop={12}
-                style={{ alignItems: 'center', paddingVertical: t.space[3] }}
-              >
-                <Text style={[t.type.bodyLg, { color: t.colors.text.link, fontWeight: '600' }]}>
-                  I have an account
-                </Text>
-              </Pressable>
-            </>
-          )}
-          <Text
-            style={[
-              t.type.caption,
-              { color: t.colors.text.tertiary, textAlign: 'center', marginTop: t.space[2] },
-            ]}
-          >
-            V1 · Jun 2026
+          <Text style={styles.body}>
+            The calm, shared workspace for your home-improvement project — from contract to handover.
+          </Text>
+
+          <Text style={styles.stamp}>
+            Phase · Built in the UK
           </Text>
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </Pressable>
   );
 }
 
+const PHASE_BLUE = lightTheme.colors.brand.primary; // #1B4DD9
+
 const styles = StyleSheet.create({
-  container: {
+  center: {
     flex: 1,
-    // Three-section vertical layout — brand cluster, hero, actions.
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+
+  // Plate sits slightly lighter than the canvas. Subtle shadow gives it
+  // a tiny lift without breaking the calm.
+  plate: {
+    width: 96,
+    height: 96,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 36,
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 12 },
+  },
+
+  headline: {
+    fontFamily: 'Geist_700Bold',
+    fontSize: 38,
+    lineHeight: 42,
+    letterSpacing: -0.6,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+
+  body: {
+    fontFamily: 'Geist_400Regular',
+    fontSize: 17,
+    lineHeight: 25,
+    color: 'rgba(255, 255, 255, 0.82)',
+    textAlign: 'center',
+    marginTop: 18,
+    maxWidth: 360,
+  },
+
+  stamp: {
+    fontFamily: 'GeistMono_500Medium',
+    fontSize: 11,
+    letterSpacing: 1.6,
+    color: 'rgba(255, 255, 255, 0.55)',
+    textTransform: 'uppercase',
+    marginTop: 24,
   },
 });

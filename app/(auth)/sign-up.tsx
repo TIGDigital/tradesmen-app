@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+// Pressable + Text + Alert already imported above; bottom cross-link to sign-in.
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PhaseLogo } from '@/components/PhaseLogo';
@@ -110,6 +111,17 @@ export default function SignUpScreen() {
           <View style={{ marginTop: t.space[8] }}>
             <PrimaryButton title="Create account" onPress={onSubmit} loading={submitting} />
           </View>
+
+          <Pressable
+            onPress={() => router.replace('/(auth)/sign-in')}
+            hitSlop={12}
+            style={{ alignItems: 'center', paddingVertical: t.space[4], marginTop: t.space[2] }}
+          >
+            <Text style={[t.type.body, { color: t.colors.text.secondary }]}>
+              Already have an account?{' '}
+              <Text style={{ color: t.colors.text.link, fontWeight: '600' }}>Sign in</Text>
+            </Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
