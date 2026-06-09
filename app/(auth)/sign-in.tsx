@@ -92,6 +92,17 @@ export default function SignInScreen() {
           <View style={{ marginTop: t.space[8] }}>
             <PrimaryButton title="Sign in" onPress={onSubmit} loading={submitting} />
           </View>
+
+          <Pressable
+            onPress={() => router.replace('/(auth)/sign-up')}
+            hitSlop={12}
+            style={{ alignItems: 'center', paddingVertical: t.space[4], marginTop: t.space[2] }}
+          >
+            <Text style={[t.type.body, { color: t.colors.text.secondary }]}>
+              New here?{' '}
+              <Text style={{ color: t.colors.text.link, fontWeight: '600' }}>Create an account</Text>
+            </Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

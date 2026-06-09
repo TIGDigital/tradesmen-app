@@ -10,25 +10,26 @@ import { lightTheme } from '@/theme/light';
 /**
  * Welcome / promise — Phase's homepage.
  *
- * Per the design system 01-PROMISE spec:
+ * Per the design system 01-PROMISE spec + product additions:
  *   - Full-bleed Phase blue canvas
- *   - App-icon plate centered (slightly brighter blue, soft shadow)
- *   - White ring mark inside the plate
+ *   - App-icon plate centered with the white ring mark
+ *   - Phase wordmark — brand recognition before the headline lands
  *   - White headline "We'll never leave you wondering."
  *   - Softer-white body line
- *   - Geist Mono stamp at the bottom of the cluster: PHASE · BUILT IN THE UK
- *
- * No visible CTAs — the whole canvas is tappable. Tap routes onwards
- * based on auth state. Sign-in / sign-up cross-link from the sign-up
- * screen handles the "I already have an account" case for cold-launch
- * users who hit the promise screen with no session.
+ *   - Geist Mono stamp underneath the cluster
+ *   - White pill button "Start your phase" — single CTA that reads the
+ *     same for new (start signing up) and returning (open the workspace)
+ *     users alike
+ *   - Signed-out users get a quiet "I have an account" affordance under
+ *     the button so anyone who actually has credentials can swap to
+ *     sign-in without going through the sign-up form
  */
 export default function WelcomeScreen() {
   const session = useAuthStore((s) => s.session);
   const markWelcomeShown = useAuthStore((s) => s.markWelcomeShown);
   const isSignedIn = !!session;
 
-  function onTap() {
+  function onPrimary() {
     markWelcomeShown();
     if (isSignedIn) {
       router.replace('/');
@@ -37,50 +38,89 @@ export default function WelcomeScreen() {
     }
   }
 
+  function onSignIn() {
+    markWelcomeShown();
+    router.push('/(auth)/sign-in');
+  }
+
   return (
-    <Pressable
-      onPress={onTap}
-      style={{ flex: 1, backgroundColor: PHASE_BLUE }}
-      accessibilityLabel="Open Phase"
-    >
+    <View style={{ flex: 1, backgroundColor: PHASE_BLUE }}>
       {/* Force light status bar over the dark canvas. */}
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <View style={styles.center}>
-          {/* App-icon plate — slightly lighter than the background, soft shadow. */}
-          <View style={styles.plate}>
-            <PhaseLogo size={48} reversed />
+        <View style={styles.outer}>
+          {/* ── Promise cluster — vertically centered ─────────── */}
+          <View style={styles.cluster}>
+            <View style={styles.plate}>
+              <PhaseLogo size={48} reversed />
+            </View>
+
+            <Text style={styles.wordmark}>Phase</Text>
+
+            <Text style={styles.headline}>
+              We'll never leave{'\n'}you wondering.
+            </Text>
+
+            <Text style={styles.body}>
+              The calm, shared workspace for your home-improvement project — from contract to handover.
+            </Text>
+
+            <Text style={styles.stamp}>
+              Phase · Built in the UK
+            </Text>
           </View>
 
-          <Text style={styles.headline}>
-            We'll never leave{'\n'}you wondering.
-          </Text>
+          {/* ── CTA cluster — bottom anchored ──────────────────── */}
+          <View style={styles.ctaBox}>
+            <Pressable
+              onPress={onPrimary}
+              style={({ pressed }) => [
+                styles.button,
+                { opacity: pressed ? 0.85 : 1 },
+              ]}
+              accessibilityLabel="Start your phase"
+            >
+              <Text style={styles.buttonLabel}>Start your phase</Text>
+            </Pressable>
 
-          <Text style={styles.body}>
-            The calm, shared workspace for your home-improvement project — from contract to handover.
-          </Text>
-
-          <Text style={styles.stamp}>
-            Phase · Built in the UK
-          </Text>
+            {!isSignedIn && (
+              <Pressable
+                onPress={onSignIn}
+                hitSlop={12}
+                style={styles.linkBox}
+                accessibilityLabel="I have an account"
+              >
+                <Text style={styles.linkLabel}>I have an account</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       </SafeAreaView>
-    </Pressable>
+    </View>
   );
 }
 
 const PHASE_BLUE = lightTheme.colors.brand.primary; // #1B4DD9
 
 const styles = StyleSheet.create({
-  center: {
+  outer: {
+    flex: 1,
+    paddingHorizontal: 28,
+    // Cluster occupies the middle, CTA box anchors the bottom — empty
+    // top space lets the brand breathe and prevents the layout from
+    // feeling cramped on shorter devices.
+    justifyContent: 'space-between',
+    paddingTop: 56,
+    paddingBottom: 24,
+  },
+
+  // ── Centerpiece cluster ──────────────────────────────────────
+  cluster: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
   },
 
-  // Plate sits slightly lighter than the canvas. Subtle shadow gives it
-  // a tiny lift without breaking the calm.
   plate: {
     width: 96,
     height: 96,
@@ -88,11 +128,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 36,
     shadowColor: '#000000',
     shadowOpacity: 0.2,
     shadowRadius: 28,
     shadowOffset: { width: 0, height: 12 },
+  },
+
+  wordmark: {
+    fontFamily: 'Geist_700Bold',
+    fontSize: 22,
+    color: '#FFFFFF',
+    letterSpacing: -0.4,
+    marginTop: 16,
   },
 
   headline: {
@@ -102,6 +149,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
     color: '#FFFFFF',
     textAlign: 'center',
+    marginTop: 28,
   },
 
   body: {
@@ -110,7 +158,7 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     color: 'rgba(255, 255, 255, 0.82)',
     textAlign: 'center',
-    marginTop: 18,
+    marginTop: 16,
     maxWidth: 360,
   },
 
@@ -120,6 +168,41 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
     color: 'rgba(255, 255, 255, 0.55)',
     textTransform: 'uppercase',
-    marginTop: 24,
+    marginTop: 22,
+  },
+
+  // ── CTA cluster ──────────────────────────────────────────────
+  ctaBox: {
+    gap: 12,
+  },
+
+  button: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+  },
+
+  buttonLabel: {
+    fontFamily: 'Geist_600SemiBold',
+    fontSize: 17,
+    color: PHASE_BLUE,
+    letterSpacing: -0.2,
+  },
+
+  linkBox: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+
+  linkLabel: {
+    fontFamily: 'Geist_500Medium',
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.85)',
   },
 });
