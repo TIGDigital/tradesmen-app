@@ -62,7 +62,7 @@ export default function WelcomeScreen() {
             </Text>
 
             <Text style={styles.body}>
-              The calm, shared workspace for your home-improvement project — from contract to handover.
+              The shared workspace where tradespeople and their customers stay aligned — from contract to handover.
             </Text>
 
             <Text style={styles.stamp}>
