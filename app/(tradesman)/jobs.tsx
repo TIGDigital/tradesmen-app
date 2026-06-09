@@ -13,12 +13,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { MenuSheet, type MenuItem } from '@/components/MenuSheet';
 import { Card } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { switchMyRole } from '@/services/auth';
+import { signOut, switchMyRole } from '@/services/auth';
 import { fireLocalTest } from '@/services/notifications';
 import { fetchMyProjects } from '@/services/projects';
 import { useLocationConsentNudge } from '@/hooks/useLocationConsentNudge';
@@ -30,6 +31,7 @@ export default function JobsScreen() {
   const t = lightTheme;
   const profile = useAuthStore((s) => s.profile);
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // First-ever visit: warm-prompt the tradesman for location, then iOS asks.
   useLocationConsentNudge();
@@ -100,30 +102,52 @@ export default function JobsScreen() {
           needsAttention > 0 ? ` · ${needsAttention} need${needsAttention === 1 ? 's' : ''} your attention` : ''
         }`;
 
-  function onMenu() {
-    Alert.alert('Menu', undefined, [
-      {
-        text: 'Settings',
-        onPress: () => router.push('/settings'),
+  // Menu items shown in the ≡ sheet for the tradesman role. Production
+  // items are listed first; dev-only escape hatches (role switch, test
+  // notification) only render when __DEV__ is true so they never reach a
+  // real user's build. The "Sign out" row gets the brand tint so it reads
+  // as the meaningful affordance at the bottom of the list.
+  const menuItems: MenuItem[] = [
+    { label: 'Projects', icon: 'briefcase-outline', onPress: () => router.push('/jobs') },
+    { label: 'Updates', icon: 'pulse-outline', onPress: () => router.push('/notifications') },
+    { label: 'Inbox', icon: 'chatbubble-outline', onPress: () => router.push('/messages') },
+    { label: 'Account', icon: 'person-outline', onPress: () => router.push('/account') },
+    { label: 'Settings', icon: 'settings-outline', onPress: () => router.push('/settings') },
+    ...(__DEV__
+      ? ([
+          {
+            label: 'Switch to customer view (dev)',
+            icon: 'swap-horizontal-outline',
+            onPress: async () => {
+              try {
+                await switchMyRole();
+                await refreshProfile();
+              } catch (e) {
+                Alert.alert('Failed', (e as Error).message);
+              }
+            },
+          },
+          {
+            label: 'Send test notification (dev)',
+            icon: 'notifications-outline',
+            onPress: () => fireLocalTest(),
+          },
+        ] as MenuItem[])
+      : []),
+    {
+      label: 'Sign out',
+      icon: 'log-out-outline',
+      tint: 'brand',
+      onPress: async () => {
+        try {
+          await signOut();
+          // Auth listener in stores/auth.ts handles redirect to welcome.
+        } catch (e) {
+          Alert.alert("Couldn't sign out", (e as Error).message);
+        }
       },
-      {
-        text: 'Switch to customer view (dev)',
-        onPress: async () => {
-          try {
-            await switchMyRole();
-            await refreshProfile();
-          } catch (e) {
-            Alert.alert('Failed', (e as Error).message);
-          }
-        },
-      },
-      {
-        text: 'Send test notification (dev)',
-        onPress: () => fireLocalTest(),
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }
+    },
+  ];
 
   // Date stamp — UK English, uppercase, like a tool brand stamping its name.
   // Renders e.g. "MON · 8 JUN" via Geist Mono with wide tracking. Same
@@ -143,7 +167,7 @@ export default function JobsScreen() {
         </Text>
       </View>
       <View style={styles.navBar}>
-        <Pressable onPress={onMenu} hitSlop={12} style={styles.navIconBox}>
+        <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} style={styles.navIconBox}>
           <Text style={{ fontSize: 22, color: t.colors.text.primary }}>≡</Text>
         </Pressable>
         <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>Jobs</Text>
@@ -285,6 +309,14 @@ export default function JobsScreen() {
           )}
         </ScrollView>
       )}
+
+      {/* The ≡ menu — Phase-styled bottom sheet. Renders outside the
+          main column so it can overlay everything when open. */}
+      <MenuSheet
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        items={menuItems}
+      />
     </SafeAreaView>
   );
 }

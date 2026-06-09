@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 
 import { MediaThumbs } from '@/components/MediaThumbs';
+import { MenuSheet, type MenuItem } from '@/components/MenuSheet';
 import { PhaseProgressRing } from '@/components/PhaseProgressRing';
 import { Reactions } from '@/components/Reactions';
 import { VoicePlayer } from '@/components/VoicePlayer';
@@ -15,7 +16,7 @@ import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useRealtimeProject } from '@/hooks/useRealtimeProject';
-import { switchMyRole } from '@/services/auth';
+import { signOut, switchMyRole } from '@/services/auth';
 import { fireLocalTest } from '@/services/notifications';
 import {
   dayOfProject,
@@ -32,6 +33,7 @@ export default function HomeScreen() {
   const t = lightTheme;
   const profile = useAuthStore((s) => s.profile);
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // All hooks must run on every render — put the query before any conditional return.
   const isCustomer = profile?.role !== 'tradesman';
@@ -78,30 +80,51 @@ export default function HomeScreen() {
   // Role-based redirects live in `app/index.tsx`. By the time we're inside
   // the (customer) tab group, the user is a customer — no guard needed.
 
-  function onMenu() {
-    Alert.alert('Menu', undefined, [
-      {
-        text: 'Settings',
-        onPress: () => router.push('/settings'),
+  // Menu items shown in the ≡ sheet for the customer role. Production
+  // items first; dev-only escape hatches (role switch, test notification)
+  // only render when __DEV__ is true so they never reach a real user's
+  // build. "Sign out" gets the brand tint as the final, meaningful row.
+  const menuItems: MenuItem[] = [
+    { label: 'Projects', icon: 'briefcase-outline', onPress: () => router.push('/') },
+    { label: 'Updates', icon: 'pulse-outline', onPress: () => router.push('/updates') },
+    { label: 'Inbox', icon: 'chatbubble-outline', onPress: () => router.push('/messages') },
+    { label: 'Account', icon: 'person-outline', onPress: () => router.push('/account') },
+    { label: 'Settings', icon: 'settings-outline', onPress: () => router.push('/settings') },
+    ...(__DEV__
+      ? ([
+          {
+            label: 'Switch to tradesman view (dev)',
+            icon: 'swap-horizontal-outline',
+            onPress: async () => {
+              try {
+                await switchMyRole();
+                await refreshProfile();
+              } catch (e) {
+                Alert.alert('Failed', (e as Error).message);
+              }
+            },
+          },
+          {
+            label: 'Send test notification (dev)',
+            icon: 'notifications-outline',
+            onPress: () => fireLocalTest(),
+          },
+        ] as MenuItem[])
+      : []),
+    {
+      label: 'Sign out',
+      icon: 'log-out-outline',
+      tint: 'brand',
+      onPress: async () => {
+        try {
+          await signOut();
+          // Auth listener in stores/auth.ts handles redirect to welcome.
+        } catch (e) {
+          Alert.alert("Couldn't sign out", (e as Error).message);
+        }
       },
-      {
-        text: 'Switch to tradesman view (dev)',
-        onPress: async () => {
-          try {
-            await switchMyRole();
-            await refreshProfile();
-          } catch (e) {
-            Alert.alert('Failed', (e as Error).message);
-          }
-        },
-      },
-      {
-        text: 'Send test notification (dev)',
-        onPress: () => fireLocalTest(),
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }
+    },
+  ];
 
   // Date stamp — UK English, uppercase, like a tool brand stamping its name.
   // Renders e.g. "MON · 8 JUN" via Geist Mono with wide tracking.
@@ -121,7 +144,7 @@ export default function HomeScreen() {
         </Text>
       </View>
       <View style={styles.navBar}>
-        <Pressable onPress={onMenu} hitSlop={12} style={styles.navIconBox}>
+        <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} style={styles.navIconBox}>
           <Text style={{ fontSize: 22, color: t.colors.text.primary }}>≡</Text>
         </Pressable>
         {isMulti ? (
@@ -213,6 +236,13 @@ export default function HomeScreen() {
           refreshing={isRefetching}
         />
       )}
+
+      {/* The ≡ menu — Phase-styled bottom sheet. */}
+      <MenuSheet
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        items={menuItems}
+      />
     </SafeAreaView>
   );
 }
