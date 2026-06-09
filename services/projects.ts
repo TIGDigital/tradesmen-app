@@ -275,12 +275,11 @@ export async function createProject(args: {
     .single();
   if (error) throw error;
 
-  const { error: crewError } = await supabase.from('project_crew').insert({
-    project_id: project.id,
-    user_id: user.id,
-    role_on_project: 'lead',
-  });
-  if (crewError) throw crewError;
+  // Note: the project_crew "lead" row is auto-inserted by the
+  // ensure_project_lead AFTER-INSERT trigger (see Sprint 36 migration
+  // 20260604000800_crew_lead_trigger.sql). We deliberately do NOT insert
+  // here — doing so would cause a duplicate-key violation on
+  // project_crew_pkey.
 
   // Auto-apply the default milestone template for this trade (silent — empty is fine).
   await applyDefaultTemplate(project.id, args.trade_type).catch((e) => {
