@@ -13,7 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AddressLookup } from '@/components/AddressLookup';
 import { InputField } from '@/components/ui/InputField';
+import { isAddressLookupConfigured } from '@/services/addressLookup';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { createProject } from '@/services/projects';
 import { lightTheme } from '@/theme/light';
@@ -48,6 +50,10 @@ export default function NewProjectScreen() {
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [postcode, setPostcode] = useState('');
+  // Whether the user has explicitly toggled to manual entry (overrides
+  // the lookup default). If the lookup API isn't configured at all the
+  // form behaves as manual regardless — see AddressLookup.
+  const [manualAddress, setManualAddress] = useState(!isAddressLookupConfigured());
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
 
@@ -154,28 +160,34 @@ export default function NewProjectScreen() {
               </Text>
             </View>
 
-            <InputField
-              label="Address"
-              value={address}
-              onChangeText={setAddress}
-              placeholder="23 Beech Road"
-              autoCapitalize="words"
-            />
-
-            <InputField
-              label="City / Town"
-              value={city}
-              onChangeText={setCity}
-              placeholder="London"
-              autoCapitalize="words"
-            />
-
-            <InputField
-              label="Postcode"
-              value={postcode}
-              onChangeText={setPostcode}
-              placeholder="SW19 4QP"
-              autoCapitalize="characters"
+            <AddressLookup
+              // The chosen-address card reads `value`; we treat the
+              // three fields collectively as the resolved address.
+              value={
+                address || city || postcode
+                  ? { address_line_1: address, city, postcode }
+                  : null
+              }
+              onChange={(a) => {
+                setAddress(a.address_line_1);
+                setCity(a.city);
+                setPostcode(a.postcode);
+              }}
+              manualMode={manualAddress}
+              onSetManualMode={(m) => {
+                setManualAddress(m);
+                // Clear the fields when toggling so we don't carry
+                // half-resolved values into manual mode.
+                setAddress('');
+                setCity('');
+                setPostcode('');
+              }}
+              manualLine1={address}
+              onManualLine1Change={setAddress}
+              manualCity={city}
+              onManualCityChange={setCity}
+              manualPostcode={postcode}
+              onManualPostcodeChange={setPostcode}
             />
 
             <View style={{ height: t.space[2] }} />
