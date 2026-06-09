@@ -129,15 +129,6 @@
       "expo-router",
       "expo-image",
       [
-        "expo-splash-screen",
-        {
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#FFFFFF"
-        }
-      ],
-      [
         "expo-image-picker",
         {
           "photosPermission": "Phase needs access to your photos so you can attach them to project updates for your customer.",
