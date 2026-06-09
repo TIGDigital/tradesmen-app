@@ -122,7 +122,9 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -161,6 +163,12 @@
       },
       "privacyPolicyUrl": "https://tigdigital.github.io/tradesmen-app/privacy.html"
     },
-    "owner": "tig-digital"
+    "owner": "tig-digital",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/be84b39b-c4b9-4f91-9894-8ad4a321fb4e"
+    }
   }
 }
