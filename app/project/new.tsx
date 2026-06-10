@@ -50,10 +50,10 @@ export default function NewProjectScreen() {
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [postcode, setPostcode] = useState('');
-  // Whether the user has explicitly toggled to manual entry (overrides
-  // the lookup default). If the lookup API isn't configured at all the
-  // form behaves as manual regardless — see AddressLookup.
-  const [manualAddress, setManualAddress] = useState(!isAddressLookupConfigured());
+  // Manual address entry: shown by default when the lookup API isn't
+  // configured (e.g. local dev without the key). User can also opt into
+  // it via the "Enter manually" link on the lookup component.
+  const [showManual, setShowManual] = useState(!isAddressLookupConfigured());
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
 
@@ -160,35 +160,74 @@ export default function NewProjectScreen() {
               </Text>
             </View>
 
-            <AddressLookup
-              // The chosen-address card reads `value`; we treat the
-              // three fields collectively as the resolved address.
-              value={
-                address || city || postcode
-                  ? { address_line_1: address, city, postcode }
-                  : null
-              }
-              onChange={(a) => {
-                setAddress(a.address_line_1);
-                setCity(a.city);
-                setPostcode(a.postcode);
-              }}
-              manualMode={manualAddress}
-              onSetManualMode={(m) => {
-                setManualAddress(m);
-                // Clear the fields when toggling so we don't carry
-                // half-resolved values into manual mode.
-                setAddress('');
-                setCity('');
-                setPostcode('');
-              }}
-              manualLine1={address}
-              onManualLine1Change={setAddress}
-              manualCity={city}
-              onManualCityChange={setCity}
-              manualPostcode={postcode}
-              onManualPostcodeChange={setPostcode}
-            />
+            {showManual ? (
+              <View style={{ gap: t.space[4] }}>
+                <InputField
+                  label="Address"
+                  value={address}
+                  onChangeText={setAddress}
+                  placeholder="23 Beech Road"
+                  autoCapitalize="words"
+                />
+                <InputField
+                  label="City / Town"
+                  value={city}
+                  onChangeText={setCity}
+                  placeholder="London"
+                  autoCapitalize="words"
+                />
+                <InputField
+                  label="Postcode"
+                  value={postcode}
+                  onChangeText={setPostcode}
+                  placeholder="SW19 4QP"
+                  autoCapitalize="characters"
+                />
+                {isAddressLookupConfigured() ? (
+                  <Pressable
+                    onPress={() => {
+                      setShowManual(false);
+                      setAddress('');
+                      setCity('');
+                      setPostcode('');
+                    }}
+                    hitSlop={8}
+                    style={{ alignItems: 'flex-start', paddingVertical: 4 }}
+                  >
+                    <Text
+                      style={[t.type.body, { color: t.colors.text.link, fontWeight: '500' }]}
+                    >
+                      Search by postcode instead
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : (
+              <AddressLookup
+                value={
+                  address && city && postcode
+                    ? { address_line_1: address, city, postcode }
+                    : null
+                }
+                onChange={(a) => {
+                  if (a) {
+                    setAddress(a.address_line_1);
+                    setCity(a.city);
+                    setPostcode(a.postcode);
+                  } else {
+                    setAddress('');
+                    setCity('');
+                    setPostcode('');
+                  }
+                }}
+                onRequestManual={() => {
+                  setShowManual(true);
+                  setAddress('');
+                  setCity('');
+                  setPostcode('');
+                }}
+              />
+            )}
 
             <View style={{ height: t.space[2] }} />
             <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Your customer</Text>

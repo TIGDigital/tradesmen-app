@@ -1,17 +1,20 @@
 /**
- * UK address autocomplete via getaddress.io.
+ * UK postcode-first address lookup via getaddress.io.
  *
- * Phase's create-project flow asks for an address. Manual entry across
- * three fields on a phone keyboard is painful — especially for a tradie
- * standing in a wet kitchen in February. getaddress.io exposes a
- * pay-as-you-go REST API that takes a partial query and returns matching
- * UK addresses. The free tier is 20/day; the cheapest paid tier is ~£3/m
- * for a couple thousand lookups.
+ * The classic UK e-commerce checkout pattern: user types a postcode,
+ * picks from the list of addresses that share it. This is faster than
+ * autocomplete-from-anywhere for Phase's tradesman flow because the
+ * tradesman almost always has the postcode written down from the
+ * customer call — typing a 7-character postcode beats typing "10 down…"
+ * and waiting for suggestions.
  *
- * The API key is set as `EXPO_PUBLIC_GETADDRESS_API_KEY` via EAS env
- * vars (see eas env:create). Because the key has no rate-limit
- * privileges beyond what the dashboard allows, embedding it in the JS
- * bundle is safe — the same model as the Supabase anon key.
+ * One API call per postcode (not per keystroke), so it's cheap to run
+ * on the paid tier.
+ *
+ * The API key lives in EXPO_PUBLIC_GETADDRESS_API_KEY. It's safe to
+ * embed in the JS bundle — getaddress.io issues a "domain token" model
+ * separately for unrestricted client-side keys, and the dashboard caps
+ * abuse via the per-minute IP throttle.
  *
  * Docs: https://documentation.getaddress.io
  */
@@ -19,31 +22,20 @@
 const API_BASE = 'https://api.getaddress.io';
 
 /**
- * A short suggestion row — what the autocomplete endpoint returns. The
- * full structured address requires a second `getAddress(id)` call.
+ * The relevant subset of a getaddress.io address record. The /find
+ * endpoint returns more fields (county, district, country, etc.) but
+ * Phase only stores three.
  */
-export interface AddressSuggestion {
-  /** UUID-like opaque id used to fetch the full address. */
-  id: string;
-  /** Human display string — "10 Downing Street, London, SW1A 2AA". */
-  address: string;
-}
-
-/**
- * The structured address returned by the `get/{id}` endpoint. We map
- * this onto Phase's three project-create fields:
- *   - address_line_1 ← line_1 (with line_2 appended if non-empty)
- *   - city           ← town_or_city
- *   - postcode       ← postcode
- */
-export interface FullAddress {
+export interface FoundAddress {
+  /** "10 Downing Street" — first non-empty address line from the API. */
   line_1: string;
+  /** Optional second line ("Flat 4", "Building B"), often empty. */
   line_2: string;
+  /** Town or city ("Westminster"). */
   town_or_city: string;
-  postcode: string;
 }
 
-/** The three fields Phase stores. Returned from `resolveAddress()`. */
+/** The three fields Phase stores on a project. */
 export interface ResolvedAddress {
   address_line_1: string;
   city: string;
@@ -55,71 +47,94 @@ function getApiKey(): string | null {
   return k && k.length > 0 ? k : null;
 }
 
-/** Whether the address lookup is wired up. If false, callers should
- *  fall back to manual entry. Cheap synchronous check. */
+/** Whether the lookup is wired up. False → component shows manual entry. */
 export function isAddressLookupConfigured(): boolean {
   return getApiKey() !== null;
 }
 
 /**
- * Fetch autocomplete suggestions for a partial query.
- *
- * getaddress.io's autocomplete endpoint is fuzzy — "10 downing" or
- * "sw1a" both return matches. Empty / very short queries (<3 chars)
- * just return an empty array to avoid wasted requests.
- *
- * Throws on network failure or non-2xx response so the caller can show
- * an error state.
+ * Normalise a UK postcode: strip non-alphanumerics, uppercase, insert a
+ * single space before the last three characters. So "sw1a2aa" and
+ * " SW1A 2AA " both normalise to "SW1A 2AA".
  */
-export async function autocompleteAddress(query: string): Promise<AddressSuggestion[]> {
+export function normaliseUKPostcode(input: string): string {
+  const compact = input.replace(/\s+/g, '').toUpperCase();
+  if (compact.length < 5) return compact;
+  return `${compact.slice(0, -3)} ${compact.slice(-3)}`;
+}
+
+/**
+ * Permissive UK postcode regex. Matches the standard forms (SW1A 2AA,
+ * M1 1AA, GIR 0AA) without being draconian about edge cases. Catches
+ * obvious typos early so we don't waste an API call.
+ */
+export function isValidUKPostcode(input: string): boolean {
+  const compact = input.replace(/\s+/g, '').toUpperCase();
+  return /^(GIR0AA|[A-PR-UWYZ]([0-9]{1,2}|([A-HK-Y][0-9]([0-9ABEHMNPRV-Y])?))[0-9][ABD-HJLNP-UW-Z]{2})$/.test(
+    compact,
+  );
+}
+
+/**
+ * Look up addresses at a UK postcode. Returns the array of matches.
+ *
+ * Throws with a friendly message on:
+ *   - Invalid / malformed postcode (404 from API)
+ *   - Authentication failure (401, 403)
+ *   - Anything else non-2xx
+ *
+ * Empty result (postcode valid but no addresses on record) returns an
+ * empty array, not an error — caller shows "no addresses found, enter
+ * manually".
+ */
+export async function findAddressesByPostcode(
+  postcode: string,
+): Promise<FoundAddress[]> {
   const key = getApiKey();
   if (!key) throw new Error('Address lookup not configured');
 
-  const q = query.trim();
-  if (q.length < 3) return [];
+  const normalised = normaliseUKPostcode(postcode);
+  if (!isValidUKPostcode(normalised)) {
+    throw new Error("That doesn't look like a UK postcode");
+  }
 
-  // `all=true` returns more variations including new-build addresses.
-  // `top=8` caps results — enough for a useful dropdown without scroll.
-  const url = `${API_BASE}/autocomplete/${encodeURIComponent(q)}?api-key=${encodeURIComponent(key)}&all=true&top=8`;
+  const url = `${API_BASE}/find/${encodeURIComponent(
+    normalised,
+  )}?api-key=${encodeURIComponent(key)}&expand=true`;
 
   const res = await fetch(url);
+
+  if (res.status === 404) {
+    // Postcode shape is valid but Royal Mail has no record. Empty list.
+    return [];
+  }
+  if (res.status === 401 || res.status === 403) {
+    throw new Error('Address lookup unauthorised — check API key');
+  }
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`Address lookup failed (${res.status}): ${body || res.statusText}`);
   }
 
-  const data: { suggestions?: AddressSuggestion[] } = await res.json();
-  return Array.isArray(data.suggestions) ? data.suggestions : [];
+  const data: { addresses?: FoundAddress[] } = await res.json();
+  return Array.isArray(data.addresses) ? data.addresses : [];
 }
 
 /**
- * Resolve a suggestion id into the three structured fields Phase stores.
- *
- * line_2 is appended to line_1 with a comma if it has content — this
- * keeps Phase's single-line "Address" field useful for flats, units,
- * etc., without forcing a separate "address line 2" field on the form.
+ * Project a getaddress.io result + the original postcode into Phase's
+ * three-field shape. Combines line_1 and line_2 with a comma when both
+ * are present (e.g. "Flat 4, 10 Downing Street").
  */
-export async function resolveAddress(id: string): Promise<ResolvedAddress> {
-  const key = getApiKey();
-  if (!key) throw new Error('Address lookup not configured');
-
-  const url = `${API_BASE}/get/${encodeURIComponent(id)}?api-key=${encodeURIComponent(key)}`;
-
-  const res = await fetch(url);
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Address fetch failed (${res.status}): ${body || res.statusText}`);
-  }
-
-  const a: FullAddress = await res.json();
-
+export function toResolvedAddress(
+  a: FoundAddress,
+  postcode: string,
+): ResolvedAddress {
   const line_1 = (a.line_1 ?? '').trim();
   const line_2 = (a.line_2 ?? '').trim();
-  const address_line_1 = line_2 ? `${line_1}, ${line_2}` : line_1;
-
+  const address_line_1 = line_2 ? `${line_2}, ${line_1}` : line_1;
   return {
     address_line_1,
     city: (a.town_or_city ?? '').trim(),
-    postcode: (a.postcode ?? '').trim().toUpperCase(),
+    postcode: normaliseUKPostcode(postcode),
   };
 }
