@@ -52,6 +52,7 @@ export default function MilestoneEditScreen() {
   });
 
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [status, setStatus] = useState<MilestoneStatus>('pending');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -60,6 +61,7 @@ export default function MilestoneEditScreen() {
   useEffect(() => {
     if (!data) return;
     setTitle(data.title);
+    setDescription(data.description ?? '');
     setStatus(data.status as MilestoneStatus);
     setStartDate(data.expected_start_date ? new Date(data.expected_start_date) : null);
     setEndDate(data.expected_date ? new Date(data.expected_date) : null);
@@ -69,6 +71,8 @@ export default function MilestoneEditScreen() {
     mutationFn: () =>
       updateMilestone(id!, {
         title: title.trim(),
+        // Empty string -> null so the DB stays clean.
+        description: description.trim() ? description.trim() : null,
         status,
         expected_start_date: startDate ? toDateString(startDate) : null,
         expected_date: endDate ? toDateString(endDate) : null,
@@ -140,6 +144,41 @@ export default function MilestoneEditScreen() {
                   },
                 ]}
               />
+            </View>
+
+            <View>
+              <Text style={[t.type.footnote, { color: t.colors.text.secondary, marginBottom: 6 }]}>
+                Notes
+              </Text>
+              <TextInput
+                value={description}
+                onChangeText={setDescription}
+                placeholder="What's involved? Anything the customer should know."
+                placeholderTextColor={t.colors.text.tertiary}
+                multiline
+                textAlignVertical="top"
+                style={[
+                  t.type.body,
+                  {
+                    minHeight: 96,
+                    color: t.colors.text.primary,
+                    backgroundColor: t.colors.bg.surface2,
+                    borderColor: t.colors.border.strong,
+                    borderWidth: 1,
+                    borderRadius: t.radius.md,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                  },
+                ]}
+              />
+              <Text
+                style={[
+                  t.type.footnote,
+                  { color: t.colors.text.tertiary, marginTop: 6 },
+                ]}
+              >
+                Optional. Visible to the customer.
+              </Text>
             </View>
 
             <View>

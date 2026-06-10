@@ -204,6 +204,8 @@ export async function updateMilestone(
   id: string,
   patch: Partial<{
     title: string;
+    /** Commentary / notes the tradesman writes about the milestone. */
+    description: string | null;
     status: MilestoneStatus;
     expected_start_date: string | null;
     expected_date: string | null;

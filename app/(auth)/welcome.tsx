@@ -43,6 +43,14 @@ export default function WelcomeScreen() {
     router.push('/(auth)/sign-in');
   }
 
+  function onCrewCode() {
+    // Crew invitees jump straight into the code-entry flow. We DON'T flip
+    // welcomeShown here — that flag is for users entering the main app
+    // shell. The crew flow lives outside the auth zone and handles its own
+    // navigation post-acceptance.
+    router.push('/crew-code-entry');
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: PHASE_BLUE }}>
       {/* Force light status bar over the dark canvas. */}
@@ -84,14 +92,24 @@ export default function WelcomeScreen() {
             </Pressable>
 
             {!isSignedIn && (
-              <Pressable
-                onPress={onSignIn}
-                hitSlop={12}
-                style={styles.linkBox}
-                accessibilityLabel="I have an account"
-              >
-                <Text style={styles.linkLabel}>I have an account</Text>
-              </Pressable>
+              <>
+                <Pressable
+                  onPress={onSignIn}
+                  hitSlop={12}
+                  style={styles.linkBox}
+                  accessibilityLabel="I have an account"
+                >
+                  <Text style={styles.linkLabel}>I have an account</Text>
+                </Pressable>
+                <Pressable
+                  onPress={onCrewCode}
+                  hitSlop={12}
+                  style={styles.linkBox}
+                  accessibilityLabel="I have a crew invite code"
+                >
+                  <Text style={styles.linkLabelSubtle}>I have a crew invite</Text>
+                </Pressable>
+              </>
             )}
           </View>
         </View>
@@ -204,5 +222,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Geist_500Medium',
     fontSize: 15,
     color: 'rgba(255, 255, 255, 0.85)',
+  },
+
+  // Quieter than "I have an account" — secondary affordance for the
+  // smaller crew-invite audience.
+  linkLabelSubtle: {
+    fontFamily: 'Geist_500Medium',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.65)',
   },
 });

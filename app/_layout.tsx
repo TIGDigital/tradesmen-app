@@ -95,6 +95,8 @@ export default function RootLayout() {
             <Stack.Screen name="milestone/[id]" options={{ presentation: 'card' }} />
             <Stack.Screen name="project/[id]/crew" options={{ presentation: 'card' }} />
             <Stack.Screen name="crew-invite/[code]" options={{ presentation: 'card' }} />
+            <Stack.Screen name="crew-signup/[code]" options={{ presentation: 'card' }} />
+            <Stack.Screen name="crew-code-entry" options={{ presentation: 'card' }} />
             <Stack.Screen name="project/[id]/approvals" options={{ presentation: 'card' }} />
             <Stack.Screen name="snag/[id]" options={{ presentation: 'card' }} />
             <Stack.Screen
@@ -158,16 +160,27 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
     const inAuthZone = segments[0] === '(auth)';
     const onWelcome = inAuthZone && segments.at(1) === 'welcome';
+    // Crew flow is invite-only and lives outside the auth zone — but the
+    // recipient may be signed-out (entering a code) OR mid-sign-up
+    // (account created, role + crew membership being attached). In all
+    // those states, do NOT bounce them to welcome / role-select; the
+    // flow handles its own navigation on success.
+    const inCrewFlow =
+      segments[0] === 'crew-invite' ||
+      segments[0] === 'crew-signup' ||
+      segments[0] === 'crew-code-entry';
 
     if (!session) {
-      if (!inAuthZone) router.replace('/(auth)/welcome');
+      if (!inAuthZone && !inCrewFlow) router.replace('/(auth)/welcome');
       return;
     }
 
     // Session exists. If no profile/role yet, force role-select.
     // (Profile may briefly be null between sign-up + trigger fire.)
     if (!profile?.role || profile.role === 'admin') {
-      if (segments.at(1) !== 'role-select') router.replace('/(auth)/role-select');
+      if (segments.at(1) !== 'role-select' && !inCrewFlow) {
+        router.replace('/(auth)/role-select');
+      }
       return;
     }
 
@@ -176,7 +189,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     // The screen sets welcomeShown=true on any CTA tap, after which we bounce
     // out of the auth zone like a normal app.
     if (!welcomeShown) {
-      if (!onWelcome) router.replace('/(auth)/welcome');
+      if (!onWelcome && !inCrewFlow) router.replace('/(auth)/welcome');
       return;
     }
 

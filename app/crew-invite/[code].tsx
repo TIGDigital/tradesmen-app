@@ -102,13 +102,29 @@ export default function CrewInviteAcceptScreen() {
           {!session ? (
             <Card>
               <Text style={[t.type.body, { color: t.colors.text.primary }]}>
-                Sign in or create an account to accept this invite.
+                Create a Phase account to accept, or sign in if you've used Phase before.
               </Text>
-              <View style={{ marginTop: 12 }}>
+              <View style={{ marginTop: 12, gap: 10 }}>
                 <PrimaryButton
-                  title="Sign in"
-                  onPress={() => router.push('/(auth)/sign-in')}
+                  title="Create account"
+                  onPress={() =>
+                    router.push({
+                      pathname: '/crew-signup/[code]',
+                      params: { code: code! },
+                    })
+                  }
                 />
+                <Pressable
+                  onPress={() => router.push('/(auth)/sign-in')}
+                  hitSlop={8}
+                  style={{ alignItems: 'center', paddingVertical: 10 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="I already have a Phase account"
+                >
+                  <Text style={[t.type.body, { color: t.colors.text.link, fontWeight: '600' }]}>
+                    I already have an account
+                  </Text>
+                </Pressable>
               </View>
             </Card>
           ) : (

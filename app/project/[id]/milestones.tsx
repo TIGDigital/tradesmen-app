@@ -104,13 +104,14 @@ export default function MilestonesScreen() {
                 title={m.title}
                 status={m.status}
                 expectedDate={m.expected_date}
+                onPress={() => router.push({ pathname: '/milestone/[id]', params: { id: m.id } })}
                 onLongPress={() => onDelete(m.id, m.title)}
               />
             </View>
           ))}
 
           <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: t.space[3] }]}>
-            Long-press a milestone to delete it.
+            Tap to edit dates, status, and notes. Long-press to delete.
           </Text>
         </ScrollView>
 
