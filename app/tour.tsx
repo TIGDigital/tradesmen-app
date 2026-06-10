@@ -22,13 +22,18 @@ import { lightTheme } from '@/theme/light';
  * the bottom, a Skip in the top right, and a primary CTA that says "Next"
  * until the final slide (where it becomes "Get started").
  *
- * The tour is generic — same content for tradesman, customer, and
- * apprentice. Role-specific tours felt like a distraction at MVP; we can
- * branch later if data shows different roles get stuck in different places.
+ * Content branches by role:
+ *   - customer → CUSTOMER_SLIDES (you'll see what your tradesman is doing)
+ *   - tradesman / apprentice → TRADESMAN_SLIDES (the work side: jobs,
+ *     EoD, leave-site nudge, less customer chasing)
  *
  * Persistence: tapping Skip or Get started flips `tourSeen` to true in
  * AsyncStorage via the auth store, and AuthGate stops routing to /tour
  * from that point on. Re-watchable from Settings → "See the tour again".
+ *
+ * Switching roles (rare — dev only) doesn't re-trigger the tour because
+ * the tour-seen flag is per-device, not per-account. That's a deliberate
+ * trade-off: re-onboarding on role-switch would annoy our own testing flow.
  */
 
 type Slide = {
@@ -40,7 +45,8 @@ type Slide = {
   body: string;
 };
 
-const SLIDES: Slide[] = [
+/** Customer-facing tour — they're consuming updates from someone on site. */
+const CUSTOMER_SLIDES: Slide[] = [
   {
     icon: 'home',
     iconBg: '#E6F0FE',
@@ -71,13 +77,57 @@ const SLIDES: Slide[] = [
     iconColor: '#1B4DD9',
     eyebrow: 'Track progress',
     title: 'Watch every step land',
-    body: 'From first-fix to handover, see what\'s done and what\'s next. Milestones, schedule, and snags — all in one feed.',
+    body: "From first-fix to handover, see what's done and what's next. Milestones, schedule, and snags — all in one feed.",
+  },
+];
+
+/** Tradesman + apprentice tour — they're ON site, sending updates outward.
+ *  Leads with the jobs hub, hero piece is the leave-site nudge (the wedge). */
+const TRADESMAN_SLIDES: Slide[] = [
+  {
+    icon: 'construct',
+    iconBg: '#E6F0FE',
+    iconColor: '#1B4DD9',
+    eyebrow: 'Your jobs',
+    title: 'Every site, one workspace',
+    body: "Project address, customer, milestones, photos — all in one feed. No more hunting old texts for an address.",
+  },
+  {
+    icon: 'moon',
+    iconBg: '#E6F0FE',
+    iconColor: '#1B4DD9',
+    eyebrow: 'End of day',
+    title: 'Wrap up in one tap',
+    body: "A pre-filled “today / tomorrow” card. Add a photo, hit send. Your customer knows where things stand before you're off site.",
+  },
+  {
+    icon: 'navigate',
+    iconBg: '#E6F0FE',
+    iconColor: '#1B4DD9',
+    eyebrow: 'The Phase wedge',
+    title: 'Never forget to update again',
+    body: "Phase notices when you drive away from site and prompts an end-of-day. You stay on top, even on autopilot.",
+  },
+  {
+    icon: 'chatbubbles',
+    iconBg: '#E6F0FE',
+    iconColor: '#1B4DD9',
+    eyebrow: 'Less chasing',
+    title: 'Customer kept in the loop',
+    body: "Photos, milestones, questions — all in their app. No more dodging WhatsApp at dinner.",
   },
 ];
 
 export default function TourScreen() {
   const t = lightTheme;
   const markTourSeen = useAuthStore((s) => s.markTourSeen);
+  const role = useAuthStore((s) => s.profile?.role);
+
+  // Customer-only sees CUSTOMER_SLIDES. Tradesman + apprentice + any
+  // future on-site role sees TRADESMAN_SLIDES. Default to customer when
+  // role is briefly null (right after sign-up, before the trigger fires)
+  // — it's the more common path and the wording still makes sense.
+  const slides = role === 'customer' ? CUSTOMER_SLIDES : TRADESMAN_SLIDES;
 
   const listRef = useRef<FlatList<Slide>>(null);
   const [index, setIndex] = useState(0);
@@ -85,7 +135,7 @@ export default function TourScreen() {
   // FlatList page width = screen width. Recompute on rotation just in case.
   const [width, setWidth] = useState(Dimensions.get('window').width);
 
-  const isLast = index === SLIDES.length - 1;
+  const isLast = index === slides.length - 1;
 
   async function finish() {
     await markTourSeen();
@@ -130,7 +180,7 @@ export default function TourScreen() {
 
       <FlatList
         ref={listRef}
-        data={SLIDES}
+        data={slides}
         keyExtractor={(s) => s.title}
         horizontal
         pagingEnabled
@@ -194,7 +244,7 @@ export default function TourScreen() {
       {/* Page dots + CTA */}
       <View style={styles.footer}>
         <View style={styles.dots}>
-          {SLIDES.map((s, i) => (
+          {slides.map((s, i) => (
             <View
               key={s.title}
               style={[
