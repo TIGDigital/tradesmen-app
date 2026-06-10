@@ -89,6 +89,13 @@ export type CrewInvite = {
   created_at: string;
   accepted_at: string | null;
   expires_at: string;
+  /** Denormalised at insert time so signed-out recipients can render
+   *  the preview without crossing RLS into projects / profiles. */
+  project_title: string | null;
+  inviter_name: string | null;
+  /** Optional joined data — present on createCrewInvite (the inviter is
+   *  signed in and has RLS access) but absent on fetchCrewInviteByCode
+   *  (the recipient may not). Use project_title / inviter_name first. */
   project: { id: string; title: string } | null;
   inviter: { id: string; full_name: string | null } | null;
 };
@@ -133,6 +140,7 @@ export async function createCrewInvite(args: {
       .select(`
         id, project_id, inviter_id, invitee_name, invite_code,
         role_on_project, created_at, accepted_at, expires_at,
+        project_title, inviter_name,
         project:projects!crew_invitations_project_id_fkey ( id, title ),
         inviter:profiles!crew_invitations_inviter_id_fkey ( id, full_name )
       `)
@@ -145,24 +153,35 @@ export async function createCrewInvite(args: {
   throw new Error('Could not generate a unique invite code — try again.');
 }
 
-/** Look up an invite by code. Returns null if not found / revoked / accepted / expired. */
+/** Look up an invite by code. Returns null if not found / revoked / accepted / expired.
+ *
+ *  Reads denormalised project_title + inviter_name — the joined `project` and
+ *  `inviter` are intentionally NOT requested here because signed-out recipients
+ *  fail those joins under RLS, which would have returned null preview fields.
+ *
+ *  Note: project_title + inviter_name aren't in types/db.ts yet — they land
+ *  in the next `supabase gen types typescript --linked` regeneration after
+ *  the 20260610000200 migration is pushed. Cast through `any` until then. */
 export async function fetchCrewInviteByCode(code: string): Promise<CrewInvite | null> {
   const { data, error } = await supabase
     .from('crew_invitations')
     .select(`
       id, project_id, inviter_id, invitee_name, invite_code,
       role_on_project, created_at, accepted_at, expires_at,
-      project:projects!crew_invitations_project_id_fkey ( id, title ),
-      inviter:profiles!crew_invitations_inviter_id_fkey ( id, full_name )
-    `)
+      project_title, inviter_name
+    ` as string)
     .eq('invite_code', code.toUpperCase())
     .is('accepted_at', null)
     .is('revoked_at', null)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  if (new Date(data.expires_at as string) < new Date()) return null;
-  return data as unknown as CrewInvite;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const row: any = data;
+  if (new Date(row.expires_at as string) < new Date()) return null;
+  // Normalise to the CrewInvite shape with project + inviter as null —
+  // the recipient screen reads project_title / inviter_name directly.
+  return { ...row, project: null, inviter: null } as unknown as CrewInvite;
 }
 
 /**

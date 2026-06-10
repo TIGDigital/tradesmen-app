@@ -137,10 +137,18 @@ export default function CrewSignUpScreen() {
             </Text>
             {inviteQuery.isLoading ? (
               <Skeleton width="60%" height={28} />
-            ) : invite ? (
+            ) : invite ? (() => {
+              // Prefer denormalised fields — see /crew-invite/[code].tsx for
+              // the rationale. Fallback chain keeps pre-migration invites
+              // rendering reasonably.
+              const projectTitle =
+                invite.project_title ?? invite.project?.title ?? 'this project';
+              const inviterName =
+                invite.inviter_name ?? invite.inviter?.full_name ?? 'Your tradesman';
+              return (
               <>
                 <Text style={[t.type.title1, { color: t.colors.text.primary }]}>
-                  {invite.project?.title ?? 'this project'}
+                  {projectTitle}
                 </Text>
                 <Text
                   style={[
@@ -148,12 +156,12 @@ export default function CrewSignUpScreen() {
                     { color: t.colors.text.secondary, marginTop: t.space[2], lineHeight: 22 },
                   ]}
                 >
-                  {invite.inviter?.full_name ?? 'The lead tradesman'} invited you as the{' '}
-                  <Text style={{ fontWeight: '700' }}>{invite.role_on_project}</Text>. Create
-                  your account and we'll add you in one tap.
+                  {inviterName} invited you to the crew. Create your account and we'll
+                  add you in one tap.
                 </Text>
               </>
-            ) : (
+              );
+            })() : (
               <ErrorState
                 tone="empty"
                 title="Invite not found"

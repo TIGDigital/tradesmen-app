@@ -81,18 +81,26 @@ export default function CrewInviteAcceptScreen() {
         />
       )}
 
-      {invite && (
+      {invite && (() => {
+        // Prefer the denormalised fields stored on the invite row — they're
+        // populated by a trigger at insert time and don't need cross-table
+        // RLS to read. Fall back to the joined relations for invites
+        // generated before the denormalise migration.
+        const projectTitle =
+          invite.project_title ?? invite.project?.title ?? 'this project';
+        const inviterName =
+          invite.inviter_name ?? invite.inviter?.full_name ?? 'Your tradesman';
+        return (
         <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
           <Card>
             <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
               You've been invited to
             </Text>
             <Text style={[t.type.title2, { color: t.colors.text.primary, marginTop: 4 }]}>
-              {invite.project?.title ?? 'a project'}
+              {projectTitle}
             </Text>
             <Text style={[t.type.body, { color: t.colors.text.secondary, marginTop: 12 }]}>
-              {invite.inviter?.full_name ?? 'The lead tradesman'} added you as the{' '}
-              <Text style={{ fontWeight: '700' }}>{invite.role_on_project}</Text>.
+              {inviterName} added you to the crew.
             </Text>
             <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 12 }]}>
               Code: {invite.invite_code}
@@ -135,7 +143,8 @@ export default function CrewInviteAcceptScreen() {
             />
           )}
         </ScrollView>
-      )}
+        );
+      })()}
     </SafeAreaView>
   );
 }
