@@ -112,13 +112,20 @@ export default function ProjectDetailScreen() {
     },
   });
 
-  /** Show an action sheet with the next-state options for a given milestone. */
+  /** Show an action sheet with the next-state options + an "Edit details…"
+   *  escape hatch that opens the full milestone editor (dates, notes, etc.). */
   function onMilestoneTap(milestone_id: string, current_status: string, title: string) {
-    const options: { text: string; new_status?: string; style?: 'cancel' | 'destructive' }[] = [];
+    const options: {
+      text: string;
+      new_status?: string;
+      edit?: boolean;
+      style?: 'cancel' | 'destructive';
+    }[] = [];
 
     if (current_status !== 'in_progress') options.push({ text: 'Mark in progress', new_status: 'in_progress' });
     if (current_status !== 'completed') options.push({ text: 'Mark complete', new_status: 'completed' });
     if (current_status !== 'pending') options.push({ text: 'Reset to not started', new_status: 'pending', style: 'destructive' });
+    options.push({ text: 'Edit details…', edit: true });
     options.push({ text: 'Cancel', style: 'cancel' });
 
     Alert.alert(
@@ -127,15 +134,21 @@ export default function ProjectDetailScreen() {
       options.map((o) => ({
         text: o.text,
         style: o.style,
-        onPress: o.new_status
+        onPress: o.edit
           ? () =>
-              setStatusMutation.mutate({
-                milestone_id,
-                current_status,
-                new_status: o.new_status,
-                title,
+              router.push({
+                pathname: '/milestone/[id]',
+                params: { id: milestone_id },
               })
-          : undefined,
+          : o.new_status
+            ? () =>
+                setStatusMutation.mutate({
+                  milestone_id,
+                  current_status,
+                  new_status: o.new_status,
+                  title,
+                })
+            : undefined,
       }))
     );
   }

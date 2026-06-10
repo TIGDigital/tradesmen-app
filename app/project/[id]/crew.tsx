@@ -209,6 +209,7 @@ export default function ProjectCrewScreen() {
               Share with {generatedInvite.invitee_name}
             </Text>
             <Text
+              selectable
               style={[
                 t.type.title1,
                 {
@@ -226,7 +227,7 @@ export default function ProjectCrewScreen() {
             <Text
               style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 6, textAlign: 'center' }]}
             >
-              Code expires in 14 days
+              Long-press the code to copy · expires in 14 days
             </Text>
             <View style={{ gap: 8, marginTop: 14 }}>
               <PrimaryButton title="Share via…" onPress={onShareInvite} />
