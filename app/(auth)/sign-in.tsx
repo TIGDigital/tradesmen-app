@@ -89,7 +89,19 @@ export default function SignInScreen() {
             />
           </View>
 
-          <View style={{ marginTop: t.space[8] }}>
+          <Pressable
+            onPress={() => router.push('/(auth)/forgot-password')}
+            hitSlop={12}
+            style={{ alignItems: 'flex-end', paddingVertical: t.space[2], marginTop: t.space[2] }}
+            accessibilityRole="button"
+            accessibilityLabel="Forgot password"
+          >
+            <Text style={[t.type.body, { color: t.colors.text.link, fontWeight: '500' }]}>
+              Forgot password?
+            </Text>
+          </Pressable>
+
+          <View style={{ marginTop: t.space[6] }}>
             <PrimaryButton title="Sign in" onPress={onSubmit} loading={submitting} />
           </View>
 

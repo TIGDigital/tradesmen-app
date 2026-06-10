@@ -19,6 +19,40 @@ Notifications.setNotificationHandler({
   }),
 });
 
+/**
+ * Current iOS push permission state. Mirrors the location pattern in
+ * services/location.ts so the consent screens read the same way.
+ *
+ *   - 'granted' — alerts will deliver.
+ *   - 'denied'  — iOS won't re-prompt; deep-link to Settings.
+ *   - 'undetermined' — never asked; the warm pre-prompt is appropriate.
+ */
+export type NotificationPermissionStatus =
+  | 'granted'
+  | 'denied'
+  | 'undetermined';
+
+export async function getNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
+  if (Platform.OS === 'web') return 'denied';
+  const perm = await Notifications.getPermissionsAsync();
+  if (perm.status === 'granted') return 'granted';
+  if (perm.status === 'denied') return 'denied';
+  return 'undetermined';
+}
+
+/**
+ * Request the system push permission. Resolves to the post-prompt status.
+ * Does NOT register a push token — that's registerForPush below; consent
+ * screen calls this, then triggers registerForPush on the granted path.
+ */
+export async function requestNotificationPermission(): Promise<NotificationPermissionStatus> {
+  if (Platform.OS === 'web') return 'denied';
+  const res = await Notifications.requestPermissionsAsync();
+  if (res.status === 'granted') return 'granted';
+  if (res.status === 'denied') return 'denied';
+  return 'undetermined';
+}
+
 const PROJECT_ID =
   Constants.expoConfig?.extra?.eas?.projectId ??
   (Constants as unknown as { easConfig?: { projectId?: string } }).easConfig?.projectId;

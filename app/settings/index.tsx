@@ -123,6 +123,24 @@ export default function SettingsScreen() {
           </Text>
         </Card>
 
+        {/* Notifications — all roles. Routes to the warm consent screen,
+            which detects current iOS permission state and either prompts,
+            deep-links to Settings, or no-ops if already granted. */}
+        <Card>
+          <Pressable
+            onPress={() => router.push('/consent/notifications')}
+            style={styles.rowBetween}
+          >
+            <View>
+              <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Notifications</Text>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                Push alerts for updates and messages
+              </Text>
+            </View>
+            <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+          </Pressable>
+        </Card>
+
         {/* Tradesman-only entries */}
         {profile?.role === 'tradesman' && (
           <>

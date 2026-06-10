@@ -36,6 +36,17 @@ export async function signOut() {
   if (error) throw error;
 }
 
+/** Send a password-reset email. Supabase emails a link with a recovery
+ *  token; tapping it lands the user on a hosted reset page. For now we
+ *  don't deep-link the recovery flow back into the app — the hosted page
+ *  is good enough for MVP and avoids the URL-handling surface area. */
+export async function resetPasswordForEmail(email: string) {
+  const trimmed = email.trim();
+  if (!trimmed) throw new Error('Enter your email first');
+  const { error } = await supabase.auth.resetPasswordForEmail(trimmed);
+  if (error) throw error;
+}
+
 export async function getSession() {
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
