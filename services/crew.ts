@@ -62,6 +62,97 @@ export async function listMyCrew(): Promise<CrewMember[]> {
   return (data as unknown as CrewMember[]) ?? [];
 }
 
+/** A distinct user the signed-in tradesman has worked with as crew on
+ *  past projects. Drives the auto-enroll picker on create-project. */
+export type PastCrewMember = {
+  user_id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  /** The role they had on their MOST RECENT project. Carried forward to
+   *  the new project so the lead doesn't have to re-pick it. */
+  role_on_project: 'apprentice' | 'helper';
+  last_assigned_at: string | null;
+};
+
+/**
+ * Distinct list of crew members the signed-in lead has worked with
+ * across all their projects. Excludes the lead themselves + soft-removed
+ * rows. Deduped by user_id, keeping the most-recent role assignment.
+ *
+ * Used by the create-project "Bring your crew?" section to offer
+ * one-tap re-enrollment for repeat work.
+ */
+export async function listMyPastCrew(): Promise<PastCrewMember[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // Step 1: my projects (as the lead tradesman).
+  const { data: myProjects, error: projErr } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('tradesman_id', user.id);
+  if (projErr) throw projErr;
+  const ids = (myProjects ?? []).map((p) => p.id);
+  if (ids.length === 0) return [];
+
+  // Step 2: all active non-lead crew rows across those projects, newest
+  // assignment first so dedup keeps the latest role.
+  const { data, error } = await supabase
+    .from('project_crew')
+    .select(`
+      user_id, role_on_project, assigned_at,
+      user:profiles!project_crew_user_id_fkey ( id, full_name, avatar_url )
+    `)
+    .in('project_id', ids)
+    .neq('role_on_project', 'lead')
+    .is('removed_at', null)
+    .order('assigned_at', { ascending: false });
+  if (error) throw error;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows = (data ?? []) as any[];
+  const seen = new Set<string>();
+  const out: PastCrewMember[] = [];
+  for (const r of rows) {
+    if (seen.has(r.user_id)) continue;
+    seen.add(r.user_id);
+    out.push({
+      user_id: r.user_id,
+      full_name: r.user?.full_name ?? null,
+      avatar_url: r.user?.avatar_url ?? null,
+      role_on_project: r.role_on_project,
+      last_assigned_at: r.assigned_at,
+    });
+  }
+  return out;
+}
+
+/**
+ * Bulk enroll a set of past crew members onto a project. Upsert on
+ * (project_id, user_id) so it's safe to call when some members are
+ * already on the project (no-op for those rows; soft-removed rows get
+ * reactivated by clearing removed_at).
+ *
+ * Caller is responsible for being the lead of the target project —
+ * RLS (crew_write_lead) enforces this server-side too.
+ */
+export async function enrollCrew(args: {
+  project_id: string;
+  members: { user_id: string; role_on_project: 'apprentice' | 'helper' }[];
+}) {
+  if (args.members.length === 0) return;
+  const rows = args.members.map((m) => ({
+    project_id: args.project_id,
+    user_id: m.user_id,
+    role_on_project: m.role_on_project,
+    removed_at: null,
+  }));
+  const { error } = await supabase
+    .from('project_crew')
+    .upsert(rows, { onConflict: 'project_id,user_id' });
+  if (error) throw error;
+}
+
 /**
  * Soft-remove a crew member from a project. RLS already scopes write
  * access to the lead tradesman (crew_write_lead policy).

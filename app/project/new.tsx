@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -17,6 +17,7 @@ import { AddressLookup } from '@/components/AddressLookup';
 import { InputField } from '@/components/ui/InputField';
 import { isAddressLookupConfigured } from '@/services/addressLookup';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { enrollCrew, listMyPastCrew } from '@/services/crew';
 import { createProject } from '@/services/projects';
 import { lightTheme } from '@/theme/light';
 import type { Database } from '@/types/db';
@@ -57,9 +58,30 @@ export default function NewProjectScreen() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
 
+  // Past crew — people the tradesman has worked with on prior projects.
+  // Used by the "Bring your crew?" section. Empty list (or first-time
+  // tradesman) → the section is hidden entirely.
+  const pastCrewQuery = useQuery({
+    queryKey: ['past-crew'],
+    queryFn: listMyPastCrew,
+    staleTime: 60_000, // doesn't change often during a single project creation
+  });
+  const pastCrew = pastCrewQuery.data ?? [];
+  // Selected user_ids — defaults to none for deliberate per-project choice.
+  const [selectedCrew, setSelectedCrew] = useState<Set<string>>(new Set());
+  function toggleCrew(user_id: string) {
+    setSelectedCrew((prev) => {
+      const next = new Set(prev);
+      if (next.has(user_id)) next.delete(user_id);
+      else next.add(user_id);
+      return next;
+    });
+  }
+
   const mutation = useMutation({
-    mutationFn: () =>
-      createProject({
+    mutationFn: async () => {
+      // Create the project first. If this fails, no crew rows leak.
+      const project = await createProject({
         title: title.trim(),
         trade_type: trade,
         address_line_1: address.trim(),
@@ -67,9 +89,28 @@ export default function NewProjectScreen() {
         postcode: postcode.trim().toUpperCase(),
         pending_customer_name: customerName.trim(),
         pending_customer_phone: customerPhone.trim(),
-      }),
+      });
+      // Enroll selected past crew. We don't fail the whole creation if
+      // enrollment errors — the project exists, the lead can re-add them
+      // manually from /project/[id]/crew.
+      if (selectedCrew.size > 0) {
+        const members = pastCrew
+          .filter((m) => selectedCrew.has(m.user_id))
+          .map((m) => ({
+            user_id: m.user_id,
+            role_on_project: m.role_on_project,
+          }));
+        try {
+          await enrollCrew({ project_id: project.id, members });
+        } catch (e) {
+          console.warn('[NewProject] auto-enroll failed; continuing', e);
+        }
+      }
+      return project;
+    },
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ['my-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project-crew', project.id] });
       router.replace({ pathname: '/project/[id]', params: { id: project.id } });
     },
     onError: (e) => Alert.alert("Couldn't create project", (e as Error).message),
@@ -250,6 +291,107 @@ export default function NewProjectScreen() {
               textContentType="telephoneNumber"
               helper="No SMS sent yet — invite link comes in a later sprint."
             />
+
+            {/* "Bring your crew?" — only renders if the tradesman has past crew.
+                First-time tradesmen never see this section. */}
+            {pastCrew.length > 0 && (
+              <View style={{ marginTop: t.space[4] }}>
+                <View style={{ height: t.space[2] }} />
+                <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
+                  Bring your crew?
+                </Text>
+                <Text
+                  style={[
+                    t.type.footnote,
+                    { color: t.colors.text.tertiary, marginTop: 4, marginBottom: t.space[3] },
+                  ]}
+                >
+                  Tap anyone you'd like on this project. They'll be added when you create it.
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: t.space[2], paddingVertical: 4 }}
+                >
+                  {pastCrew.map((m) => {
+                    const selected = selectedCrew.has(m.user_id);
+                    const displayName = m.full_name ?? 'Crew member';
+                    const initial = (displayName[0] ?? '?').toUpperCase();
+                    return (
+                      <Pressable
+                        key={m.user_id}
+                        onPress={() => toggleCrew(m.user_id)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 8,
+                          paddingVertical: 8,
+                          paddingLeft: 8,
+                          paddingRight: 14,
+                          borderRadius: t.radius.sm,
+                          backgroundColor: selected
+                            ? t.colors.brand.primary
+                            : t.colors.bg.surface2,
+                          borderWidth: 1,
+                          borderColor: selected
+                            ? t.colors.brand.primary
+                            : t.colors.border.subtle,
+                        }}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                        accessibilityLabel={`${displayName}${selected ? ', selected' : ''}`}
+                      >
+                        <View
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 14,
+                            backgroundColor: selected
+                              ? 'rgba(255,255,255,0.18)'
+                              : t.colors.bg.surface,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Text
+                            style={[
+                              t.type.footnote,
+                              {
+                                color: selected ? '#FFFFFF' : t.colors.text.primary,
+                                fontWeight: '700',
+                              },
+                            ]}
+                          >
+                            {initial}
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            t.type.body,
+                            {
+                              color: selected ? t.colors.text.inverse : t.colors.text.primary,
+                              fontWeight: '500',
+                            },
+                          ]}
+                        >
+                          {displayName}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+                {selectedCrew.size > 0 && (
+                  <Text
+                    style={[
+                      t.type.footnote,
+                      { color: t.colors.text.tertiary, marginTop: t.space[2] },
+                    ]}
+                  >
+                    {selectedCrew.size} crew member{selectedCrew.size === 1 ? '' : 's'} will be added.
+                  </Text>
+                )}
+              </View>
+            )}
           </View>
 
           <View style={{ marginTop: t.space[8] }}>
