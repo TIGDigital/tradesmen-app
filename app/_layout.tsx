@@ -58,6 +58,7 @@ export default function RootLayout() {
             <Stack.Screen name="consent/location" options={{ presentation: 'card' }} />
             <Stack.Screen name="consent/notifications" options={{ presentation: 'card' }} />
             <Stack.Screen name="(auth)/forgot-password" options={{ presentation: 'card' }} />
+            <Stack.Screen name="tour" options={{ presentation: 'card', gestureEnabled: false }} />
             <Stack.Screen name="project/[id]/index" options={{ presentation: 'card' }} />
             <Stack.Screen
               name="project/[id]/compose"
@@ -129,6 +130,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const profile = useAuthStore((s) => s.profile);
   const initialising = useAuthStore((s) => s.initialising);
   const welcomeShown = useAuthStore((s) => s.welcomeShown);
+  const tourSeen = useAuthStore((s) => s.tourSeen);
   const initialise = useAuthStore((s) => s.initialise);
   const router = useRouter();
   const segments = useSegments();
@@ -195,11 +197,21 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // First-run tour. Persisted to AsyncStorage so it only shows once per
+    // device. tourSeen=null means we haven't loaded the flag yet — don't
+    // route in that window (causes a flash). Crew-flow paths are exempt
+    // so an invite acceptance can finish before the tutorial runs.
+    const onTour = segments[0] === 'tour';
+    if (tourSeen === false && !onTour && !inCrewFlow) {
+      router.replace('/tour');
+      return;
+    }
+
     // Welcome already passed this session — push out of the auth zone if we're
     // stuck there. Exception: stay on role-select if the user is explicitly
     // there (post-signup confirmation step).
     if (inAuthZone && segments.at(1) !== 'role-select') router.replace('/');
-  }, [session, profile?.role, initialising, welcomeShown, segments, router]);
+  }, [session, profile?.role, initialising, welcomeShown, tourSeen, segments, router]);
 
   if (initialising) {
     return (

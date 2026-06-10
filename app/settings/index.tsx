@@ -141,6 +141,25 @@ export default function SettingsScreen() {
           </Pressable>
         </Card>
 
+        {/* Re-watch the onboarding tour. Skips the AuthGate redirect
+            because tour-seen is already true at this point — we navigate
+            directly. Tour screen calls markTourSeen on finish; harmless
+            no-op when already true. */}
+        <Card>
+          <Pressable
+            onPress={() => router.push('/tour')}
+            style={styles.rowBetween}
+          >
+            <View>
+              <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Phase tour</Text>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                See the walkthrough again
+              </Text>
+            </View>
+            <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+          </Pressable>
+        </Card>
+
         {/* Tradesman-only entries */}
         {profile?.role === 'tradesman' && (
           <>

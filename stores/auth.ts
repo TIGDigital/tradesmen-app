@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
@@ -11,6 +12,9 @@ type Profile = Pick<
   'id' | 'role' | 'full_name' | 'avatar_url' | 'email'
 >;
 
+/** Bumped if we ship a re-designed tour and want to re-show it to all users. */
+const TOUR_SEEN_KEY = 'phase.tour.seen.v1';
+
 type AuthState = {
   session: Session | null;
   profile: Profile | null;
@@ -23,6 +27,13 @@ type AuthState = {
    * every cold app launch resets it to false.
    */
   welcomeShown: boolean;
+  /**
+   * Has the user already swiped through (or skipped) the Phase tour?
+   * Persisted to AsyncStorage so the tutorial appears once per device.
+   * `null` while still loading from disk — AuthGate treats null as "don't
+   * route yet" to avoid a flash of the tour on cold launch.
+   */
+  tourSeen: boolean | null;
 };
 
 type AuthActions = {
@@ -32,6 +43,10 @@ type AuthActions = {
   refreshProfile: () => Promise<void>;
   /** Mark the welcome screen as having been seen this app session. */
   markWelcomeShown: () => void;
+  /** Mark the tour as seen — persists to AsyncStorage so it doesn't re-show. */
+  markTourSeen: () => Promise<void>;
+  /** Reset the tour-seen flag (used by Settings → "See the tour again"). */
+  resetTourSeen: () => Promise<void>;
 };
 
 export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
@@ -39,13 +54,26 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   profile: null,
   initialising: true,
   welcomeShown: false,
+  tourSeen: null,
 
   markWelcomeShown: () => set({ welcomeShown: true }),
+  markTourSeen: async () => {
+    await AsyncStorage.setItem(TOUR_SEEN_KEY, 'true');
+    set({ tourSeen: true });
+  },
+  resetTourSeen: async () => {
+    await AsyncStorage.removeItem(TOUR_SEEN_KEY);
+    set({ tourSeen: false });
+  },
 
   initialise: () => {
-    // Read current session synchronously from storage, then mark initialising=false.
-    void supabase.auth.getSession().then(async ({ data }) => {
-      const session = data.session ?? null;
+    // Read current session + tour flag in parallel.
+    void (async () => {
+      const [sessionResult, tourSeenStr] = await Promise.all([
+        supabase.auth.getSession(),
+        AsyncStorage.getItem(TOUR_SEEN_KEY),
+      ]);
+      const session = sessionResult.data.session ?? null;
       let profile: Profile | null = null;
       if (session) {
         try {
@@ -57,8 +85,13 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         // Fire-and-forget push registration. Failures don't block sign-in.
         void registerForPush();
       }
-      set({ session, profile, initialising: false });
-    });
+      set({
+        session,
+        profile,
+        initialising: false,
+        tourSeen: tourSeenStr === 'true',
+      });
+    })();
 
     // Subscribe to changes from then on.
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
