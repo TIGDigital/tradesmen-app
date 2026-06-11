@@ -42,54 +42,65 @@ export default function RoleSelectScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['top', 'bottom']}>
       <View style={[styles.container, { padding: t.space[5] }]}>
-        <View>
-          <Text style={[t.type.title1, { color: t.colors.text.primary }]}>
-            Which describes you?
-          </Text>
-          <Text style={[t.type.body, { color: t.colors.text.secondary, marginTop: t.space[2] }]}>
-            We'll set up the right home screen for you.
-          </Text>
-        </View>
+        {/* iPad: cap the content width and center so the iPhone-designed
+            cards don't stretch the full tablet width. Cards stay ~ phone-
+            sized + readable. */}
+        <View style={styles.maxWidthInner}>
+          <View>
+            <Text style={[t.type.title1, { color: t.colors.text.primary }]}>
+              Which describes you?
+            </Text>
+            <Text style={[t.type.body, { color: t.colors.text.secondary, marginTop: t.space[2] }]}>
+              We'll set up the right home screen for you.
+            </Text>
+          </View>
 
-        <View style={{ gap: t.space[3], marginTop: t.space[8] }}>
-          {choices.map((c) => {
-            const isSelected = selected === c.value;
-            return (
-              <Pressable
-                key={c.value}
-                onPress={() => setSelected(c.value)}
-                style={[
-                  styles.choice,
-                  {
-                    backgroundColor: isSelected ? t.colors.brand.tint : t.colors.bg.surface,
-                    borderColor: isSelected ? t.colors.brand.primary : t.colors.border.subtle,
-                    borderRadius: t.radius.lg,
-                    padding: t.space[5],
-                  },
-                ]}
-              >
-                <Text style={[t.type.title3, { color: t.colors.text.primary }]}>{c.title}</Text>
-                <Text
+          <View style={{ gap: t.space[3], marginTop: t.space[8] }}>
+            {choices.map((c) => {
+              const isSelected = selected === c.value;
+              return (
+                <Pressable
+                  key={c.value}
+                  onPress={() => setSelected(c.value)}
+                  // Generous hitSlop so iPad's larger touch area still
+                  // catches taps near the card edges.
+                  hitSlop={8}
                   style={[
-                    t.type.body,
-                    { color: t.colors.text.secondary, marginTop: 4 },
+                    styles.choice,
+                    {
+                      backgroundColor: isSelected ? t.colors.brand.tint : t.colors.bg.surface,
+                      borderColor: isSelected ? t.colors.brand.primary : t.colors.border.subtle,
+                      borderRadius: t.radius.lg,
+                      padding: t.space[5],
+                    },
                   ]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={`${c.title}. ${c.sub}`}
                 >
-                  {c.sub}
-                </Text>
-              </Pressable>
-            );
-          })}
+                  <Text style={[t.type.title3, { color: t.colors.text.primary }]}>{c.title}</Text>
+                  <Text
+                    style={[
+                      t.type.body,
+                      { color: t.colors.text.secondary, marginTop: 4 },
+                    ]}
+                  >
+                    {c.sub}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={{ flex: 1 }} />
+
+          <PrimaryButton
+            title="Continue"
+            onPress={onContinue}
+            loading={submitting}
+            disabled={!selected}
+          />
         </View>
-
-        <View style={{ flex: 1 }} />
-
-        <PrimaryButton
-          title="Continue"
-          onPress={onContinue}
-          loading={submitting}
-          disabled={!selected}
-        />
       </View>
     </SafeAreaView>
   );
@@ -97,5 +108,15 @@ export default function RoleSelectScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  // 520pt caps the inner content roughly at a "phone-width" feel on iPad,
+  // letting the surrounding canvas breathe. alignSelf: 'center' horizontally
+  // centers; flex: 1 makes it fill vertically so the Continue button can
+  // still anchor to the bottom.
+  maxWidthInner: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+  },
   choice: { borderWidth: 1.5 },
 });
