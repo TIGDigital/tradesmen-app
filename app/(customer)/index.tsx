@@ -7,6 +7,7 @@ import { useState } from 'react';
 
 import { MediaThumbs } from '@/components/MediaThumbs';
 import { MenuSheet, type MenuItem } from '@/components/MenuSheet';
+import { OnboardingChecklist, type ChecklistItem } from '@/components/OnboardingChecklist';
 import { PhaseProgressRing } from '@/components/PhaseProgressRing';
 import { Reactions } from '@/components/Reactions';
 import { VoicePlayer } from '@/components/VoicePlayer';
@@ -18,6 +19,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { useRealtimeProject } from '@/hooks/useRealtimeProject';
 import { signOut, switchMyRole } from '@/services/auth';
 import { fireLocalTest } from '@/services/notifications';
+import { fetchCustomerOnboarding } from '@/services/onboarding';
 import {
   dayOfProject,
   fetchMyCurrentProject,
@@ -321,6 +323,40 @@ function ProjectContent({
 }) {
   const t = lightTheme;
 
+  // ─── Onboarding checklist state ──────────────────────────────────
+  // Lives here (not in HomeScreen) because the checklist only renders
+  // on the dashboard — the empty-state already has its own
+  // join-a-project CTA. Same TanStack key + dedup means it's free even
+  // if other screens query it later.
+  const profileId = useAuthStore((s) => s.profile?.id);
+  const onboardingDismissed = useAuthStore((s) => s.onboardingDismissed);
+  const dismissOnboarding = useAuthStore((s) => s.dismissOnboarding);
+  const onboardingQuery = useQuery({
+    queryKey: ['onboarding', 'customer', profileId],
+    queryFn: fetchCustomerOnboarding,
+    enabled: !!profileId && onboardingDismissed === false,
+    staleTime: 0,
+  });
+  const ob = onboardingQuery.data;
+  const checklistItems: ChecklistItem[] = ob && ob.first_project_id
+    ? [
+        {
+          title: 'React to an update',
+          subtitle: 'Tap 👏 ❤️ or 💪 on a recent post to let your tradesman know.',
+          done: ob.has_reacted,
+          onPress: () =>
+            router.push({ pathname: '/project/[id]', params: { id: ob.first_project_id! } }),
+        },
+        {
+          title: 'Send your first message',
+          subtitle: 'Got a question? Drop it in the project chat.',
+          done: ob.has_messaged,
+          onPress: () =>
+            router.push({ pathname: '/project/[id]/chat', params: { id: ob.first_project_id! } }),
+        },
+      ]
+    : [];
+
   // ─── Project metrics ─────────────────────────────────────────────
   // Day count: prefer actual start → expected start. When the tradesman
   // hasn't set an end date yet, we still want to surface "Day 3" so the
@@ -372,6 +408,14 @@ function ProjectContent({
       <Text style={[t.type.title1, { color: t.colors.text.primary }]}>
         Hello, {firstName}
       </Text>
+
+      {/* ── Onboarding checklist (renders only while items pending) ── */}
+      {ob && checklistItems.length > 0 && (
+        <OnboardingChecklist
+          items={checklistItems}
+          onDismiss={() => void dismissOnboarding()}
+        />
+      )}
 
       {/* ── Hero card: ring + status + project + day stamp ──────── */}
       <Pressable onPress={onOpen}>

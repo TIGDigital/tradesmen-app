@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MenuSheet, type MenuItem } from '@/components/MenuSheet';
+import { OnboardingChecklist, type ChecklistItem } from '@/components/OnboardingChecklist';
 import { Card } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
@@ -21,6 +22,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { signOut, switchMyRole } from '@/services/auth';
 import { fireLocalTest } from '@/services/notifications';
+import { fetchTradesmanOnboarding } from '@/services/onboarding';
 import { fetchMyProjects } from '@/services/projects';
 import { useLocationConsentNudge } from '@/hooks/useLocationConsentNudge';
 import { useAuthStore } from '@/stores/auth';
@@ -31,6 +33,8 @@ export default function JobsScreen() {
   const t = lightTheme;
   const profile = useAuthStore((s) => s.profile);
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
+  const onboardingDismissed = useAuthStore((s) => s.onboardingDismissed);
+  const dismissOnboarding = useAuthStore((s) => s.dismissOnboarding);
   const [menuOpen, setMenuOpen] = useState(false);
 
   // First-ever visit: warm-prompt the tradesman for location, then iOS asks.
@@ -41,6 +45,67 @@ export default function JobsScreen() {
     queryFn: fetchMyProjects,
     enabled: !!profile && profile.role === 'tradesman',
   });
+
+  // Onboarding progress — derived from existing data on every screen
+  // mount. Stays stale-while-revalidate so the checklist doesn't lag a
+  // beat behind after the user creates a project, sends an invite, etc.
+  const onboardingQuery = useQuery({
+    queryKey: ['onboarding', 'tradesman', profile?.id],
+    queryFn: fetchTradesmanOnboarding,
+    enabled: !!profile && profile.role === 'tradesman' && onboardingDismissed === false,
+    staleTime: 0,
+  });
+  const ob = onboardingQuery.data;
+
+  // The checklist items only render if there's at least one outstanding
+  // step. We still build the array unconditionally so item.done state
+  // reflects truth — the component hides itself when 100% complete.
+  const checklistItems: ChecklistItem[] = ob
+    ? [
+        {
+          title: 'Create your first project',
+          subtitle: "We'll set up starter milestones for your trade.",
+          done: ob.has_project,
+          onPress: () => router.push('/project/new'),
+        },
+        {
+          title: 'Send your customer the invite code',
+          subtitle: 'Share via SMS or copy the code from the project.',
+          done: ob.has_sent_invite,
+          onPress: ob.first_project_id
+            ? () =>
+                router.push({
+                  pathname: '/project/[id]',
+                  params: { id: ob.first_project_id! },
+                })
+            : () => router.push('/project/new'),
+        },
+        {
+          title: 'Post your first update',
+          subtitle: 'A photo and a sentence is enough — the customer sees it instantly.',
+          done: ob.has_posted_update,
+          onPress: ob.first_project_id
+            ? () =>
+                router.push({
+                  pathname: '/project/[id]/compose',
+                  params: { id: ob.first_project_id! },
+                })
+            : () => router.push('/project/new'),
+        },
+        {
+          title: 'Try end-of-day',
+          subtitle: 'Wrap up the day in one tap — the wedge feature.',
+          done: ob.has_ended_day,
+          onPress: ob.first_project_id
+            ? () =>
+                router.push({
+                  pathname: '/project/[id]/end-of-day',
+                  params: { id: ob.first_project_id! },
+                })
+            : () => router.push('/project/new'),
+        },
+      ]
+    : [];
 
   type Filter = 'all' | 'on_track' | 'delayed' | 'needs_update';
   const [filter, setFilter] = useState<Filter>('all');
@@ -227,6 +292,18 @@ export default function JobsScreen() {
               {summary}
             </Text>
           </View>
+
+          {/* Onboarding checklist — auto-hides when all items are done or
+              after the user has explicitly dismissed via ×. Reads from
+              the onboarding query so it stays truthful. */}
+          {ob && checklistItems.length > 0 && (
+            <View style={{ marginBottom: t.space[3] }}>
+              <OnboardingChecklist
+                items={checklistItems}
+                onDismiss={() => void dismissOnboarding()}
+              />
+            </View>
+          )}
 
           {/* Filter chips — hidden when there are no projects at all */}
           {stats.list.length > 0 && (

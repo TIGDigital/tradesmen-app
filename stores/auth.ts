@@ -14,6 +14,8 @@ type Profile = Pick<
 
 /** Bumped if we ship a re-designed tour and want to re-show it to all users. */
 const TOUR_SEEN_KEY = 'phase.tour.seen.v1';
+/** Per-device flag: the user clicked × on the onboarding checklist. */
+const ONBOARDING_DISMISSED_KEY = 'phase.onboarding.dismissed.v1';
 
 type AuthState = {
   session: Session | null;
@@ -34,6 +36,14 @@ type AuthState = {
    * route yet" to avoid a flash of the tour on cold launch.
    */
   tourSeen: boolean | null;
+  /**
+   * Has the user manually × dismissed the onboarding checklist on the
+   * Jobs / Project tabs? Per-device flag, `null` while still loading
+   * from AsyncStorage. The checklist also auto-hides when all items are
+   * complete (handled in the component) — this flag is for the "I don't
+   * want to see this right now" case.
+   */
+  onboardingDismissed: boolean | null;
 };
 
 type AuthActions = {
@@ -47,6 +57,10 @@ type AuthActions = {
   markTourSeen: () => Promise<void>;
   /** Reset the tour-seen flag (used by Settings → "See the tour again"). */
   resetTourSeen: () => Promise<void>;
+  /** Hide the onboarding checklist card — persists to AsyncStorage. */
+  dismissOnboarding: () => Promise<void>;
+  /** Re-show the onboarding checklist (Settings → "Show get-started again"). */
+  resetOnboardingDismissed: () => Promise<void>;
 };
 
 export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
@@ -55,6 +69,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   initialising: true,
   welcomeShown: false,
   tourSeen: null,
+  onboardingDismissed: null,
 
   markWelcomeShown: () => set({ welcomeShown: true }),
   markTourSeen: async () => {
@@ -65,13 +80,22 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     await AsyncStorage.removeItem(TOUR_SEEN_KEY);
     set({ tourSeen: false });
   },
+  dismissOnboarding: async () => {
+    await AsyncStorage.setItem(ONBOARDING_DISMISSED_KEY, 'true');
+    set({ onboardingDismissed: true });
+  },
+  resetOnboardingDismissed: async () => {
+    await AsyncStorage.removeItem(ONBOARDING_DISMISSED_KEY);
+    set({ onboardingDismissed: false });
+  },
 
   initialise: () => {
-    // Read current session + tour flag in parallel.
+    // Read current session + persisted flags in parallel.
     void (async () => {
-      const [sessionResult, tourSeenStr] = await Promise.all([
+      const [sessionResult, tourSeenStr, onboardingDismissedStr] = await Promise.all([
         supabase.auth.getSession(),
         AsyncStorage.getItem(TOUR_SEEN_KEY),
+        AsyncStorage.getItem(ONBOARDING_DISMISSED_KEY),
       ]);
       const session = sessionResult.data.session ?? null;
       let profile: Profile | null = null;
@@ -90,6 +114,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         profile,
         initialising: false,
         tourSeen: tourSeenStr === 'true',
+        onboardingDismissed: onboardingDismissedStr === 'true',
       });
     })();
 
