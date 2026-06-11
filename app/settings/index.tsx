@@ -203,6 +203,28 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
+        {/* Danger zone — account deletion is an App Store requirement
+            (5.1.1(v)). Routes to a separate screen with a typed-DELETE
+            confirmation so this can't fire by accident. */}
+        <View style={{ marginTop: t.space[4] }}>
+          <Pressable
+            onPress={() => router.push('/settings/delete-account')}
+            hitSlop={8}
+            style={{ alignItems: 'center', paddingVertical: t.space[3] }}
+            accessibilityRole="button"
+            accessibilityLabel="Delete my account"
+          >
+            <Text
+              style={[
+                t.type.body,
+                { color: t.colors.destructive.text, fontWeight: '500' },
+              ]}
+            >
+              Delete my account
+            </Text>
+          </Pressable>
+        </View>
+
         <Text
           style={[
             t.type.footnote,

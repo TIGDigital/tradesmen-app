@@ -86,6 +86,7 @@ export default function RootLayout() {
             />
             <Stack.Screen name="settings/index" options={{ presentation: 'card' }} />
             <Stack.Screen name="settings/edit-name" options={{ presentation: 'card' }} />
+            <Stack.Screen name="settings/delete-account" options={{ presentation: 'card' }} />
             <Stack.Screen name="settings/business" options={{ presentation: 'card' }} />
             <Stack.Screen name="settings/verification" options={{ presentation: 'card' }} />
             <Stack.Screen name="settings/certificate/[id]" options={{ presentation: 'card' }} />

@@ -47,6 +47,29 @@ export async function resetPasswordForEmail(email: string) {
   if (error) throw error;
 }
 
+/** Permanently delete the signed-in user's account.
+ *
+ *  Calls the delete-my-account Edge Function (which has the service-role
+ *  key needed to remove rows from auth.users). The function deletes any
+ *  projects the user owns (tradesman case) then deletes auth.users — the
+ *  cascade takes profiles + push_tokens + notifications + anything else
+ *  keyed on the user_id.
+ *
+ *  After this resolves the session is invalid. Caller should immediately
+ *  call signOut() and navigate to /(auth)/welcome.
+ *
+ *  Required by App Store guideline 5.1.1(v) — apps that let users create
+ *  accounts must also let them delete those accounts in-app. */
+export async function deleteMyAccount() {
+  const { data, error } = await supabase.functions.invoke<{
+    success?: boolean;
+    error?: string;
+  }>('delete-my-account');
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  if (!data?.success) throw new Error('Account deletion did not complete');
+}
+
 export async function getSession() {
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
