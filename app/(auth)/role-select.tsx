@@ -1,6 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
@@ -59,12 +65,16 @@ export default function RoleSelectScreen() {
             {choices.map((c) => {
               const isSelected = selected === c.value;
               return (
-                <Pressable
+                // TouchableOpacity over Pressable here on purpose:
+                // Pressable on iPadOS has had intermittent tap-recognition
+                // issues with certain accessibilityRole values, and the
+                // friend testing was stuck on this screen. TouchableOpacity
+                // is older + more battle-tested across iPhone + iPad.
+                // accessibilityRole='button' is the safest choice.
+                <TouchableOpacity
                   key={c.value}
                   onPress={() => setSelected(c.value)}
-                  // Generous hitSlop so iPad's larger touch area still
-                  // catches taps near the card edges.
-                  hitSlop={8}
+                  activeOpacity={0.75}
                   style={[
                     styles.choice,
                     {
@@ -74,7 +84,7 @@ export default function RoleSelectScreen() {
                       padding: t.space[5],
                     },
                   ]}
-                  accessibilityRole="radio"
+                  accessibilityRole="button"
                   accessibilityState={{ selected: isSelected }}
                   accessibilityLabel={`${c.title}. ${c.sub}`}
                 >
@@ -87,7 +97,7 @@ export default function RoleSelectScreen() {
                   >
                     {c.sub}
                   </Text>
-                </Pressable>
+                </TouchableOpacity>
               );
             })}
           </View>
