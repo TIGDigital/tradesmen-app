@@ -215,19 +215,33 @@ export default function ProjectDetailScreen() {
           onRefresh={refreshAll}
           onCompose={() => router.push({ pathname: '/project/[id]/compose', params: { id: id! } })}
           onEndOfDay={async () => {
-            // Fire the leave-site nudge: logs the event, fires a local notification.
-            // Tapping the notification opens the EoD card. In production the geofence
-            // does this trigger automatically; the button is the in-app manual fallback.
+            // Fire the leave-site nudge in the background — logs the event
+            // + sends a local notification matching what the real geofence
+            // would do. Swallow any failure (notification permission
+            // denied, simulator, etc.) and continue — the user tapped
+            // "End my day" and they want the modal, not just a side-effect.
             try {
               await logLeaveSite(id!);
               const customerFirst =
                 projectQuery.data?.customer?.full_name?.split(' ')[0] ??
                 projectQuery.data?.pending_customer_name?.split(' ')[0] ??
                 'your customer';
-              await fireLeaveSiteNudge({ project_id: id!, customer_first_name: customerFirst });
+              await fireLeaveSiteNudge({
+                project_id: id!,
+                customer_first_name: customerFirst,
+              });
             } catch (e) {
-              Alert.alert("Couldn't end day", (e as Error).message);
+              console.warn('[EndMyDay] nudge failed', e);
             }
+            // Open the EoD card directly so the user always gets immediate
+            // feedback. On a real phone with notifications enabled, both
+            // happen (nudge fires AND modal opens) — harmless redundancy.
+            // On simulator / with notifications denied / when the app is
+            // foregrounded, this is the only thing that actually works.
+            router.push({
+              pathname: '/project/[id]/end-of-day',
+              params: { id: id! },
+            });
           }}
           onManageMilestones={() => router.push({ pathname: '/project/[id]/milestones', params: { id: id! } })}
           onChangeStatus={() => router.push({ pathname: '/project/[id]/status', params: { id: id! } })}
