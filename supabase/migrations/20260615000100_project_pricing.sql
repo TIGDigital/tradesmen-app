@@ -52,7 +52,7 @@ create policy price_changes_read on project_price_changes
        where p.id = project_price_changes.project_id
          and (
            p.customer_id = auth.uid()
-           or p.lead_id = auth.uid()
+           or p.tradesman_id = auth.uid()
            or exists (
              select 1 from project_crew pc
               where pc.project_id = p.id and pc.user_id = auth.uid()
@@ -68,7 +68,7 @@ create policy price_changes_lead_propose on project_price_changes
     and exists (
       select 1 from projects p
        where p.id = project_price_changes.project_id
-         and p.lead_id = auth.uid()
+         and p.tradesman_id = auth.uid()
     )
   );
 

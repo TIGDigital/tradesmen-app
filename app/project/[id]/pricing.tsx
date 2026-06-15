@@ -75,7 +75,7 @@ export default function PricingScreen() {
   type ProjectShape = {
     id: string;
     title: string;
-    lead_id?: string | null;
+    tradesman_id?: string | null;
     customer_id?: string | null;
     quoted_amount?: number | null;
   };
@@ -83,7 +83,7 @@ export default function PricingScreen() {
   const pending = pendingQ.data;
   const history = historyQ.data ?? [];
 
-  const isLead = !!project && userId === project.lead_id;
+  const isLead = !!project && userId === project.tradesman_id;
   const isCustomer = !!project && userId === project.customer_id;
 
   // Local form state for "set initial" and "propose change".
