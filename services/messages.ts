@@ -1,3 +1,4 @@
+import { notifyCounterparty } from '@/services/projects';
 import { supabase } from '@/services/supabase';
 import type { Database } from '@/types/db';
 
@@ -46,6 +47,21 @@ export async function sendMessage(project_id: string, body: string) {
     .select()
     .single();
   if (error) throw error;
+
+  // Fire-and-forget push to the counterparty so they actually know a
+  // message landed. Without this the message sits silently in the
+  // tradesman's Messages tab until they happen to refresh — the original
+  // sendMessage skipped the notify hop, which is the bug Todd hit today.
+  // Truncate body to a polite 80 chars so the lock-screen preview reads
+  // cleanly without leaking too much context.
+  const preview = body.length > 80 ? body.slice(0, 77) + '…' : body;
+  void notifyCounterparty({
+    project_id,
+    sender_id: user.id,
+    title: profile?.role === 'customer' ? 'Message from your customer' : 'New message',
+    body: preview,
+  });
+
   return data;
 }
 

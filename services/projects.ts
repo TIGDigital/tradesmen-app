@@ -439,11 +439,14 @@ export async function postEndOfDay(args: {
 }
 
 /**
- * Internal: send a push to the OTHER party on the project (sender does not push to self).
+ * Send a push to the OTHER party on the project (sender does not push to self).
  * Reads the recipient's push_tokens via RLS (counterparty policy added in Sprint 7).
  * Fully non-blocking — any failure is logged inside sendPush; caller does not await.
+ *
+ * Exported so services/messages.ts (and anything else that wants to ping the
+ * other side) can reuse the same recipient-lookup + token-resolution path.
  */
-async function notifyCounterparty(args: {
+export async function notifyCounterparty(args: {
   project_id: string;
   sender_id: string;
   title: string;
