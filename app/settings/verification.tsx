@@ -91,7 +91,7 @@ export default function VerificationSettingsScreen() {
           <Text style={[t.type.bodyLg, { color: t.colors.text.link }]}>Cancel</Text>
         </Pressable>
         <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
-          Verification
+          Cards & Certificates
         </Text>
         <View style={{ width: 60 }} />
       </View>
@@ -141,7 +141,7 @@ export default function VerificationSettingsScreen() {
           <View style={{ gap: t.space[3] }}>
             <View style={styles.sectionHead}>
               <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
-                Your cards
+                Your cards & certificates
               </Text>
             </View>
 

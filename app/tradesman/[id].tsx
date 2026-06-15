@@ -180,7 +180,7 @@ export default function TradesmanProfileScreen() {
                   { color: t.colors.text.tertiary, marginBottom: t.space[3] },
                 ]}
               >
-                Cards on file
+                Cards & Certificates
               </Text>
               <View style={{ gap: t.space[2] }}>
                 {liveCertificates.map((c) => (

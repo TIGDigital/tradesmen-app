@@ -183,9 +183,9 @@ export default function SettingsScreen() {
                 style={styles.rowBetween}
               >
                 <View>
-                  <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Verification</Text>
+                  <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Cards & Certificates</Text>
                   <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
-                    Certificates + insurance
+                    Your trade cards + insurance
                   </Text>
                 </View>
                 <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
