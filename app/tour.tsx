@@ -79,6 +79,14 @@ const CUSTOMER_SLIDES: Slide[] = [
     title: 'Watch every step land',
     body: "From first-fix to handover, see what's done and what's next. Milestones, schedule, and snags — all in one feed.",
   },
+  {
+    icon: 'pricetag',
+    iconBg: '#E6F0FE',
+    iconColor: '#1B4DD9',
+    eyebrow: 'No surprise bills',
+    title: "You approve every price change",
+    body: "If your tradesman needs to bump the price, they have to ask first — with a reason. You approve or reject. Every change stays in your project history.",
+  },
 ];
 
 /** Tradesman + apprentice tour — they're ON site, sending updates outward.
@@ -115,6 +123,14 @@ const TRADESMAN_SLIDES: Slide[] = [
     eyebrow: 'Less chasing',
     title: 'Customer kept in the loop',
     body: "Photos, milestones, questions — all in their app. No more dodging WhatsApp at dinner.",
+  },
+  {
+    icon: 'pricetag',
+    iconBg: '#E6F0FE',
+    iconColor: '#1B4DD9',
+    eyebrow: 'No surprise bills',
+    title: 'Every price change, on the record',
+    body: 'Need to bump the price? Send the customer a request with the reason. They approve, you proceed. Every change is logged forever.',
   },
 ];
 

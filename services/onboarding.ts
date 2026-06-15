@@ -24,6 +24,9 @@ export type TradesmanOnboarding = {
   has_sent_invite: boolean;
   has_posted_update: boolean;
   has_ended_day: boolean;
+  /** Has the tradesman set the agreed price on their first project?
+   *  Powers the "Set the agreed price" checklist item (Sprint 51 wedge). */
+  has_set_price: boolean;
 };
 
 /** Customer checklist — engaging with their project for the first time. */
@@ -41,6 +44,7 @@ export async function fetchTradesmanOnboarding(): Promise<TradesmanOnboarding> {
     has_sent_invite: false,
     has_posted_update: false,
     has_ended_day: false,
+    has_set_price: false,
   };
 
   const {
@@ -48,13 +52,15 @@ export async function fetchTradesmanOnboarding(): Promise<TradesmanOnboarding> {
   } = await supabase.auth.getUser();
   if (!user) return empty;
 
-  // Four small queries in parallel — count-only where we can to keep the
+  // Five small queries in parallel — count-only where we can to keep the
   // payload tiny. The first query also returns the project id we need for
   // deep-links so we don't pay for a second roundtrip.
-  const [firstProject, sentInvite, postedUpdate, etaUpdate] = await Promise.all([
-    supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const projectsClient = supabase as any;
+  const [firstProject, sentInvite, postedUpdate, etaUpdate, priceSet] = await Promise.all([
+    projectsClient
       .from('projects')
-      .select('id')
+      .select('id, quoted_amount')
       .eq('tradesman_id', user.id)
       .is('archived_at', null)
       .order('created_at', { ascending: true })
@@ -77,9 +83,14 @@ export async function fetchTradesmanOnboarding(): Promise<TradesmanOnboarding> {
     supabase
       .from('project_updates')
       .select('id', { head: true, count: 'exact' })
-      .eq('author_id', user.id)
       .is('deleted_at', null)
+      .eq('author_id', user.id)
       .eq('type', 'eta'),
+    projectsClient
+      .from('projects')
+      .select('id', { head: true, count: 'exact' })
+      .eq('tradesman_id', user.id)
+      .not('quoted_amount', 'is', null),
   ]);
 
   return {
@@ -88,6 +99,7 @@ export async function fetchTradesmanOnboarding(): Promise<TradesmanOnboarding> {
     has_sent_invite: (sentInvite.count ?? 0) > 0,
     has_posted_update: (postedUpdate.count ?? 0) > 0,
     has_ended_day: (etaUpdate.count ?? 0) > 0,
+    has_set_price: (priceSet.count ?? 0) > 0,
   };
 }
 

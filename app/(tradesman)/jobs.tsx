@@ -115,6 +115,18 @@ export default function JobsScreen() {
                 })
             : () => router.push('/project/new'),
         },
+        {
+          title: 'Set the agreed price',
+          subtitle: 'Capture what you and your customer agreed. Future changes need their OK.',
+          done: ob.has_set_price,
+          onPress: ob.first_project_id
+            ? () =>
+                router.push({
+                  pathname: '/project/[id]/pricing',
+                  params: { id: ob.first_project_id! },
+                })
+            : () => router.push('/project/new'),
+        },
       ]
     : [];
 

@@ -166,25 +166,11 @@ export default function OnboardingWelcomeScreen() {
           >
             What's next
           </Text>
-          <Step
-            n={1}
-            title="Quick tour"
-            body="Four screens, 30 seconds. Explains how Phase fits in your day."
-          />
-          <Step
-            n={2}
-            title="Your get-started list"
-            body={
-              role === 'customer'
-                ? 'A short checklist of things to try first — react to an update, send a message.'
-                : "A short checklist that walks you through your first project — set it up, invite your customer, post an update."
-            }
-          />
-          <Step
-            n={3}
-            title="You're off"
-            body="Build your reputation one happy customer at a time."
-          />
+          {(role === 'customer' ? CUSTOMER_STEPS : TRADESMAN_STEPS).map(
+            (s, i) => (
+              <Step key={s.title} n={i + 1} title={s.title} body={s.body} />
+            ),
+          )}
         </View>
 
         <View style={{ marginTop: t.space[10] }}>
@@ -194,6 +180,55 @@ export default function OnboardingWelcomeScreen() {
     </SafeAreaView>
   );
 }
+
+/** The five-step previews shown under "What's next". Tuned to mirror the
+ *  Get-started checklist the user will land in afterwards, so they can
+ *  see the runway end-to-end before tapping continue. */
+const TRADESMAN_STEPS = [
+  {
+    title: 'Quick tour',
+    body: "Five screens, 45 seconds. Explains how Phase fits in your day.",
+  },
+  {
+    title: 'Create your first project',
+    body: "We'll pre-fill milestones for your trade so you're not staring at a blank page.",
+  },
+  {
+    title: 'Invite your customer',
+    body: "One tap to send them a code — they join via SMS, no chasing.",
+  },
+  {
+    title: 'Post your first update',
+    body: "A photo and a sentence is enough. They see it instantly.",
+  },
+  {
+    title: "Lock in the price",
+    body: "Set the agreed quote. Any change after that needs their OK — no surprise bills.",
+  },
+];
+
+const CUSTOMER_STEPS = [
+  {
+    title: 'Quick tour',
+    body: "Four screens, 30 seconds. Explains what Phase will show you.",
+  },
+  {
+    title: 'Join your project',
+    body: "Enter the code your tradesman sent and you're in.",
+  },
+  {
+    title: 'React to an update',
+    body: 'Tap 👏 ❤️ or 💪 so your tradesman knows the message landed.',
+  },
+  {
+    title: 'Ask questions any time',
+    body: "Built-in chat — replies stay logged so nobody forgets what was agreed.",
+  },
+  {
+    title: 'Approve every price change',
+    body: "If the price needs to move, you get the request first. Approve or reject.",
+  },
+];
 
 function Step({ n, title, body }: { n: number; title: string; body: string }) {
   const t = lightTheme;
