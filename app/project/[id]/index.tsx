@@ -578,6 +578,37 @@ function Content({
         </Pressable>
       </Card>
 
+      {/* Pricing — always visible to both parties. The price changes here
+          are the "no surprise bills" wedge: every change is logged,
+          customer must approve. */}
+      <Card>
+        <Pressable
+          onPress={() =>
+            router.push({ pathname: '/project/[id]/pricing', params: { id: project.id } })
+          }
+          style={styles.metaRow}
+        >
+          <View>
+            <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Pricing</Text>
+            <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+              {(project as { quoted_amount?: number | null }).quoted_amount != null
+                ? new Intl.NumberFormat('en-GB', {
+                    style: 'currency',
+                    currency: 'GBP',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                  }).format(
+                    (project as { quoted_amount: number }).quoted_amount,
+                  )
+                : isTradesman
+                  ? 'Set the agreed price'
+                  : 'No quote set yet'}
+            </Text>
+          </View>
+          <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+        </Pressable>
+      </Card>
+
       {/* Approvals card — only visible to the lead when there's pending
           work to review. Apprentice updates queue here before reaching
           the customer. */}

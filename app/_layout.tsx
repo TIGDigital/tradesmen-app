@@ -82,6 +82,10 @@ export default function RootLayout() {
               options={{ presentation: 'card' }}
             />
             <Stack.Screen
+              name="project/[id]/pricing"
+              options={{ presentation: 'card' }}
+            />
+            <Stack.Screen
               name="invite/[code]"
               options={{ presentation: 'card' }}
             />
