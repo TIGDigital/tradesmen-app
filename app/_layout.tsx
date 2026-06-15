@@ -58,6 +58,7 @@ export default function RootLayout() {
             <Stack.Screen name="consent/location" options={{ presentation: 'card' }} />
             <Stack.Screen name="consent/notifications" options={{ presentation: 'card' }} />
             <Stack.Screen name="(auth)/forgot-password" options={{ presentation: 'card' }} />
+            <Stack.Screen name="(auth)/onboarding-welcome" options={{ presentation: 'card', gestureEnabled: false }} />
             <Stack.Screen name="tour" options={{ presentation: 'card', gestureEnabled: false }} />
             <Stack.Screen name="project/[id]/index" options={{ presentation: 'card' }} />
             <Stack.Screen
@@ -136,6 +137,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const initialising = useAuthStore((s) => s.initialising);
   const welcomeShown = useAuthStore((s) => s.welcomeShown);
   const tourSeen = useAuthStore((s) => s.tourSeen);
+  const onboardingWelcomeSeen = useAuthStore((s) => s.onboardingWelcomeSeen);
   const initialise = useAuthStore((s) => s.initialise);
   const router = useRouter();
   const segments = useSegments();
@@ -202,6 +204,22 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Personalised "Hi [Name]!" onboarding welcome screen. Fires once
+    // per device after sign-up + role-select. Comes BEFORE the tour so
+    // the user sees a warm human moment first, then the feature
+    // overview. Existing users who installed before this screen existed
+    // will see it once on their next launch — one tap dismisses forever.
+    const onOnboardingWelcome =
+      inAuthZone && segments.at(1) === 'onboarding-welcome';
+    if (
+      onboardingWelcomeSeen === false &&
+      !onOnboardingWelcome &&
+      !inCrewFlow
+    ) {
+      router.replace('/(auth)/onboarding-welcome');
+      return;
+    }
+
     // First-run tour. Persisted to AsyncStorage so it only shows once per
     // device. tourSeen=null means we haven't loaded the flag yet — don't
     // route in that window (causes a flash). Crew-flow paths are exempt
@@ -216,7 +234,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     // stuck there. Exception: stay on role-select if the user is explicitly
     // there (post-signup confirmation step).
     if (inAuthZone && segments.at(1) !== 'role-select') router.replace('/');
-  }, [session, profile?.role, initialising, welcomeShown, tourSeen, segments, router]);
+  }, [session, profile?.role, initialising, welcomeShown, tourSeen, onboardingWelcomeSeen, segments, router]);
 
   if (initialising) {
     return (

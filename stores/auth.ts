@@ -17,6 +17,8 @@ type Profile = Pick<
 const TOUR_SEEN_KEY = 'phase.tour.seen.v1';
 /** Per-device flag: the user clicked × on the onboarding checklist. */
 const ONBOARDING_DISMISSED_KEY = 'phase.onboarding.dismissed.v1';
+/** Per-device flag: the user has seen the personalised "Hi [Name]!" welcome. */
+const ONBOARDING_WELCOME_SEEN_KEY = 'phase.onboarding.welcome.seen.v1';
 
 type AuthState = {
   session: Session | null;
@@ -45,6 +47,12 @@ type AuthState = {
    * want to see this right now" case.
    */
   onboardingDismissed: boolean | null;
+  /**
+   * Has the user seen the personalised "Hi [Name]!" welcome screen
+   * that fires once after sign-up + role-select? Per-device, persisted
+   * to AsyncStorage. `null` while loading.
+   */
+  onboardingWelcomeSeen: boolean | null;
 };
 
 type AuthActions = {
@@ -62,6 +70,8 @@ type AuthActions = {
   dismissOnboarding: () => Promise<void>;
   /** Re-show the onboarding checklist (Settings → "Show get-started again"). */
   resetOnboardingDismissed: () => Promise<void>;
+  /** Mark the personalised welcome screen as seen — persists. */
+  markOnboardingWelcomeSeen: () => Promise<void>;
 };
 
 export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
@@ -71,6 +81,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
   welcomeShown: false,
   tourSeen: null,
   onboardingDismissed: null,
+  onboardingWelcomeSeen: null,
 
   markWelcomeShown: () => set({ welcomeShown: true }),
   markTourSeen: async () => {
@@ -89,14 +100,24 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     await AsyncStorage.removeItem(ONBOARDING_DISMISSED_KEY);
     set({ onboardingDismissed: false });
   },
+  markOnboardingWelcomeSeen: async () => {
+    await AsyncStorage.setItem(ONBOARDING_WELCOME_SEEN_KEY, 'true');
+    set({ onboardingWelcomeSeen: true });
+  },
 
   initialise: () => {
     // Read current session + persisted flags in parallel.
     void (async () => {
-      const [sessionResult, tourSeenStr, onboardingDismissedStr] = await Promise.all([
+      const [
+        sessionResult,
+        tourSeenStr,
+        onboardingDismissedStr,
+        onboardingWelcomeSeenStr,
+      ] = await Promise.all([
         supabase.auth.getSession(),
         AsyncStorage.getItem(TOUR_SEEN_KEY),
         AsyncStorage.getItem(ONBOARDING_DISMISSED_KEY),
+        AsyncStorage.getItem(ONBOARDING_WELCOME_SEEN_KEY),
       ]);
       const session = sessionResult.data.session ?? null;
       let profile: Profile | null = null;
@@ -121,6 +142,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         initialising: false,
         tourSeen: tourSeenStr === 'true',
         onboardingDismissed: onboardingDismissedStr === 'true',
+        onboardingWelcomeSeen: onboardingWelcomeSeenStr === 'true',
       });
     })();
 

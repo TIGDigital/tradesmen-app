@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       apprentice_profiles: {
@@ -133,70 +158,6 @@ export type Database = {
           },
         ]
       }
-      crew_invitations: {
-        Row: {
-          id: string
-          project_id: string
-          inviter_id: string
-          invitee_name: string
-          invite_code: string
-          role_on_project: string
-          created_at: string
-          accepted_at: string | null
-          accepted_by: string | null
-          expires_at: string
-          revoked_at: string | null
-        }
-        Insert: {
-          id?: string
-          project_id: string
-          inviter_id: string
-          invitee_name: string
-          invite_code: string
-          role_on_project?: string
-          created_at?: string
-          accepted_at?: string | null
-          accepted_by?: string | null
-          expires_at?: string
-          revoked_at?: string | null
-        }
-        Update: {
-          id?: string
-          project_id?: string
-          inviter_id?: string
-          invitee_name?: string
-          invite_code?: string
-          role_on_project?: string
-          created_at?: string
-          accepted_at?: string | null
-          accepted_by?: string | null
-          expires_at?: string
-          revoked_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "crew_invitations_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "crew_invitations_inviter_id_fkey"
-            columns: ["inviter_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "crew_invitations_accepted_by_fkey"
-            columns: ["accepted_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       consent_records: {
         Row: {
           created_at: string | null
@@ -240,6 +201,76 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crew_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          invite_code: string
+          invitee_name: string
+          inviter_id: string
+          inviter_name: string | null
+          project_id: string
+          project_title: string | null
+          revoked_at: string | null
+          role_on_project: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invite_code: string
+          invitee_name: string
+          inviter_id: string
+          inviter_name?: string | null
+          project_id: string
+          project_title?: string | null
+          revoked_at?: string | null
+          role_on_project?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invite_code?: string
+          invitee_name?: string
+          inviter_id?: string
+          inviter_name?: string | null
+          project_id?: string
+          project_title?: string | null
+          revoked_at?: string | null
+          role_on_project?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crew_invitations_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_invitations_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crew_invitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -889,105 +920,80 @@ export type Database = {
           },
         ]
       }
-      project_documents: {
+      project_snag_photos: {
         Row: {
-          id: string
-          project_id: string
-          uploader_id: string
-          file_name: string
-          storage_path: string
-          mime_type: string
-          size_bytes: number
           created_at: string
-          deleted_at: string | null
+          id: string
+          snag_id: string
+          sort_order: number
+          storage_path: string
         }
         Insert: {
-          id?: string
-          project_id: string
-          uploader_id: string
-          file_name: string
-          storage_path: string
-          mime_type: string
-          size_bytes: number
           created_at?: string
-          deleted_at?: string | null
+          id?: string
+          snag_id: string
+          sort_order?: number
+          storage_path: string
         }
         Update: {
-          id?: string
-          project_id?: string
-          uploader_id?: string
-          file_name?: string
-          storage_path?: string
-          mime_type?: string
-          size_bytes?: number
           created_at?: string
-          deleted_at?: string | null
+          id?: string
+          snag_id?: string
+          sort_order?: number
+          storage_path?: string
         }
         Relationships: [
           {
-            foreignKeyName: "project_documents_project_id_fkey"
-            columns: ["project_id"]
+            foreignKeyName: "project_snag_photos_snag_id_fkey"
+            columns: ["snag_id"]
             isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "project_documents_uploader_id_fkey"
-            columns: ["uploader_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "project_snags"
             referencedColumns: ["id"]
           },
         ]
       }
       project_snags: {
         Row: {
-          id: string
-          project_id: string
-          reporter_id: string
-          title: string
-          description: string | null
-          location_hint: string | null
-          status: Database["public"]["Enums"]["snag_status"]
-          resolved_at: string | null
-          resolved_by: string | null
-          resolution_note: string | null
-          confirmed_at: string | null
-          confirmed_by: string | null
           created_at: string
           deleted_at: string | null
-        }
-        Insert: {
-          id?: string
+          description: string | null
+          id: string
+          location_hint: string | null
           project_id: string
           reporter_id: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["snag_status"]
           title: string
-          description?: string | null
-          location_hint?: string | null
-          status?: Database["public"]["Enums"]["snag_status"]
-          resolved_at?: string | null
-          resolved_by?: string | null
-          resolution_note?: string | null
-          confirmed_at?: string | null
-          confirmed_by?: string | null
+        }
+        Insert: {
           created_at?: string
           deleted_at?: string | null
+          description?: string | null
+          id?: string
+          location_hint?: string | null
+          project_id: string
+          reporter_id: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["snag_status"]
+          title: string
         }
         Update: {
-          id?: string
-          project_id?: string
-          reporter_id?: string
-          title?: string
-          description?: string | null
-          location_hint?: string | null
-          status?: Database["public"]["Enums"]["snag_status"]
-          resolved_at?: string | null
-          resolved_by?: string | null
-          resolution_note?: string | null
-          confirmed_at?: string | null
-          confirmed_by?: string | null
           created_at?: string
           deleted_at?: string | null
+          description?: string | null
+          id?: string
+          location_hint?: string | null
+          project_id?: string
+          reporter_id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["snag_status"]
+          title?: string
         }
         Relationships: [
           {
@@ -1009,41 +1015,6 @@ export type Database = {
             columns: ["resolved_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      project_snag_photos: {
-        Row: {
-          id: string
-          snag_id: string
-          storage_path: string
-          sort_order: number
-          kind: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          snag_id: string
-          storage_path: string
-          sort_order?: number
-          kind?: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          snag_id?: string
-          storage_path?: string
-          sort_order?: number
-          kind?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_snag_photos_snag_id_fkey"
-            columns: ["snag_id"]
-            isOneToOne: false
-            referencedRelation: "project_snags"
             referencedColumns: ["id"]
           },
         ]
@@ -1175,6 +1146,9 @@ export type Database = {
       }
       project_updates: {
         Row: {
+          approval_decided_at: string | null
+          approval_decided_by: string | null
+          approval_status: Database["public"]["Enums"]["update_approval_status"]
           author_id: string
           body: string | null
           created_at: string | null
@@ -1187,15 +1161,15 @@ export type Database = {
           id: string
           milestone_id: string | null
           project_id: string
+          rejection_reason: string | null
           type: Database["public"]["Enums"]["update_type"]
           voice_note_transcript: string | null
           voice_note_url: string | null
-          approval_status: Database["public"]["Enums"]["update_approval_status"]
-          approval_decided_at: string | null
-          approval_decided_by: string | null
-          rejection_reason: string | null
         }
         Insert: {
+          approval_decided_at?: string | null
+          approval_decided_by?: string | null
+          approval_status?: Database["public"]["Enums"]["update_approval_status"]
           author_id: string
           body?: string | null
           created_at?: string | null
@@ -1208,15 +1182,15 @@ export type Database = {
           id?: string
           milestone_id?: string | null
           project_id: string
+          rejection_reason?: string | null
           type?: Database["public"]["Enums"]["update_type"]
           voice_note_transcript?: string | null
           voice_note_url?: string | null
-          approval_status?: Database["public"]["Enums"]["update_approval_status"]
-          approval_decided_at?: string | null
-          approval_decided_by?: string | null
-          rejection_reason?: string | null
         }
         Update: {
+          approval_decided_at?: string | null
+          approval_decided_by?: string | null
+          approval_status?: Database["public"]["Enums"]["update_approval_status"]
           author_id?: string
           body?: string | null
           created_at?: string | null
@@ -1229,15 +1203,19 @@ export type Database = {
           id?: string
           milestone_id?: string | null
           project_id?: string
+          rejection_reason?: string | null
           type?: Database["public"]["Enums"]["update_type"]
           voice_note_transcript?: string | null
           voice_note_url?: string | null
-          approval_status?: Database["public"]["Enums"]["update_approval_status"]
-          approval_decided_at?: string | null
-          approval_decided_by?: string | null
-          rejection_reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "project_updates_approval_decided_by_fkey"
+            columns: ["approval_decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_updates_author_id_fkey"
             columns: ["author_id"]
@@ -1534,6 +1512,56 @@ export type Database = {
           },
         ]
       }
+      tradesman_certificates: {
+        Row: {
+          created_at: string
+          custom_name: string | null
+          expires_at: string | null
+          id: string
+          issued_at: string | null
+          kind: Database["public"]["Enums"]["certificate_kind"]
+          notes: string | null
+          number: string | null
+          photo_path: string | null
+          tradesman_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_name?: string | null
+          expires_at?: string | null
+          id?: string
+          issued_at?: string | null
+          kind: Database["public"]["Enums"]["certificate_kind"]
+          notes?: string | null
+          number?: string | null
+          photo_path?: string | null
+          tradesman_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_name?: string | null
+          expires_at?: string | null
+          id?: string
+          issued_at?: string | null
+          kind?: Database["public"]["Enums"]["certificate_kind"]
+          notes?: string | null
+          number?: string | null
+          photo_path?: string | null
+          tradesman_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tradesman_certificates_tradesman_id_fkey"
+            columns: ["tradesman_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tradesman_profiles: {
         Row: {
           avg_rating: number | null
@@ -1659,6 +1687,19 @@ export type Database = {
       is_project_tradesman: { Args: { p_id: string }; Returns: boolean }
     }
     Enums: {
+      certificate_kind:
+        | "gas_safe"
+        | "niceic"
+        | "cscs"
+        | "part_p"
+        | "asbestos_awareness"
+        | "ipaf"
+        | "first_aid"
+        | "scaffolding"
+        | "sssts"
+        | "smsts"
+        | "pasma"
+        | "other"
       consent_purpose:
         | "location_geofence"
         | "location_home_anchor"
@@ -1721,7 +1762,6 @@ export type Database = {
         | "completed"
       reaction_kind: "thumbs_up" | "question" | "heart"
       snag_status: "open" | "in_progress" | "resolved"
-      update_approval_status: "pending" | "approved" | "rejected"
       trade_type:
         | "builder"
         | "kitchen_fitter"
@@ -1738,6 +1778,7 @@ export type Database = {
         | "hvac"
         | "general"
         | "other"
+      update_approval_status: "pending" | "approved" | "rejected"
       update_type:
         | "progress"
         | "milestone"
@@ -1871,8 +1912,25 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
+      certificate_kind: [
+        "gas_safe",
+        "niceic",
+        "cscs",
+        "part_p",
+        "asbestos_awareness",
+        "ipaf",
+        "first_aid",
+        "scaffolding",
+        "sssts",
+        "smsts",
+        "pasma",
+        "other",
+      ],
       consent_purpose: [
         "location_geofence",
         "location_home_anchor",
@@ -1942,7 +2000,6 @@ export const Constants = {
       ],
       reaction_kind: ["thumbs_up", "question", "heart"],
       snag_status: ["open", "in_progress", "resolved"],
-      update_approval_status: ["pending", "approved", "rejected"],
       trade_type: [
         "builder",
         "kitchen_fitter",
@@ -1960,6 +2017,7 @@ export const Constants = {
         "general",
         "other",
       ],
+      update_approval_status: ["pending", "approved", "rejected"],
       update_type: [
         "progress",
         "milestone",
