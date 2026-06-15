@@ -244,6 +244,7 @@ export default function ProjectDetailScreen() {
             });
           }}
           onManageMilestones={() => router.push({ pathname: '/project/[id]/milestones', params: { id: id! } })}
+          onSetReminder={() => router.push({ pathname: '/project/[id]/reminders', params: { id: id! } })}
           onChangeStatus={() => router.push({ pathname: '/project/[id]/status', params: { id: id! } })}
           onMilestoneTap={onMilestoneTap}
           onSendInviteSms={async () => {
@@ -280,6 +281,7 @@ function Content({
   onCompose,
   onEndOfDay,
   onManageMilestones,
+  onSetReminder,
   onChangeStatus,
   onMilestoneTap,
   onSendInviteSms,
@@ -294,6 +296,7 @@ function Content({
   onCompose: () => void;
   onEndOfDay: () => void;
   onManageMilestones: () => void;
+  onSetReminder: () => void;
   onChangeStatus: () => void;
   onMilestoneTap: (milestone_id: string, current_status: string, title: string) => void;
   onSendInviteSms: () => void;
@@ -490,6 +493,17 @@ function Content({
           >
             <Text style={[t.type.body, { color: t.colors.text.link }]}>
               Or post a quick update
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={onSetReminder}
+            hitSlop={8}
+            style={{ paddingVertical: t.space[2] }}
+            accessibilityRole="button"
+            accessibilityLabel="Configure daily end-of-day reminder for this project"
+          >
+            <Text style={[t.type.footnote, { color: t.colors.text.secondary }]}>
+              Set up daily reminder
             </Text>
           </Pressable>
         </View>

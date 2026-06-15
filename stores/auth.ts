@@ -4,6 +4,7 @@ import { create } from 'zustand';
 
 import { getMyProfile } from '@/services/auth';
 import { registerForPush } from '@/services/notifications';
+import { rehydrateAllProjectReminders } from '@/services/reminders';
 import { supabase } from '@/services/supabase';
 import type { Database } from '@/types/db';
 
@@ -108,6 +109,11 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         }
         // Fire-and-forget push registration. Failures don't block sign-in.
         void registerForPush();
+        // Re-sync any saved per-project EoD reminders with the device's
+        // scheduled-notifications list. Necessary after re-installs or
+        // iOS major version bumps that clear the scheduled queue.
+        // Fire-and-forget — failures don't block sign-in either.
+        void rehydrateAllProjectReminders();
       }
       set({
         session,
