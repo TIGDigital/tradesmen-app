@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { Redirect, router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { Redirect, router, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -56,6 +56,17 @@ export default function JobsScreen() {
     staleTime: 0,
   });
   const ob = onboardingQuery.data;
+
+  // Re-derive checklist state every time Jobs comes into focus — the
+  // user may have posted an update, sent an invite, or ended their day
+  // on a child screen, and the bullets should tick off without a manual
+  // pull-to-refresh.
+  useFocusEffect(
+    useCallback(() => {
+      void onboardingQuery.refetch();
+      void refetch();
+    }, [onboardingQuery, refetch]),
+  );
 
   // The checklist items only render if there's at least one outstanding
   // step. We still build the array unconditionally so item.done state

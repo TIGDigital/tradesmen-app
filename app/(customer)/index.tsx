@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { MediaThumbs } from '@/components/MediaThumbs';
 import { MenuSheet, type MenuItem } from '@/components/MenuSheet';
@@ -338,6 +338,16 @@ function ProjectContent({
     staleTime: 0,
   });
   const ob = onboardingQuery.data;
+
+  // Re-fetch checklist progress whenever the dashboard comes back into
+  // focus — reacting to an update or sending a message happens on
+  // sub-screens, so without this the bullets only tick after a manual
+  // pull-to-refresh.
+  useFocusEffect(
+    useCallback(() => {
+      void onboardingQuery.refetch();
+    }, [onboardingQuery]),
+  );
   const checklistItems: ChecklistItem[] = ob && ob.first_project_id
     ? [
         {
