@@ -128,13 +128,11 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
           // Profile might not exist yet (race with trigger). That's OK.
           profile = null;
         }
-        // Fire-and-forget push registration. Failures don't block sign-in.
-        void registerForPush();
-        // Re-sync any saved per-project EoD reminders with the device's
-        // scheduled-notifications list. Necessary after re-installs or
-        // iOS major version bumps that clear the scheduled queue.
-        // Fire-and-forget — failures don't block sign-in either.
-        void rehydrateAllProjectReminders();
+        // DIAGNOSTIC: temporarily disabled to isolate signup crash.
+        // If disabling these fixes the crash we know one of the
+        // expo-notifications native calls is dying under iOS 26 / build 10.
+        // void registerForPush();
+        // void rehydrateAllProjectReminders();
       }
       set({
         session,
@@ -151,7 +149,9 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
       let profile: Profile | null = null;
       if (session) {
         try { profile = await getMyProfile(); } catch { profile = null; }
-        if (event === 'SIGNED_IN') void registerForPush();
+        // DIAGNOSTIC: registerForPush temporarily disabled — see initialise() comment.
+        // if (event === 'SIGNED_IN') void registerForPush();
+        void event; // suppress unused-var warning while diagnostic is active
       }
       set({ session, profile });
     });
