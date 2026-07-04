@@ -91,11 +91,18 @@ export async function getMyProfile() {
   return data;
 }
 
-/** Update the current user's role (used by the role-select screen). */
+/** Update the current user's role (used by the role-select screen).
+ *
+ *  Uses getSession() (reads from local storage) rather than getUser()
+ *  (round-trips to the server). Post-crash-recovery flows can have a
+ *  stale-but-present session where getUser() returns null but
+ *  getSession() still has the user id — that's what we care about
+ *  for the RLS on this update. If the token is actually invalid the
+ *  UPDATE itself fails with a 401 which we surface. */
 export async function setMyRole(role: Role) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not signed in');
-  const { error } = await supabase.from('profiles').update({ role }).eq('id', user.id);
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) throw new Error('Not signed in');
+  const { error } = await supabase.from('profiles').update({ role }).eq('id', session.user.id);
   if (error) throw error;
 }
 
