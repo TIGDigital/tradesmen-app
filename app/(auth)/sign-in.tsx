@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PhaseLogo } from '@/components/PhaseLogo';
@@ -22,6 +22,10 @@ export default function SignInScreen() {
       Alert.alert('Missing something', 'Email and password please.');
       return;
     }
+    // Same iOS 26 keyboard-teardown crash mitigation as sign-up.tsx:
+    // blur first so `secureTextEntry` doesn't crash when the screen
+    // unmounts on successful sign-in.
+    Keyboard.dismiss();
     setSubmitting(true);
     try {
       await signInWithEmail(email.trim(), password);

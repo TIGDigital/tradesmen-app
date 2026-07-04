@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 // Pressable + Text + Alert already imported above; bottom cross-link to sign-in.
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -24,6 +24,13 @@ export default function SignUpScreen() {
       Alert.alert('Missing something', 'Name, email, and a 6+ character password please.');
       return;
     }
+    // iOS 26 crash workaround: dismiss the keyboard BEFORE the screen
+    // unmounts. Leaving a `secureTextEntry` TextInput focused across
+    // `router.replace` causes UIKit's password-suggestion machinery to
+    // hit an assertion in `_UIKeyboardStateManager _teardownExistingDelegate`
+    // and abort() — the confirmed cause of the SIGABRT we saw on the
+    // .ips log after signup. Blurring cleanly first side-steps it.
+    Keyboard.dismiss();
     setSubmitting(true);
     try {
       // Default role on signup is 'customer'; role-select screen lets them change it next.
