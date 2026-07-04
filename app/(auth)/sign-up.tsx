@@ -24,12 +24,17 @@ export default function SignUpScreen() {
       Alert.alert('Missing something', 'Name, email, and a 6+ character password please.');
       return;
     }
-    // iOS 26 crash workaround: dismiss the keyboard BEFORE the screen
-    // unmounts. Leaving a `secureTextEntry` TextInput focused across
-    // `router.replace` causes UIKit's password-suggestion machinery to
-    // hit an assertion in `_UIKeyboardStateManager _teardownExistingDelegate`
-    // and abort() — the confirmed cause of the SIGABRT we saw on the
-    // .ips log after signup. Blurring cleanly first side-steps it.
+    // iOS 26 crash workaround (v2 — stronger than the initial Keyboard.dismiss()).
+    // Confirmed via .ips crash log that iOS 26.5's
+    // `_UIKeyboardStateManager _teardownExistingDelegate` hits an assertion
+    // if a `secureTextEntry` TextInput is still first-responder when its
+    // host view unmounts. `Keyboard.dismiss()` alone leaves a race where
+    // the password-suggestion UI is still tearing down when router.replace
+    // unmounts the field.
+    //
+    // Belt + braces: dismiss the keyboard, wait 250ms for iOS to fully
+    // tear down the suggestion UI, then navigate. 250ms is imperceptible
+    // vs the network round-trip we're already awaiting.
     Keyboard.dismiss();
     setSubmitting(true);
     try {
@@ -40,6 +45,10 @@ export default function SignUpScreen() {
         full_name: fullName.trim(),
         role: 'customer',
       });
+      // Give iOS a beat to finish tearing down the password-suggestion
+      // UI before we unmount the screen. Without this the app crashes
+      // natively on iOS 26 (SIGABRT in UIKeyboardStateManager).
+      await new Promise((resolve) => setTimeout(resolve, 250));
       // On success, the auth store picks up the new session and root layout redirects.
       router.replace('/(auth)/role-select');
     } catch (e) {
