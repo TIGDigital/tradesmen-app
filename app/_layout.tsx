@@ -208,6 +208,18 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Role-select whitelist. The sign-up form defaults role to 'customer'
+    // in the DB (via the profile-autocreate trigger) and then explicitly
+    // navigates to /(auth)/role-select so the new user can pick their
+    // real role. Because profile.role is already set, none of the
+    // "!profile.role → role-select" checks fire, so if we didn't skip
+    // the onboarding-welcome + tour blocks below, they'd bounce the
+    // user straight off role-select onto Hi-[Name] before they had a
+    // chance to pick. Role-select onContinue navigates to '/', letting
+    // AuthGate resume normal routing (welcome → onboarding-welcome →
+    // tour → home).
+    const onRoleSelect = inAuthZone && segments.at(1) === 'role-select';
+
     // Personalised "Hi [Name]!" onboarding welcome screen. Fires once
     // per device after sign-up + role-select. Comes BEFORE the tour so
     // the user sees a warm human moment first, then the feature
@@ -218,6 +230,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     if (
       onboardingWelcomeSeen === false &&
       !onOnboardingWelcome &&
+      !onRoleSelect &&
       !inCrewFlow
     ) {
       router.replace('/(auth)/onboarding-welcome');
@@ -229,7 +242,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     // route in that window (causes a flash). Crew-flow paths are exempt
     // so an invite acceptance can finish before the tutorial runs.
     const onTour = segments[0] === 'tour';
-    if (tourSeen === false && !onTour && !inCrewFlow) {
+    if (tourSeen === false && !onTour && !onRoleSelect && !inCrewFlow) {
       router.replace('/tour');
       return;
     }
