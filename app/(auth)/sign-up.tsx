@@ -63,7 +63,13 @@ export default function SignUpScreen() {
       });
       // Second guard-wait before nav.
       await new Promise((resolve) => setTimeout(resolve, 300));
-      router.replace('/(auth)/role-select');
+      // v4: use `push` instead of `replace` so the sign-up screen stays
+      // MOUNTED in the stack. router.replace unmounts the current
+      // screen, and iOS 26 crashes on any TextInput unmount even after
+      // v1/v2/v3 workarounds. With push the TextInput's native view
+      // stays alive — UIKit's keyboard-state machine has nothing to
+      // race with. The user only ever moves forward through the stack.
+      router.push('/(auth)/role-select');
     } catch (e) {
       // On error we stay on this screen — re-mount the password field
       // so the user can correct + retry.
@@ -133,8 +139,12 @@ export default function SignUpScreen() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
-                autoComplete="password-new"
-                textContentType="newPassword"
+                // v4: intentionally NO autoComplete/textContentType.
+                // Setting textContentType="newPassword" triggers iOS's
+                // strong-password suggestion overlay, which is the
+                // specific native UI that crashes on iOS 26.5 during
+                // teardown. Trading off Keychain auto-suggest for a
+                // signup that doesn't crash the app.
                 helper="At least 6 characters."
                 returnKeyType="done"
                 onSubmitEditing={onSubmit}
