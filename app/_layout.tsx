@@ -79,8 +79,12 @@ export default function RootLayout() {
             <Stack.Screen name="project/new" options={{ presentation: 'card' }} />
             <Stack.Screen name="consent/location" options={{ presentation: 'card' }} />
             <Stack.Screen name="consent/notifications" options={{ presentation: 'card' }} />
-            <Stack.Screen name="(auth)/forgot-password" options={{ presentation: 'card' }} />
-            <Stack.Screen name="(auth)/onboarding-welcome" options={{ presentation: 'card', gestureEnabled: false }} />
+            {/* NOTE: children of the (auth) group must NOT be declared
+                here — expo-router rejects nested names at the root
+                ("No route named ... exists in nested children") and the
+                resulting unroutable target sent AuthGate's redirect
+                into the infinite loop behind the entire July crash
+                saga. They're declared in app/(auth)/_layout.tsx. */}
             <Stack.Screen name="tour" options={{ presentation: 'card', gestureEnabled: false }} />
             <Stack.Screen name="project/[id]/index" options={{ presentation: 'card' }} />
             <Stack.Screen
@@ -209,6 +213,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }, [segKey]);
   const go = (target: string) => {
     if (pendingNav.current === target) return;
+    if (__DEV__) console.log('[AuthGate] nav →', target, '| currently at:', segKey || '(root)');
     pendingNav.current = target;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     router.replace(target as any);
@@ -270,15 +275,22 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     // the user sees a warm human moment first, then the feature
     // overview. Existing users who installed before this screen existed
     // will see it once on their next launch — one tap dismisses forever.
+    // THE JULY LOOP, root cause: these two "show once" blocks used to
+    // fall through when the user was ALREADY on the screen in question
+    // ("!onOnboardingWelcome && ..." as part of the nav condition, with
+    // the return inside). A fresh user has seen NEITHER screen, so
+    // standing on onboarding-welcome the tour block said "go to tour"
+    // and standing on tour this block said "go to onboarding-welcome" —
+    // an A↔B redirect ping-pong ("Maximum update depth exceeded") that
+    // crashed every fresh signup and signed-in boot from 4 Jul on.
+    // Each block must be a STOPPING state: while its flag is unseen,
+    // being on (or heading to) its screen ends routing evaluation.
     const onOnboardingWelcome =
       inAuthZone && segments.at(1) === 'onboarding-welcome';
-    if (
-      onboardingWelcomeSeen === false &&
-      !onOnboardingWelcome &&
-      !onRoleSelect &&
-      !inCrewFlow
-    ) {
-      go('/(auth)/onboarding-welcome');
+    if (onboardingWelcomeSeen === false && !inCrewFlow) {
+      if (!onOnboardingWelcome && !onRoleSelect) {
+        go('/(auth)/onboarding-welcome');
+      }
       return;
     }
 
@@ -287,8 +299,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     // route in that window (causes a flash). Crew-flow paths are exempt
     // so an invite acceptance can finish before the tutorial runs.
     const onTour = segments[0] === 'tour';
-    if (tourSeen === false && !onTour && !onRoleSelect && !inCrewFlow) {
-      go('/tour');
+    if (tourSeen === false && !inCrewFlow) {
+      if (!onTour && !onRoleSelect) {
+        go('/tour');
+      }
       return;
     }
 
