@@ -157,3 +157,36 @@ Report results step-by-step; any failure gets fixed before moving on.
 | Regenerate DB types | `SUPABASE_ACCESS_TOKEN=<token> npx supabase gen types typescript --project-id gzzznhqvwyuyvzociydw --schema public > types/db.ts` |
 | Reset test data | The DO-block nuke (skips missing tables) — see memory / session notes |
 | OTA reaches a device | Cold start downloads it in background; **second** cold start runs it. Delete + reinstall if a device is in a crash loop. |
+
+---
+
+## 8. 19 Jul (later) — the real root cause: poisoned OTA pipeline
+
+The fresh `.ips` from Todd's phone after build #12 was a **boot crash, 2 seconds
+after launch, on `expo.controller.errorRecoveryQueue`** — identical signature
+and code offsets to the 4 Jul boot crash. Combined with the pattern that
+server-built binaries always boot fine, the conclusion:
+
+> **JS bundles published as OTAs from Todd's Mac fail at startup on device.**
+> expo-updates then either crashes (the boot crashes testers saw) or silently
+> rolls back to the binary's built-in bundle (why testers always looked like
+> they were "on stale versions" — the OTAs loaded, died, and reverted).
+
+This retroactively explains most of the 15 Jun "tester on old OTA" mysteries
+and much of the 4 Jul saga. The signup crash on the embedded bundle may have a
+separate cause — with the crash trap now embedded in build #13, the next
+occurrence will identify itself on screen. Exact local-bundling mechanism
+(stale Metro cache? env drift? node_modules subtleties — 89 npm-ls warnings,
+mostly optional peers) is unconfirmed and no longer worth chasing.
+
+**Actions taken:**
+- Published **roll-back-to-embedded** on the `production` branch (`e6b99d48`)
+  — all devices abandon locally-bundled OTAs and run the binary's own code.
+- **Build #13** kicked off with crash trap v2 + welcome-screen build stamp
+  compiled in natively.
+
+**New shipping policy (until further notice): NO `eas update`.** Every change
+ships as a native EAS build + TestFlight submit. Slower (~40 min) but built in
+a clean environment and deterministic. Revisit OTAs only after a clean
+`npm ci` + cache reset, verified by publishing a trivial OTA and checking the
+welcome-screen stamp flips without a crash.
