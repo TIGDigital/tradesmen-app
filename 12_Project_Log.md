@@ -199,3 +199,38 @@ ships as a native EAS build + TestFlight submit. Slower (~40 min) but built in
 a clean environment and deterministic. Revisit OTAs only after a clean
 `npm ci` + cache reset, verified by publishing a trivial OTA and checking the
 welcome-screen stamp flips without a crash.
+
+---
+
+## 9. 19 Jul (evening) — THE ACTUAL ROOT CAUSE, caught red-handed
+
+Build #14 still crashed. Todd captured the crash **live via the Mac's Console
+app** with the iPhone on a cable — and there it was, in plain text:
+
+> `RCTFatalException: Unhandled JS Exception: Error: Maximum update depth
+> exceeded ... at AuthGate`
+
+**AuthGate — our own routing gatekeeper — was stuck in an infinite redirect
+loop.** It navigates from inside a React effect, but the router reports its
+location with a lag; on fast paths the same redirect re-fired against the
+stale location ~50 times in one beat and React aborted the app. It only
+triggers when a session exists at the moment AuthGate first evaluates —
+exactly (a) the instant signup completes and (b) every boot with a saved
+session. One bug = the signup crash + the boot crash + the boot loop, on
+every build since the Sprint 44-era effect-driven redirects, detonating only
+when render timing aligned.
+
+**The false trails, for the record:** iOS 26 keyboard teardown (v1–v4 fixes),
+the OTA bundler environment (still plausibly flaky, ban stays), expo-updates
+error recovery (it was merely the messenger relaying the JS error), the push
+permission prompt. Days of fixes aimed at bystanders. The lesson: *get the
+error text first* — the Console capture achieved in five minutes what four
+crash-log autopsies couldn't.
+
+**The fix (build #15, commit `d87c876`):**
+- `go(target)` guard in AuthGate — each redirect target can be requested at
+  most once until the router's location actually changes. Loops are now
+  impossible by construction.
+- A root **ErrorBoundary** — render-phase errors (invisible to the ErrorUtils
+  crash trap, as this saga proved) now show a screenshot-able error screen
+  instead of killing the app.
