@@ -279,3 +279,49 @@ builds #9/#10 on **4 Jul — the exact day the "signup crashes" began.**
 never the query object. Codebase swept: no other instances. DB re-nuked via
 the management API. Build #16 auto-submitted on completion.
 - Build #16 (`21cf73cb`) submitted to TestFlight ~15:35.
+
+---
+
+## 12. 19 Jul (~15:30) — THE root cause, reproduced live and fixed ✅
+
+Build #16 crashed identically ("same error"), disproving §11 — the refetch
+bug was real but secondary. Time to stop guessing from 40-minute TestFlight
+builds: **reproduced the crash in the iOS Simulator** (Expo Go + Metro,
+30-second iterations) with a nav log inside AuthGate's `go()`. The Metro
+console caught it red-handed:
+
+```
+[AuthGate] nav → /tour                      | currently at: (auth)/onboarding-welcome
+[AuthGate] nav → /(auth)/onboarding-welcome | currently at: tour
+[AuthGate] nav → /tour                      | currently at: (auth)/onboarding-welcome
+... forever → "Maximum update depth exceeded" → RCTFatal SIGABRT in release
+```
+
+**THE root cause:** an A↔B redirect ping-pong between two "show once"
+screens. A fresh user has seen neither `onboarding-welcome` (Sprint 50) nor
+the tour (Sprint 44). Each AuthGate block said "if unseen and not already on
+it → navigate" — but when the user *was* on it, the block **fell through to
+the next block** instead of stopping. So standing on onboarding-welcome, the
+tour block fired → standing on tour, the welcome block fired → infinite loop.
+Every fresh signup and fresh-install boot since the code went native on 4 Jul
+walked straight into it.
+
+**Fix (`2f1fa9d`):** each unseen-flag block is now a **stopping state** —
+while the flag is false, being on (or heading to) that screen ends routing
+evaluation entirely (`return`), no fall-through. Also moved the (auth) child
+screen options into `app/(auth)/_layout.tsx` where expo-router requires them
+(root-level declarations of nested routes are invalid and made
+onboarding-welcome unroutable — the silent enabler).
+
+**Verified end-to-end in the simulator, watching the nav log stay clean:**
+signup → role-select → tradesman → Continue → **"Hi Sim!" welcome screen
+(first time it has EVER rendered on any device)** → 5-slide tour → **Jobs
+with the full 5-item get-started checklist.** No loop, no crash, and the
+§11 refetch fix confirmed live at the same time.
+
+Housekeeping: nav log now dev-gated (`__DEV__`), DB re-nuked via the
+management API (0 users), **build #17** building + auto-submitting.
+
+**The lesson of the whole saga:** the simulator repro loop should have been
+step one, not step twelve. 30-second iterations with logs beat 40-minute
+blind builds every single time. It's now the standing rule in §7.
