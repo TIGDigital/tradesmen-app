@@ -10,10 +10,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Alert, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { installCrashTrap, readLastFatalError } from '@/services/crash-trap';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
@@ -69,6 +70,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
+        <ErrorBoundary>
         <AuthGate>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
@@ -140,6 +142,7 @@ export default function RootLayout() {
             <Stack.Screen name="tradesman/[id]" options={{ presentation: 'card' }} />
           </Stack>
         </AuthGate>
+        </ErrorBoundary>
         <StatusBar style="dark" />
       </SafeAreaProvider>
     </QueryClientProvider>
@@ -189,6 +192,28 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     return () => sub.remove();
   }, [router]);
 
+  // ── Loop-proof navigation ─────────────────────────────────────────
+  // ROOT CAUSE of the 19 Jul crash ("Maximum update depth exceeded" at
+  // AuthGate): router.replace() from inside this effect triggers a
+  // re-render BEFORE useSegments() reflects the new location, so the
+  // same redirect condition matched again and again — ~50 synchronous
+  // replaces and React aborts the app. The guard below makes each
+  // target requestable at most ONCE until the router's reported
+  // location actually changes, which breaks any such loop by
+  // construction. Every redirect in this effect MUST go through go().
+  const segKey = segments.join('/');
+  const pendingNav = useRef<string | null>(null);
+  useEffect(() => {
+    // Router caught up — allow a fresh navigation request.
+    pendingNav.current = null;
+  }, [segKey]);
+  const go = (target: string) => {
+    if (pendingNav.current === target) return;
+    pendingNav.current = target;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    router.replace(target as any);
+  };
+
   // Route based on auth state any time it changes.
   useEffect(() => {
     if (initialising) return;
@@ -206,7 +231,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       segments[0] === 'crew-code-entry';
 
     if (!session) {
-      if (!inAuthZone && !inCrewFlow) router.replace('/(auth)/welcome');
+      if (!inAuthZone && !inCrewFlow) go('/(auth)/welcome');
       return;
     }
 
@@ -214,7 +239,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     // (Profile may briefly be null between sign-up + trigger fire.)
     if (!profile?.role || profile.role === 'admin') {
       if (segments.at(1) !== 'role-select' && !inCrewFlow) {
-        router.replace('/(auth)/role-select');
+        go('/(auth)/role-select');
       }
       return;
     }
@@ -224,7 +249,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     // The screen sets welcomeShown=true on any CTA tap, after which we bounce
     // out of the auth zone like a normal app.
     if (!welcomeShown) {
-      if (!onWelcome && !inCrewFlow) router.replace('/(auth)/welcome');
+      if (!onWelcome && !inCrewFlow) go('/(auth)/welcome');
       return;
     }
 
@@ -253,7 +278,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       !onRoleSelect &&
       !inCrewFlow
     ) {
-      router.replace('/(auth)/onboarding-welcome');
+      go('/(auth)/onboarding-welcome');
       return;
     }
 
@@ -263,15 +288,16 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     // so an invite acceptance can finish before the tutorial runs.
     const onTour = segments[0] === 'tour';
     if (tourSeen === false && !onTour && !onRoleSelect && !inCrewFlow) {
-      router.replace('/tour');
+      go('/tour');
       return;
     }
 
     // Welcome already passed this session — push out of the auth zone if we're
     // stuck there. Exception: stay on role-select if the user is explicitly
     // there (post-signup confirmation step).
-    if (inAuthZone && segments.at(1) !== 'role-select') router.replace('/');
-  }, [session, profile?.role, initialising, welcomeShown, tourSeen, onboardingWelcomeSeen, segments, router]);
+    if (inAuthZone && segments.at(1) !== 'role-select') go('/');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, profile?.role, initialising, welcomeShown, tourSeen, onboardingWelcomeSeen, segKey]);
 
   if (initialising) {
     return (
