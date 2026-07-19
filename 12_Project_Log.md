@@ -182,8 +182,17 @@ mostly optional peers) is unconfirmed and no longer worth chasing.
 **Actions taken:**
 - Published **roll-back-to-embedded** on the `production` branch (`e6b99d48`)
   — all devices abandon locally-bundled OTAs and run the binary's own code.
-- **Build #13** kicked off with crash trap v2 + welcome-screen build stamp
-  compiled in natively.
+- **Build #13** built (crash trap v2 + build stamp) but **never submitted** —
+  superseded the same afternoon after the trap-armed signup crash showed no
+  on-screen error, proving the signup crash bypasses JavaScript (native abort).
+- **Build #14** (`6dffd4a`, submitted to TestFlight 19 Jul): expo-updates
+  **disabled entirely** (`updates.enabled=false` — the ErrorRecovery crash
+  surface is out of the process; stamp permanently reads `js embedded`),
+  crash trap v3 (record + swallow, report on next launch, no in-handler
+  alert), and a minimal signup flow (blur → 600ms settle → network →
+  `router.push`; the v3 unmount-the-password-field trick deleted as a
+  suspected crash cause). Next: delete + reinstall on devices, nuke DB,
+  re-run test script §6 from A1.
 
 **New shipping policy (until further notice): NO `eas update`.** Every change
 ships as a native EAS build + TestFlight submit. Slower (~40 min) but built in
