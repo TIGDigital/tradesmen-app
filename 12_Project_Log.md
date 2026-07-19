@@ -243,3 +243,11 @@ crash-log autopsies couldn't.
   0 projects, `project_documents` confirmed present) without the dashboard.
   Future migrations can be applied by Claude directly.
 - Build #15 (`5587e6e2`) built + submitted to TestFlight automatically at ~14:55.
+
+---
+
+## 10. 19 Jul (~15:10) — CONFIRMED FIXED ✅
+
+Todd, on a clean install of build #15: signed up as a fresh user and **landed
+on "Which describes you?"** — no crash. The AuthGate loop fix (`d87c876`) is
+verified on device. The July crash saga is closed. Testing resumes at §6 A5.
