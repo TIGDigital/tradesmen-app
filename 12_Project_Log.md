@@ -93,9 +93,9 @@ Whole project now compiles with **zero TypeScript errors**. Rule going forward: 
 - [ ] Run the **Documents migration** SQL in the Supabase Dashboard SQL editor
 - [ ] Run the **snag sign-off migration** SQL
 - [ ] Run the **nuke** DO-block so users/projects start from zero
-- [ ] Terminal: `eas build --profile production --platform ios` (→ build #11)
-- [ ] Terminal: `eas submit --profile production --platform ios` (pick build #11)
-- [ ] Every test device: **Delete** the Phase app entirely, reinstall from TestFlight once #11 appears (clears the corrupted update cache from the crash loop)
+- [x] Terminal: `eas build` → 19 Jul: first attempt blocked by Apple paperwork (updated Developer Program agreement + EU DSA trader status — both accepted in the web portals); retry succeeded → **build #12** (`ae5268f4`, the failed attempt burned #11)
+- [ ] Terminal: `eas submit --profile production --platform ios` (pick **build #12**, ID `ae5268f4…`)
+- [ ] Every test device: **Delete** the Phase app entirely, reinstall from TestFlight once #12 appears (clears the corrupted update cache from the crash loop)
 - [ ] After migrations are in: regenerate types + remove the `(supabase as any)` bridges in `services/documents.ts`, `services/snags.ts`, `services/reminders.ts`, `services/pricing.ts` (dev task, non-urgent)
 
 ---
