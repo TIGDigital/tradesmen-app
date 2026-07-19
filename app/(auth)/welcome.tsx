@@ -1,5 +1,7 @@
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Updates from 'expo-updates';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -111,6 +113,13 @@ export default function WelcomeScreen() {
                 </Pressable>
               </>
             )}
+            {/* Beta build stamp — native version (build) + which JS
+                update is running. "embedded" = no OTA applied yet;
+                8-char id = that OTA is live. Lets testers verify an
+                update actually landed without force-close guesswork. */}
+            <Text style={styles.buildStamp}>
+              v{Constants.expoConfig?.version ?? '?'} ({Constants.expoConfig?.ios?.buildNumber ?? Updates.runtimeVersion ?? '?'}) · js {Updates.updateId ? Updates.updateId.slice(0, 8) : 'embedded'}
+            </Text>
           </View>
         </View>
       </SafeAreaView>
@@ -230,5 +239,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Geist_500Medium',
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.65)',
+  },
+
+  // Beta build stamp — barely-there mono footer for OTA verification.
+  buildStamp: {
+    fontFamily: 'GeistMono_500Medium',
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.4)',
+    textAlign: 'center',
+    marginTop: 10,
   },
 });

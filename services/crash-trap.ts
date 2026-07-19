@@ -44,22 +44,40 @@ export function installCrashTrap(): void {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   errorUtils.setGlobalHandler((error: any, isFatal?: boolean) => {
+    let message = 'unknown error';
     try {
       const stack = String(error?.stack ?? '')
         .split('\n')
         .slice(0, 12)
         .join('\n');
-      const message =
+      message =
         `[${isFatal ? 'FATAL' : 'non-fatal'}] ` +
         `${error?.name ?? 'Error'}: ${error?.message ?? String(error)}\n` +
         stack;
       // Also emit to console so Metro / Expo Go sessions see it inline.
       console.error('[crash-trap]', message);
-      // Fire-and-forget persist. May lose the race against the native
-      // abort on some devices, but empirically usually lands.
       void AsyncStorage.setItem(KEY, message);
     } catch {
       // Never let the trap itself throw.
+    }
+
+    if (isFatal) {
+      // v2: do NOT forward fatal errors to RN's native handler. In
+      // release builds that handler raises RCTFatalException and
+      // aborts the process in the SAME synchronous call stack — the
+      // AsyncStorage write above never gets a chance to land (v1's
+      // flaw), and the tester just sees "Phase crashed". Instead,
+      // surface the error on screen so it can be screenshotted. The
+      // app may be in a degraded state afterwards (force-close to
+      // recover) — acceptable for beta diagnosis.
+      // Lazy import to avoid a require cycle at module init.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { Alert } = require('react-native');
+      Alert.alert(
+        'Phase hit an error',
+        `Please screenshot this and send it to Todd:\n\n${message.slice(0, 900)}`,
+      );
+      return;
     }
     previousHandler?.(error, isFatal);
   });
