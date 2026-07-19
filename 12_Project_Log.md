@@ -251,3 +251,30 @@ crash-log autopsies couldn't.
 Todd, on a clean install of build #15: signed up as a fresh user and **landed
 on "Which describes you?"** — no crash. The AuthGate loop fix (`d87c876`) is
 verified on device. The July crash saga is closed. Testing resumes at §6 A5.
+
+---
+
+## 11. 19 Jul (~15:00) — the boundary catches the REAL killer
+
+Build #15's signup worked (role-select finally reachable!) but tapping
+tradesman → Continue hit the new ErrorBoundary screen — which is exactly what
+it's for: instead of a mystery crash, it showed the error and full component
+trace on-screen.
+
+**The true root cause of the entire July saga** (superseding §9's AuthGate
+theory — AuthGate was ancestry in the traces, not the culprit): the Sprint 46
+"checklist refetches on focus" fix (`8c0e085`, 15 Jun) put the whole
+useQuery result object in its effect deps. That object is new every render →
+the focus effect re-fired every render → refetch → state change → render →
+**infinite loop** ("Maximum update depth exceeded") whenever the Jobs or
+customer home screen gained focus. Every crash path ran through a home screen
+gaining focus: fresh signup (→ customer home), signed-in boot (→ home),
+role-select confirm (→ Jobs).
+
+Why it hid for two weeks: shipped 15 Jun as an OTA the broken bundler
+pipeline never delivered (June testing passed), first embedded natively in
+builds #9/#10 on **4 Jul — the exact day the "signup crashes" began.**
+
+**Fix (`c7c9b3f`, build #16):** dep on TanStack's stable `refetch` functions,
+never the query object. Codebase swept: no other instances. DB re-nuked via
+the management API. Build #16 auto-submitted on completion.
