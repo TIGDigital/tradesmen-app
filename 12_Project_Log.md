@@ -278,3 +278,4 @@ builds #9/#10 on **4 Jul — the exact day the "signup crashes" began.**
 **Fix (`c7c9b3f`, build #16):** dep on TanStack's stable `refetch` functions,
 never the query object. Codebase swept: no other instances. DB re-nuked via
 the management API. Build #16 auto-submitted on completion.
+- Build #16 (`21cf73cb`) submitted to TestFlight ~15:35.
