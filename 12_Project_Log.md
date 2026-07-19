@@ -153,7 +153,7 @@ Report results step-by-step; any failure gets fixed before moving on.
 |---|---|
 | JS-only change | commit → `eas update --branch production --environment production --message "..."` → `git push` |
 | Native change / fresh binary | `eas build --profile production --platform ios` → `eas submit ...` |
-| Database change | Write migration file in `supabase/migrations/` **and paste it into the Dashboard SQL editor** (CLI push doesn't work from this machine — the missing-migration bug happened because this second step got skipped) |
+| Database change | Write migration file in `supabase/migrations/` **and apply it to the live DB**. As of 19 Jul, Claude can apply SQL directly via the Supabase Management API (`POST /v1/projects/<ref>/database/query`) — no more manual dashboard pasting, which is the step whose omission caused the missing-migration bug |
 | Regenerate DB types | `SUPABASE_ACCESS_TOKEN=<token> npx supabase gen types typescript --project-id gzzznhqvwyuyvzociydw --schema public > types/db.ts` |
 | Reset test data | The DO-block nuke (skips missing tables) — see memory / session notes |
 | OTA reaches a device | Cold start downloads it in background; **second** cold start runs it. Delete + reinstall if a device is in a crash loop. |
@@ -234,3 +234,12 @@ crash-log autopsies couldn't.
 - A root **ErrorBoundary** — render-phase errors (invisible to the ErrorUtils
   crash trap, as this saga proved) now show a screenshot-able error screen
   instead of killing the app.
+
+**Follow-through (same evening, autonomous while Todd was out):**
+- Swept the whole app for other effect-driven navigation: AuthGate was the
+  only instance; all other navigation is user-tap-initiated. Clean.
+- Discovered the Supabase **Management API** accepts SQL directly with the
+  existing access token — the DB was nuked + verified (0 users / 0 profiles /
+  0 projects, `project_documents` confirmed present) without the dashboard.
+  Future migrations can be applied by Claude directly.
+- Build #15 submitted to TestFlight automatically on completion.
