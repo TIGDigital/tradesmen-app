@@ -61,11 +61,19 @@ export default function JobsScreen() {
   // user may have posted an update, sent an invite, or ended their day
   // on a child screen, and the bullets should tick off without a manual
   // pull-to-refresh.
+  // CRITICAL: dep on the STABLE refetch function, never on the query
+  // result object — `onboardingQuery` has a new identity every render,
+  // which made this callback recreate every render, which made
+  // useFocusEffect re-fire every render, which called refetch(), which
+  // re-rendered… the "Maximum update depth exceeded" crash that took
+  // down every signup + signed-in boot from 4–19 Jul (native builds
+  // #9–#15). TanStack guarantees refetch identity is stable.
+  const { refetch: refetchOnboarding } = onboardingQuery;
   useFocusEffect(
     useCallback(() => {
-      void onboardingQuery.refetch();
+      void refetchOnboarding();
       void refetch();
-    }, [onboardingQuery, refetch]),
+    }, [refetchOnboarding, refetch]),
   );
 
   // The checklist items only render if there's at least one outstanding

@@ -343,10 +343,14 @@ function ProjectContent({
   // focus — reacting to an update or sending a message happens on
   // sub-screens, so without this the bullets only tick after a manual
   // pull-to-refresh.
+  // CRITICAL: dep on the STABLE refetch fn, never the query object —
+  // same infinite-refetch loop as jobs.tsx (see comment there; this
+  // was THE July crash).
+  const { refetch: refetchOnboarding } = onboardingQuery;
   useFocusEffect(
     useCallback(() => {
-      void onboardingQuery.refetch();
-    }, [onboardingQuery]),
+      void refetchOnboarding();
+    }, [refetchOnboarding]),
   );
   const checklistItems: ChecklistItem[] = ob && ob.first_project_id
     ? [
