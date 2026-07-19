@@ -242,4 +242,4 @@ crash-log autopsies couldn't.
   existing access token — the DB was nuked + verified (0 users / 0 profiles /
   0 projects, `project_documents` confirmed present) without the dashboard.
   Future migrations can be applied by Claude directly.
-- Build #15 submitted to TestFlight automatically on completion.
+- Build #15 (`5587e6e2`) built + submitted to TestFlight automatically at ~14:55.
