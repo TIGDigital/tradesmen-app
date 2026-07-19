@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -68,6 +69,11 @@ export default function CrewSignUpScreen() {
       Alert.alert('Missing code', 'This invite link is incomplete.');
       return;
     }
+    // iOS 26 keyboard-teardown crash guard — blur well before the
+    // router.replace at the end of this flow unmounts the screen.
+    // Same root cause + fix as sign-up.tsx.
+    Keyboard.dismiss();
+    await new Promise((resolve) => setTimeout(resolve, 400));
     setSubmitting(true);
     try {
       // 1. Create the account with role pre-set to 'apprentice'. The
@@ -197,8 +203,10 @@ export default function CrewSignUpScreen() {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
-                  autoComplete="password-new"
-                  textContentType="newPassword"
+                  // Intentionally NO autoComplete/textContentType: iOS
+                  // 26.5's password-suggestion overlay crashes when the
+                  // field unmounts on the post-signup navigation. Same
+                  // guard as sign-up.tsx / sign-in.tsx.
                   helper="At least 6 characters."
                   returnKeyType="done"
                   onSubmitEditing={onSubmit}

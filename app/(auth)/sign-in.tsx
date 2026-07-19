@@ -86,8 +86,10 @@ export default function SignInScreen() {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              autoComplete="current-password"
-              textContentType="password"
+              // Intentionally NO autoComplete/textContentType: iOS 26.5's
+              // password-suggestion overlay crashes (SIGABRT in
+              // UIKeyboardStateManager) when the field unmounts on the
+              // post-sign-in navigation. Same guard as sign-up.tsx.
               returnKeyType="done"
               onSubmitEditing={onSubmit}
             />
@@ -110,7 +112,11 @@ export default function SignInScreen() {
           </View>
 
           <Pressable
-            onPress={() => router.replace('/(auth)/sign-up')}
+            onPress={() => {
+              // iOS 26 guard: blur before replace unmounts this screen.
+              Keyboard.dismiss();
+              setTimeout(() => router.replace('/(auth)/sign-up'), 150);
+            }}
             hitSlop={12}
             style={{ alignItems: 'center', paddingVertical: t.space[4], marginTop: t.space[2] }}
           >

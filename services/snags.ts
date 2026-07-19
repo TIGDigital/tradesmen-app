@@ -257,14 +257,21 @@ export async function resolveSnag(args: {
         return { storage_path: path, sort_order: 100 + i, kind: 'resolution' as const };
       }),
     );
-    const { error: linkErr } = await supabase
+    // `kind` comes from migration 20260604000600 which hasn't been
+    // applied to the live DB yet (July audit) — cast until it is and
+    // types are regenerated.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: linkErr } = await (supabase as any)
       .from('project_snag_photos')
       .insert(uploads.map((u) => ({ snag_id: args.id, ...u })));
     if (linkErr) throw linkErr;
   }
 
   // 2. Flip status + stamp resolution metadata.
-  const { data: snag, error } = await supabase
+  // confirmed_at/confirmed_by also come from migration 20260604000600 —
+  // same cast bridge as above until it's applied + types regenerated.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: snag, error } = await (supabase as any)
     .from('project_snags')
     .update({
       status: 'resolved',
@@ -295,7 +302,10 @@ export async function signOffSnag(args: { id: string; project_id: string }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not signed in');
 
-  const { data: snag, error } = await supabase
+  // confirmed_at/confirmed_by: migration 20260604000600 bridge — see
+  // resolveSnag above.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: snag, error } = await (supabase as any)
     .from('project_snags')
     .update({
       confirmed_at: new Date().toISOString(),
@@ -326,7 +336,10 @@ export async function reopenSnag(args: { id: string; project_id: string; reason:
 
   const trimmedReason = args.reason.trim();
 
-  const { data: snag, error } = await supabase
+  // confirmed_at/confirmed_by: migration 20260604000600 bridge — see
+  // resolveSnag above.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: snag, error } = await (supabase as any)
     .from('project_snags')
     .update({
       status: 'open',

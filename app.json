@@ -10,7 +10,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tigdigital.phase",
-      "buildNumber": "1",
       "config": {
         "usesNonExemptEncryption": false
       },

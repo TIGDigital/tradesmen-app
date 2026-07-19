@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       apprentice_profiles: {
@@ -920,6 +895,115 @@ export type Database = {
           },
         ]
       }
+      project_price_changes: {
+        Row: {
+          created_at: string
+          id: string
+          previous_amount: number | null
+          project_id: string
+          proposed_amount: number
+          proposed_by: string
+          reason: string
+          responded_at: string | null
+          responded_by: string | null
+          response_note: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          previous_amount?: number | null
+          project_id: string
+          proposed_amount: number
+          proposed_by: string
+          reason: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response_note?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          previous_amount?: number | null
+          project_id?: string
+          proposed_amount?: number
+          proposed_by?: string
+          reason?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response_note?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_price_changes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_price_changes_proposed_by_fkey"
+            columns: ["proposed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_price_changes_responded_by_fkey"
+            columns: ["responded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_reminders: {
+        Row: {
+          created_at: string | null
+          days_of_week: number[]
+          enabled: boolean
+          project_id: string
+          time_of_day: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          days_of_week?: number[]
+          enabled?: boolean
+          project_id: string
+          time_of_day: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          days_of_week?: number[]
+          enabled?: boolean
+          project_id?: string
+          time_of_day?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_reminders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_reminders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_snag_photos: {
         Row: {
           created_at: string
@@ -1262,6 +1346,8 @@ export type Database = {
           pending_customer_name: string | null
           pending_customer_phone: string | null
           postcode: string | null
+          quoted_amount: number | null
+          quoted_amount_set_at: string | null
           status: Database["public"]["Enums"]["project_status"]
           status_reason: string | null
           title: string
@@ -1292,6 +1378,8 @@ export type Database = {
           pending_customer_name?: string | null
           pending_customer_phone?: string | null
           postcode?: string | null
+          quoted_amount?: number | null
+          quoted_amount_set_at?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           status_reason?: string | null
           title: string
@@ -1322,6 +1410,8 @@ export type Database = {
           pending_customer_name?: string | null
           pending_customer_phone?: string | null
           postcode?: string | null
+          quoted_amount?: number | null
+          quoted_amount_set_at?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           status_reason?: string | null
           title?: string
@@ -1912,9 +2002,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       certificate_kind: [

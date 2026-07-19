@@ -18,12 +18,9 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  // v3 crash workaround: conditionally-render the password TextInput so
-  // we can explicitly UNMOUNT it (React → native view removal) BEFORE
-  // navigating. That guarantees UIKit tears down its
-  // password-suggestion delegate on its own timeline, not in a race
-  // with router.replace's screen unmount. See onSubmit for the
-  // sequencing.
+  // iOS 26 keyboard-teardown crash guard (see onSubmit): the password
+  // TextInput is conditionally rendered so we can unmount it explicitly
+  // before any navigation.
   const [showPasswordField, setShowPasswordField] = useState(true);
 
   async function onSubmit() {
@@ -31,24 +28,14 @@ export default function SignUpScreen() {
       Alert.alert('Missing something', 'Name, email, and a 6+ character password please.');
       return;
     }
-    // iOS 26 signup-crash workaround, v3.
-    //
-    // Root cause (confirmed via .ips): iOS 26.5's `_UIKeyboardStateManager
-    // _teardownExistingDelegate` hits an assertion if a `secureTextEntry`
-    // TextInput is still first-responder when its host view unmounts.
-    // v1 (Keyboard.dismiss) and v2 (+250ms wait) weren't enough on Todd's
-    // tester's device — Expo Updates then hit its rollback threshold and
-    // itself crashed on startup, bricking the app.
-    //
-    // v3 sequences the teardown explicitly rather than praying to iOS:
-    //   1. Blur (Keyboard.dismiss) - releases first-responder
-    //   2. Unmount password TextInput (setShowPasswordField(false)) -
-    //      React removes the native view, UIKit tears down its
-    //      password-suggestion delegate BEFORE any navigation
-    //   3. Wait 400ms so tear-down animation + XPC round-trips finish
-    //   4. Do the network signup
-    //   5. Wait 300ms more so iOS has fully quiesced
-    //   6. Now safe to router.replace
+    // iOS 26 crash guard. iOS 26.5 aborts (confirmed via .ips crash log:
+    // SIGABRT in `_UIKeyboardStateManager _teardownExistingDelegate`) if
+    // a focused TextInput's native view is torn down while the keyboard's
+    // suggestion machinery is mid-teardown — exactly what a router
+    // navigation does to a just-submitted form. So sequence the teardown
+    // deterministically: blur → unmount the password field → wait →
+    // network call → wait → `push` (not `replace`, so this screen stays
+    // mounted and nothing gets torn down at nav time).
     Keyboard.dismiss();
     setShowPasswordField(false);
     await new Promise((resolve) => setTimeout(resolve, 400));
@@ -61,18 +48,10 @@ export default function SignUpScreen() {
         full_name: fullName.trim(),
         role: 'customer',
       });
-      // Second guard-wait before nav.
       await new Promise((resolve) => setTimeout(resolve, 300));
-      // v4: use `push` instead of `replace` so the sign-up screen stays
-      // MOUNTED in the stack. router.replace unmounts the current
-      // screen, and iOS 26 crashes on any TextInput unmount even after
-      // v1/v2/v3 workarounds. With push the TextInput's native view
-      // stays alive — UIKit's keyboard-state machine has nothing to
-      // race with. The user only ever moves forward through the stack.
       router.push('/(auth)/role-select');
     } catch (e) {
-      // On error we stay on this screen — re-mount the password field
-      // so the user can correct + retry.
+      // Stay here on error — re-mount the password field for retry.
       setShowPasswordField(true);
       Alert.alert("Couldn't sign up", (e as Error).message);
     } finally {
@@ -161,7 +140,11 @@ export default function SignUpScreen() {
           </View>
 
           <Pressable
-            onPress={() => router.replace('/(auth)/sign-in')}
+            onPress={() => {
+              // Same iOS 26 guard: blur before replace unmounts this screen.
+              Keyboard.dismiss();
+              setTimeout(() => router.replace('/(auth)/sign-in'), 150);
+            }}
             hitSlop={12}
             style={{ alignItems: 'center', paddingVertical: t.space[4], marginTop: t.space[2] }}
           >

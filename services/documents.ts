@@ -2,6 +2,14 @@ import * as DocumentPicker from 'expo-document-picker';
 
 import { supabase } from '@/services/supabase';
 
+// The project_documents table is defined in migration 20260604000400 but
+// was never applied to the live DB (found in the July audit), so the
+// regenerated types/db.ts doesn't know it. Cast through `any` — same
+// bridge pattern as services/reminders.ts — until the migration is run
+// in the Supabase Dashboard and types are regenerated.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const docsTable = () => (supabase as any).from('project_documents');
+
 export type ProjectDocument = {
   id: string;
   project_id: string;
@@ -64,8 +72,7 @@ export async function uploadDocument(args: {
     });
   if (uploadErr) throw uploadErr;
 
-  const { data: row, error: insertErr } = await supabase
-    .from('project_documents')
+  const { data: row, error: insertErr } = await docsTable()
     .insert({
       project_id,
       uploader_id: user.id,
@@ -87,8 +94,7 @@ export async function uploadDocument(args: {
 
 /** List documents on a project, newest first, excluding soft-deleted rows. */
 export async function listProjectDocuments(project_id: string): Promise<ProjectDocument[]> {
-  const { data, error } = await supabase
-    .from('project_documents')
+  const { data, error } = await docsTable()
     .select(`
       id, project_id, uploader_id, file_name, storage_path, mime_type,
       size_bytes, created_at,
@@ -103,8 +109,7 @@ export async function listProjectDocuments(project_id: string): Promise<ProjectD
 
 /** Soft-delete a document. RLS scopes to the uploader. */
 export async function softDeleteDocument(id: string) {
-  const { error } = await supabase
-    .from('project_documents')
+  const { error } = await docsTable()
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw error;
@@ -129,8 +134,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 /** Fetch one document row by id, including uploader profile. */
 export async function fetchDocument(id: string): Promise<ProjectDocument | null> {
-  const { data, error } = await supabase
-    .from('project_documents')
+  const { data, error } = await docsTable()
     .select(`
       id, project_id, uploader_id, file_name, storage_path, mime_type,
       size_bytes, created_at,
