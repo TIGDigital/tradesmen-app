@@ -11,11 +11,16 @@ import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Alert, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { installCrashTrap, readLastFatalError } from '@/services/crash-trap';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
+
+// Install as early as possible so even errors during module init of
+// later imports get recorded. Beta-only tooling — see crash-trap.ts.
+installCrashTrap();
 
 const queryClient = new QueryClient();
 
@@ -27,6 +32,21 @@ export default function RootLayout() {
     Geist_700Bold,
     GeistMono_500Medium,
   });
+
+  // Beta crash reporting: if the previous session died on a fatal JS
+  // error, the crash trap saved it — surface it so testers can
+  // screenshot + report. Remove once the beta stabilises.
+  useEffect(() => {
+    void (async () => {
+      const lastError = await readLastFatalError();
+      if (lastError) {
+        Alert.alert(
+          'Phase hit a problem last time',
+          `Please screenshot this and send it to Todd:\n\n${lastError.slice(0, 900)}`,
+        );
+      }
+    })();
+  }, []);
 
   // Hold the whole app until Geist + Geist Mono are resolved — without
   // them, the type tokens reference families that don't exist yet and
