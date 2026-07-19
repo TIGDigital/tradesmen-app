@@ -62,21 +62,14 @@ export function installCrashTrap(): void {
     }
 
     if (isFatal) {
-      // v2: do NOT forward fatal errors to RN's native handler. In
-      // release builds that handler raises RCTFatalException and
-      // aborts the process in the SAME synchronous call stack — the
-      // AsyncStorage write above never gets a chance to land (v1's
-      // flaw), and the tester just sees "Phase crashed". Instead,
-      // surface the error on screen so it can be screenshotted. The
-      // app may be in a degraded state afterwards (force-close to
-      // recover) — acceptable for beta diagnosis.
-      // Lazy import to avoid a require cycle at module init.
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { Alert } = require('react-native');
-      Alert.alert(
-        'Phase hit an error',
-        `Please screenshot this and send it to Todd:\n\n${message.slice(0, 900)}`,
-      );
+      // v3: do NOT forward fatal errors to RN's native handler (that
+      // handler raises RCTFatalException and aborts before the write
+      // above lands), and do NOT try to Alert from inside the handler
+      // either — v2 did, and presenting a native alert while UIKit is
+      // mid-teardown can itself crash natively on iOS 26. Just record
+      // and swallow: worst case the UI freezes/white-screens, the
+      // tester force-closes, and the NEXT launch shows the stored
+      // error via readLastFatalError() in the root layout.
       return;
     }
     previousHandler?.(error, isFatal);

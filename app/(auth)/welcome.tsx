@@ -118,7 +118,7 @@ export default function WelcomeScreen() {
                 8-char id = that OTA is live. Lets testers verify an
                 update actually landed without force-close guesswork. */}
             <Text style={styles.buildStamp}>
-              v{Constants.expoConfig?.version ?? '?'} ({Constants.expoConfig?.ios?.buildNumber ?? Updates.runtimeVersion ?? '?'}) · js {Updates.updateId ? Updates.updateId.slice(0, 8) : 'embedded'}
+              v{Constants.expoConfig?.version ?? '?'} · js {Updates.updateId ? Updates.updateId.slice(0, 8) : 'embedded'}
             </Text>
           </View>
         </View>

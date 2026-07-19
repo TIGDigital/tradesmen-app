@@ -18,27 +18,21 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  // iOS 26 keyboard-teardown crash guard (see onSubmit): the password
-  // TextInput is conditionally rendered so we can unmount it explicitly
-  // before any navigation.
-  const [showPasswordField, setShowPasswordField] = useState(true);
-
   async function onSubmit() {
     if (!fullName.trim() || !email.trim() || password.length < 6) {
       Alert.alert('Missing something', 'Name, email, and a 6+ character password please.');
       return;
     }
-    // iOS 26 crash guard. iOS 26.5 aborts (confirmed via .ips crash log:
-    // SIGABRT in `_UIKeyboardStateManager _teardownExistingDelegate`) if
-    // a focused TextInput's native view is torn down while the keyboard's
-    // suggestion machinery is mid-teardown — exactly what a router
-    // navigation does to a just-submitted form. So sequence the teardown
-    // deterministically: blur → unmount the password field → wait →
-    // network call → wait → `push` (not `replace`, so this screen stays
-    // mounted and nothing gets torn down at nav time).
+    // iOS 26 crash guard, simplified after the July crash hunt. The
+    // load-bearing rules: (1) blur the password field and give iOS a
+    // real, generous pause to finish tearing down the keyboard +
+    // suggestion UI while every view still exists; (2) never unmount
+    // the field ourselves (an earlier "fix" did — removing a focused
+    // secure field mid-dismiss is exactly the operation iOS 26 aborts
+    // on); (3) navigate forward with `push` so this screen and its
+    // inputs stay mounted.
     Keyboard.dismiss();
-    setShowPasswordField(false);
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await new Promise((resolve) => setTimeout(resolve, 600));
     setSubmitting(true);
     try {
       // Default role on signup is 'customer'; role-select screen lets them change it next.
@@ -48,11 +42,8 @@ export default function SignUpScreen() {
         full_name: fullName.trim(),
         role: 'customer',
       });
-      await new Promise((resolve) => setTimeout(resolve, 300));
       router.push('/(auth)/role-select');
     } catch (e) {
-      // Stay here on error — re-mount the password field for retry.
-      setShowPasswordField(true);
       Alert.alert("Couldn't sign up", (e as Error).message);
     } finally {
       setSubmitting(false);
@@ -112,27 +103,20 @@ export default function SignUpScreen() {
               textContentType="emailAddress"
               returnKeyType="next"
             />
-            {showPasswordField ? (
-              <InputField
-                label="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                // v4: intentionally NO autoComplete/textContentType.
-                // Setting textContentType="newPassword" triggers iOS's
-                // strong-password suggestion overlay, which is the
-                // specific native UI that crashes on iOS 26.5 during
-                // teardown. Trading off Keychain auto-suggest for a
-                // signup that doesn't crash the app.
-                helper="At least 6 characters."
-                returnKeyType="done"
-                onSubmitEditing={onSubmit}
-              />
-            ) : (
-              // Placeholder keeps layout stable while the real TextInput
-              // is unmounted during the iOS 26 keyboard-teardown window.
-              <View style={{ height: 78 }} />
-            )}
+            <InputField
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              // Intentionally NO autoComplete/textContentType: the
+              // "newPassword" attrs summon iOS's strong-password
+              // suggestion overlay — the native UI implicated in the
+              // iOS 26.5 teardown crash. Keychain auto-suggest traded
+              // for stability.
+              helper="At least 6 characters."
+              returnKeyType="done"
+              onSubmitEditing={onSubmit}
+            />
           </View>
 
           <View style={{ marginTop: t.space[8] }}>
