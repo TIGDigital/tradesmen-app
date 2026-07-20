@@ -89,7 +89,7 @@ export default function SnagsScreen() {
       {items.length > 0 && (
         <ScrollView
           contentContainerStyle={{ padding: t.space[5], gap: t.space[3] }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+          refreshControl={<RefreshControl tintColor={t.colors.brand.primary} refreshing={isRefetching} onRefresh={refetch} />}
         >
           {items.map((s) => (
             <Card key={s.id}>

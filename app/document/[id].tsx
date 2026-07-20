@@ -6,7 +6,6 @@ import * as Sharing from 'expo-sharing';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   StyleSheet,
@@ -17,6 +16,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ErrorState } from '@/components/ui/ErrorState';
+import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -190,7 +190,7 @@ export default function DocumentViewerScreen() {
             />
           ) : (
             <View style={[styles.center, { backgroundColor: '#000' }]}>
-              <ActivityIndicator color="#FFFFFF" />
+              <PhaseSpinner white />
             </View>
           )}
         </View>

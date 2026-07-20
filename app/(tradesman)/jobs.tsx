@@ -309,7 +309,7 @@ export default function JobsScreen() {
         <ScrollView
           contentContainerStyle={{ padding: t.space[5], gap: t.space[3], paddingBottom: t.space[16] }}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+          refreshControl={<RefreshControl tintColor={t.colors.brand.primary} refreshing={isRefetching} onRefresh={refetch} />}
         >
           {/* Greeting */}
           <View style={{ marginBottom: t.space[2] }}>

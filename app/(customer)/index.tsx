@@ -416,7 +416,7 @@ function ProjectContent({
     <ScrollView
       contentContainerStyle={{ padding: t.space[5], gap: t.space[5], paddingBottom: t.space[10] }}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl tintColor={t.colors.brand.primary} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {/* ── Greeting ─────────────────────────────────────────────── */}
       <Text style={[t.type.title1, { color: t.colors.text.primary }]}>

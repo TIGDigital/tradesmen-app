@@ -105,7 +105,7 @@ export default function CustomerUpdatesScreen() {
       {projectQuery.data && (
         <ScrollView
           contentContainerStyle={{ padding: t.space[5], gap: t.space[3], paddingBottom: t.space[16] }}
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} />}
+          refreshControl={<RefreshControl tintColor={t.colors.brand.primary} refreshing={isRefreshing} onRefresh={refresh} />}
         >
           {updates.length === 0 ? (
             <Text style={[t.type.body, { color: t.colors.text.tertiary }]}>

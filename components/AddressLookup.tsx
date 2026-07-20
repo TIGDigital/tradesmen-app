@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -9,6 +8,7 @@ import {
 } from 'react-native';
 
 import { InputField } from '@/components/ui/InputField';
+import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 import {
   findAddressesByPostcode,
   isValidUKPostcode,
@@ -171,7 +171,7 @@ export function AddressLookup({
         accessibilityLabel="Find addresses at this postcode"
       >
         {status === 'loading' ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
+          <PhaseSpinner size={20} white />
         ) : (
           <Text
             style={[

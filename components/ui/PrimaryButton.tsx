@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
   View,
   type GestureResponderEvent,
 } from 'react-native';
+
+import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 
 import { lightTheme } from '@/theme/light';
 
@@ -52,7 +53,7 @@ export function PrimaryButton({ title, onPress, loading, disabled, size = 'large
     >
       {loading && (
         <View style={styles.spinner}>
-          <ActivityIndicator color={t.colors.text.inverse} />
+          <PhaseSpinner size={22} white />
         </View>
       )}
       <Text

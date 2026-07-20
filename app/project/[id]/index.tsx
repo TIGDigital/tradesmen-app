@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   RefreshControl,
@@ -19,6 +18,7 @@ import { ProjectHero } from '@/components/ProjectHero';
 import { Reactions } from '@/components/Reactions';
 import { VoicePlayer } from '@/components/VoicePlayer';
 import { Card } from '@/components/ui/Card';
+import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useRealtimeProject } from '@/hooks/useRealtimeProject';
 import { sendInviteSms } from '@/services/invites';
@@ -193,7 +193,7 @@ export default function ProjectDetailScreen() {
 
       {isLoading && (
         <View style={styles.center}>
-          <ActivityIndicator />
+          <PhaseSpinner size={36} />
         </View>
       )}
 
@@ -321,7 +321,7 @@ function Content({
     <ScrollView
       contentContainerStyle={{ padding: t.space[5], gap: t.space[4], paddingBottom: t.space[16] }}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      refreshControl={<RefreshControl tintColor={t.colors.brand.primary} refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <ProjectHero
         status={project.status as ProjectStatus}

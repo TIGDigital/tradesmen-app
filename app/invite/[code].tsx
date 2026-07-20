@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -12,6 +11,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
+import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { acceptInvite, getInviteByCode } from '@/services/invites';
 import { useAuthStore } from '@/stores/auth';
@@ -60,7 +60,7 @@ export default function InviteAcceptScreen() {
       >
         {inviteQuery.isLoading && (
           <View style={styles.center}>
-            <ActivityIndicator />
+            <PhaseSpinner size={36} />
           </View>
         )}
 

@@ -11,14 +11,25 @@ import { lightTheme } from '@/theme/light';
  *   size       — outer width/height in px (default 56)
  *   reversed   — render the pale arc in white instead of blue-300, for
  *                use on dark / brand-coloured backgrounds.
+ *   white      — render the whole mark in white (pale arc translucent),
+ *                for photo viewers and brand-blue buttons where blue
+ *                arcs would vanish into the background.
  *
  * Source: assets/brand/phase-mark.svg + phase-mark-white.svg.
  * Geometry is the spec — don't redraw it ad-hoc.
  */
-export function PhaseLogo({ size = 56, reversed = false }: { size?: number; reversed?: boolean }) {
+export function PhaseLogo({
+  size = 56,
+  reversed = false,
+  white = false,
+}: {
+  size?: number;
+  reversed?: boolean;
+  white?: boolean;
+}) {
   const t = lightTheme;
-  const main = t.colors.brand.primary;
-  const pale = reversed ? '#FFFFFF' : '#91A8F6';
+  const main = white ? '#FFFFFF' : t.colors.brand.primary;
+  const pale = white ? 'rgba(255,255,255,0.45)' : reversed ? '#FFFFFF' : '#91A8F6';
 
   return (
     <Svg width={size} height={size} viewBox="0 0 100 100" fill="none">

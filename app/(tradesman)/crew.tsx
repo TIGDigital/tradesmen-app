@@ -70,7 +70,7 @@ export default function TradesmanCrewScreen() {
       {grouped.length > 0 && (
         <ScrollView
           contentContainerStyle={{ padding: 20, gap: 12 }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+          refreshControl={<RefreshControl tintColor={t.colors.brand.primary} refreshing={isRefetching} onRefresh={refetch} />}
         >
           {grouped.map((g) => (
             <Card key={g.user_id}>

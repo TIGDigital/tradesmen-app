@@ -11,10 +11,11 @@ import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, Alert, View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 import { installCrashTrap, readLastFatalError } from '@/services/crash-trap';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
@@ -62,7 +63,7 @@ export default function RootLayout() {
           backgroundColor: lightTheme.colors.bg.canvas,
         }}
       >
-        <ActivityIndicator />
+        <PhaseSpinner size={44} />
       </View>
     );
   }
@@ -316,7 +317,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   if (initialising) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.colors.bg.canvas }}>
-        <ActivityIndicator />
+        <PhaseSpinner size={44} />
       </View>
     );
   }

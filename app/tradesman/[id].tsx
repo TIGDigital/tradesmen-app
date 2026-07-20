@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
+import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 import {
   CERTIFICATE_LABELS,
   daysUntilExpiry,
@@ -91,7 +91,7 @@ export default function TradesmanProfileScreen() {
 
       {isLoading && (
         <View style={styles.center}>
-          <ActivityIndicator />
+          <PhaseSpinner size={36} />
         </View>
       )}
 

@@ -3,7 +3,6 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   Pressable,
   ScrollView,
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 import { getSignedUrl } from '@/services/media';
 import { supabase } from '@/services/supabase';
 
@@ -55,7 +55,7 @@ export default function PhotoViewerScreen() {
     <View style={styles.root}>
       {isLoading && (
         <View style={styles.center}>
-          <ActivityIndicator color="#FFFFFF" />
+          <PhaseSpinner white />
         </View>
       )}
 

@@ -246,7 +246,7 @@ export default function ProjectCrewScreen() {
       {items.length > 0 && (
         <ScrollView
           contentContainerStyle={{ padding: 20, gap: 12 }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+          refreshControl={<RefreshControl tintColor={t.colors.brand.primary} refreshing={isRefetching} onRefresh={refetch} />}
         >
           {items.map((m) => (
             <Card key={m.user_id}>

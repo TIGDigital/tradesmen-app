@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   KeyboardAvoidingView,
@@ -16,6 +15,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TypingIndicator } from '@/components/TypingIndicator';
+import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 import { useTypingPresence } from '@/hooks/useTypingPresence';
 import { fetchMessages, type MessageRow, markChatRead, sendMessage } from '@/services/messages';
@@ -190,7 +190,7 @@ export default function ChatScreen() {
       >
         {messagesQuery.isLoading && (
           <View style={styles.center}>
-            <ActivityIndicator />
+            <PhaseSpinner size={36} />
           </View>
         )}
 
