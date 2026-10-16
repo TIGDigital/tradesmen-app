@@ -309,45 +309,13 @@ export async function fetchCrewInviteByCode(code: string): Promise<CrewInvite | 
  * role set or were a 'customer' before.
  */
 export async function acceptCrewInvite(code: string): Promise<{ project_id: string }> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('You need to sign in to accept this invite');
-
-  const invite = await fetchCrewInviteByCode(code);
-  if (!invite) throw new Error('Invite is expired, revoked, or already used');
-
-  // 1. Insert (or reactivate) the crew row.
-  const { error: insertErr } = await supabase
-    .from('project_crew')
-    .upsert(
-      {
-        project_id: invite.project_id,
-        user_id: user.id,
-        role_on_project: invite.role_on_project,
-        removed_at: null,
-      },
-      { onConflict: 'project_id,user_id' },
-    );
-  if (insertErr) throw insertErr;
-
-  // 2. Mark the invite accepted.
-  const { error: updateErr } = await supabase
-    .from('crew_invitations')
-    .update({ accepted_at: new Date().toISOString(), accepted_by: user.id })
-    .eq('id', invite.id);
-  if (updateErr) {
-    // Best-effort — the crew row is already in place. Log but don't fail.
-    console.warn('[acceptCrewInvite] could not flip invite to accepted', updateErr);
-  }
-
-  // 3. Promote the signed-in user to 'apprentice' role if needed.
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle();
-  if (profile && (profile.role === 'customer' || !profile.role)) {
-    await supabase.from('profiles').update({ role: 'apprentice' }).eq('id', user.id);
-  }
-
-  return { project_id: invite.project_id };
+  // One atomic SECURITY DEFINER RPC (migration 20261016000200): validates
+  // the code, inserts/restores the crew row, marks the invite accepted,
+  // promotes the profile role. Replaces the old client-side upsert, which
+  // hit a Postgres RLS + ON CONFLICT edge case and broke crew signup.
+  const { data, error } = await supabase.rpc('accept_crew_invite', {
+    p_code: code.trim().toUpperCase(),
+  });
+  if (error) throw new Error(error.message);
+  return { project_id: data as string };
 }
