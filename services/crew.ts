@@ -191,6 +191,30 @@ export type CrewInvite = {
   inviter: { id: string; full_name: string | null } | null;
 };
 
+/**
+ * Outstanding (not yet accepted, not expired) invites for one project —
+ * the "waiting to join" section on the crew screen.
+ */
+export async function listPendingCrewInvites(project_id: string): Promise<CrewInvite[]> {
+  const { data, error } = await supabase
+    .from('crew_invitations')
+    .select(`
+      id, project_id, inviter_id, invitee_name, invite_code,
+      role_on_project, created_at, accepted_at, expires_at,
+      project_title, inviter_name
+    `)
+    .eq('project_id', project_id)
+    .is('accepted_at', null)
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return ((data ?? []) as unknown as CrewInvite[]).map((row) => ({
+    ...row,
+    project: null,
+    inviter: null,
+  }));
+}
+
 /** Generate a short, human-friendly invite code. Avoids easily-mistyped chars. */
 function generateCode(): string {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1

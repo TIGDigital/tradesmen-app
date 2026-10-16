@@ -25,11 +25,13 @@ import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   createCrewInvite,
+  listPendingCrewInvites,
   listProjectCrew,
   removeCrewMember,
   type CrewInvite,
   type CrewMember,
 } from '@/services/crew';
+import { relativeTime } from '@/services/projects';
 import { lightTheme } from '@/theme/light';
 
 /**
@@ -53,6 +55,13 @@ export default function ProjectCrewScreen() {
     enabled: !!id,
   });
 
+  const pendingQuery = useQuery({
+    queryKey: ['project-crew-pending', id],
+    queryFn: () => listPendingCrewInvites(id!),
+    enabled: !!id,
+  });
+  const pendingInvites = pendingQuery.data ?? [];
+
   const removeMutation = useMutation({
     mutationFn: (user_id: string) =>
       removeCrewMember({ project_id: id!, user_id }),
@@ -68,6 +77,7 @@ export default function ProjectCrewScreen() {
   const inviteMutation = useMutation({
     mutationFn: () =>
       createCrewInvite({ project_id: id!, invitee_name: inviteeName }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['project-crew-pending', id] }),
     onSuccess: (row) => {
       setGeneratedInvite(row);
       setInviteState('ready');
@@ -148,7 +158,7 @@ export default function ProjectCrewScreen() {
         <ErrorState message={(error as Error).message} onRetry={() => void refetch()} />
       )}
 
-      {!isLoading && !error && items.length === 0 && (
+      {!isLoading && !error && items.length === 0 && pendingInvites.length === 0 && (
         <ErrorState
           tone="empty"
           title="No crew yet"
@@ -243,14 +253,19 @@ export default function ProjectCrewScreen() {
         </View>
       )}
 
-      {items.length > 0 && (
+      {(items.length > 0 || pendingInvites.length > 0) && (
         <ScrollView
           contentContainerStyle={{ padding: 20, gap: 12 }}
           refreshControl={<RefreshControl tintColor={t.colors.brand.primary} refreshing={isRefetching} onRefresh={refetch} />}
         >
           {items.map((m) => (
             <Card key={m.user_id}>
-              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+              <Pressable
+                onPress={() =>
+                  router.push({ pathname: '/tradesman/[id]', params: { id: m.user_id } })
+                }
+                style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}
+              >
                 <View style={[styles.avatar, { backgroundColor: t.colors.bg.surface2 }]}>
                   {m.user?.avatar_url ? (
                     <Image
@@ -287,9 +302,57 @@ export default function ProjectCrewScreen() {
                     />
                   </Pressable>
                 )}
-              </View>
+              </Pressable>
             </Card>
           ))}
+
+          {/* ── Outstanding invites — sent but not yet accepted ── */}
+          {pendingInvites.length > 0 && (
+            <>
+              <Text
+                style={[
+                  t.type.caption,
+                  { color: t.colors.text.tertiary, marginTop: items.length > 0 ? 8 : 0 },
+                ]}
+              >
+                Waiting to join
+              </Text>
+              {pendingInvites.map((inv) => (
+                <Card key={inv.id}>
+                  <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                    <View style={[styles.avatar, { backgroundColor: t.colors.bg.surface2 }]}>
+                      <Ionicons name="hourglass-outline" size={18} color={t.colors.text.tertiary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}
+                        numberOfLines={1}
+                      >
+                        {inv.invitee_name}
+                      </Text>
+                      <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>
+                        Invited {relativeTime(inv.created_at)} · code {inv.invite_code}
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() =>
+                        void Share.share({
+                          message:
+                            `You've been invited to join a project on Phase.\n\n` +
+                            `Open the app and enter this code:\n${inv.invite_code}`,
+                        })
+                      }
+                      hitSlop={6}
+                      style={{ padding: 6 }}
+                      accessibilityLabel="Re-share invite"
+                    >
+                      <Ionicons name="share-outline" size={20} color={t.colors.text.link} />
+                    </Pressable>
+                  </View>
+                </Card>
+              ))}
+            </>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>

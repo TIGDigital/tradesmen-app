@@ -103,6 +103,14 @@ export default function TradesmanProfileScreen() {
         </View>
       )}
 
+      {!isLoading && !error && !profile && (
+        <View style={styles.center}>
+          <Text style={[t.type.body, { color: t.colors.text.secondary, textAlign: 'center' }]}>
+            No public profile yet.{'\n'}Crew members get one when they set up business details.
+          </Text>
+        </View>
+      )}
+
       {profile && (
         <ScrollView contentContainerStyle={{ padding: t.space[5], gap: t.space[4] }}>
           {/* Hero card */}

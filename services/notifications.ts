@@ -261,6 +261,20 @@ export async function markAllNotificationsRead() {
   if (error) throw error;
 }
 
+/** Delete one notification. RLS enforces ownership. */
+export async function deleteNotification(id: string) {
+  const { error } = await supabase.from('notifications').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/** Delete every notification for the signed-in user — the "Clear all" action. */
+export async function clearAllNotifications() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const { error } = await supabase.from('notifications').delete().eq('user_id', user.id);
+  if (error) throw error;
+}
+
 /**
  * Persist a notification row for a recipient. Called alongside the push
  * pipeline so an inbox entry exists whether or not the push was delivered.

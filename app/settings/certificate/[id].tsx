@@ -225,7 +225,7 @@ export default function CertificateEditScreen() {
 
           {kind === 'other' && (
             <InputField
-              label="Card name"
+              label="Document name"
               value={customName}
               onChangeText={setCustomName}
               autoCapitalize="words"

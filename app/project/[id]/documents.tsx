@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   Alert,
@@ -48,7 +49,11 @@ export default function DocumentsScreen() {
       return uploadDocument({ project_id: id!, asset });
     },
     onSuccess: (row) => {
-      if (row) queryClient.invalidateQueries({ queryKey: ['documents', id] });
+      if (row) {
+        queryClient.invalidateQueries({ queryKey: ['documents', id] });
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Uploaded', `"${row.file_name}" is now on the project.`);
+      }
     },
     onError: (e) => Alert.alert("Couldn't upload", (e as Error).message),
   });

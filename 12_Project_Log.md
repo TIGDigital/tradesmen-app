@@ -325,3 +325,51 @@ management API (0 users), **build #17** building + auto-submitting.
 **The lesson of the whole saga:** the simulator repro loop should have been
 step one, not step twelve. 30-second iterations with logs beat 40-minute
 blind builds every single time. It's now the standing rule in §7.
+
+---
+
+## 13. 16 Oct — first full beta feedback batch (Todd's tradesman pass, build #19)
+
+Three-month gap since §12. On return: Supabase had auto-paused twice (woken
+via Management API both times; data survived, including a real customer-side
+signup — Todd's friend Izaak, 6 Sep), builds #17/#18 hit TestFlight's 90-day
+expiry, and a new Apple agreement blocked submissions until Todd accepted it.
+Build #19 (same code as #18) shipped 16 Oct. A stray Shopify theme that had
+been unzipped into the repo root in July was moved out to
+`~/Desktop/shopify-theme-moved-from-phase-repo/`.
+
+Todd ran the first full tradesman pass on #19 and filed 14 notes.
+
+**Fixed same day (for build #20), migration `20261016000100`:**
+- Inbox no longer fills with your own updates — removed the old self-test
+  fallback in `notifyCounterparty` that notified the sender when a project
+  had no customer yet.
+- Inbox rows can be dismissed (✕, optimistic) and "Clear all" added;
+  new DELETE RLS policy on notifications.
+- Document upload now confirms: success haptic + "Uploaded" alert naming
+  the file.
+- Update photos upload much faster: picker quality 0.85 → 0.5 (library and
+  camera).
+- Crew members tap through to their profile; profile screen shows a
+  friendly message when a crew member has no public profile yet.
+- Crew screen shows "Waiting to join" — outstanding invites with code,
+  age, and a re-share button.
+- Milestones screen explains ordering (trade build order, additions at the
+  bottom).
+- Copy: "Add a card" → "Add document", "Card name" → "Document name".
+- Business details gains "Company number" above VAT
+  (tradesman_profiles.company_number).
+
+**Backlog (need design or an external dependency):**
+- Single date-range picker for start/end dates (currently two calendars).
+- Drag-and-drop milestone reordering.
+- Quote builder: itemised lines, VAT, discount, trade rates — the big one;
+  needs schema + design before code.
+- Snags: severity levels, timelines, choose customer vs crew audience.
+- Read receipts — "has the customer seen this update?"
+- Invite SMS/share text should carry an app link — blocked until a public
+  TestFlight link or App Store listing exists.
+- Companies House lookup to autofill business details — needs Todd to
+  register a (free) Companies House API key.
+- Swipe-to-dismiss inbox rows (gesture library not installed; ✕ button
+  shipped instead).

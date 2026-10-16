@@ -468,9 +468,16 @@ export async function notifyCounterparty(args: {
     const recipient_id =
       project.tradesman_id === args.sender_id ? project.customer_id : project.tradesman_id;
 
-    const target_user_id = recipient_id && recipient_id !== args.sender_id ? recipient_id : args.sender_id;
-    const isSelfTest = target_user_id === args.sender_id;
-    devLog('[notify] target_user_id', target_user_id, 'isSelfTest', isSelfTest);
+    // No counterparty on the project yet (e.g. customer hasn't joined) —
+    // nobody to tell. Never notify the sender about their own action; the
+    // old self-test fallback filled the tradesman's inbox with their own
+    // updates (Todd's beta feedback, 16 Oct).
+    if (!recipient_id || recipient_id === args.sender_id) {
+      devLog('[notify] no counterparty to notify — skipping');
+      return;
+    }
+    const target_user_id = recipient_id;
+    devLog('[notify] target_user_id', target_user_id);
 
     // Persist an inbox row regardless of whether the push goes out — Expo
     // Go on simulator can't deliver pushes but we still want the recipient
@@ -493,7 +500,7 @@ export async function notifyCounterparty(args: {
 
     await sendPush({
       tokens: tokens.map((t) => t.token),
-      title: isSelfTest ? `[Self-test] ${args.title}` : args.title,
+      title: args.title,
       body: args.body,
       data: { project_id: args.project_id },
     });

@@ -839,6 +839,57 @@ export type Database = {
           },
         ]
       }
+      project_documents: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          file_name: string
+          id: string
+          mime_type: string
+          project_id: string
+          size_bytes: number
+          storage_path: string
+          uploader_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          file_name: string
+          id?: string
+          mime_type: string
+          project_id: string
+          size_bytes: number
+          storage_path: string
+          uploader_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          file_name?: string
+          id?: string
+          mime_type?: string
+          project_id?: string
+          size_bytes?: number
+          storage_path?: string
+          uploader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_documents_uploader_id_fkey"
+            columns: ["uploader_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_milestones: {
         Row: {
           approved_by_customer_at: string | null
@@ -1008,6 +1059,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          kind: string
           snag_id: string
           sort_order: number
           storage_path: string
@@ -1015,6 +1067,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          kind?: string
           snag_id: string
           sort_order?: number
           storage_path: string
@@ -1022,6 +1075,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          kind?: string
           snag_id?: string
           sort_order?: number
           storage_path?: string
@@ -1038,6 +1092,8 @@ export type Database = {
       }
       project_snags: {
         Row: {
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           deleted_at: string | null
           description: string | null
@@ -1052,6 +1108,8 @@ export type Database = {
           title: string
         }
         Insert: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -1066,6 +1124,8 @@ export type Database = {
           title: string
         }
         Update: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -1080,6 +1140,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_snags_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_snags_project_id_fkey"
             columns: ["project_id"]
@@ -1657,6 +1724,7 @@ export type Database = {
           avg_rating: number | null
           bio: string | null
           business_name: string
+          company_number: string | null
           completed_projects: number | null
           created_at: string | null
           cscs_card_number: string | null
@@ -1689,6 +1757,7 @@ export type Database = {
           avg_rating?: number | null
           bio?: string | null
           business_name: string
+          company_number?: string | null
           completed_projects?: number | null
           created_at?: string | null
           cscs_card_number?: string | null
@@ -1721,6 +1790,7 @@ export type Database = {
           avg_rating?: number | null
           bio?: string | null
           business_name?: string
+          company_number?: string | null
           completed_projects?: number | null
           created_at?: string | null
           cscs_card_number?: string | null
@@ -1892,12 +1962,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1921,11 +1991,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1946,11 +2016,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1971,11 +2041,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1988,11 +2058,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

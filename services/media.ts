@@ -68,7 +68,9 @@ async function pickFromLibrary(maxCount: number): Promise<PickedPhoto[]> {
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
     allowsMultipleSelection: true,
     selectionLimit: maxCount,
-    quality: 0.85,
+    // 0.5 halves upload size vs 0.85 with no visible loss at feed sizes —
+    // posting an update was "taking a while" on device (beta feedback 16 Oct).
+    quality: 0.5,
   });
   if (result.canceled) return [];
   return result.assets.map(toPickedPhoto);
@@ -82,7 +84,7 @@ async function pickFromCamera(): Promise<PickedPhoto[]> {
   }
   const result = await ImagePicker.launchCameraAsync({
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    quality: 0.85,
+    quality: 0.5, // see pickFromLibrary — upload speed on site connections
   });
   if (result.canceled) return [];
   return result.assets.map(toPickedPhoto);

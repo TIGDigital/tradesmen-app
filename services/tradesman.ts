@@ -95,6 +95,7 @@ export type TradesmanProfile = Pick<
   | 'cscs_card_number'
   | 'insurance_provider'
   | 'insurance_expiry'
+  | 'company_number'
   | 'vat_number'
   | 'utr_number'
   | 'verified_at'
@@ -114,7 +115,7 @@ export async function getMyTradesmanProfile(): Promise<TradesmanProfile | null> 
   const { data, error } = await supabase
     .from('tradesman_profiles')
     .select(
-      'id, business_name, primary_trade, secondary_trades, years_trading, service_postcodes, bio, logo_url, website, gas_safe_number, niceic_number, cscs_card_number, insurance_provider, insurance_expiry, vat_number, utr_number, verified_at, avg_rating, total_reviews'
+      'id, business_name, primary_trade, secondary_trades, years_trading, service_postcodes, bio, logo_url, website, gas_safe_number, niceic_number, cscs_card_number, insurance_provider, insurance_expiry, company_number, vat_number, utr_number, verified_at, avg_rating, total_reviews'
     )
     .eq('id', user.id)
     .maybeSingle();
@@ -137,6 +138,7 @@ export async function updateTradesmanProfile(patch: Partial<{
   cscs_card_number: string | null;
   insurance_provider: string | null;
   insurance_expiry: string | null;
+  company_number: string | null;
   vat_number: string | null;
   utr_number: string | null;
 }>) {

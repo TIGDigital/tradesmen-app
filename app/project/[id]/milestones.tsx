@@ -86,6 +86,15 @@ export default function MilestonesScreen() {
             <Text style={[t.type.body, { color: t.colors.text.tertiary }]}>Loading…</Text>
           )}
 
+          {!isLoading && milestones.length > 0 && (
+            <Text
+              style={[t.type.footnote, { color: t.colors.text.tertiary, paddingBottom: t.space[3] }]}
+            >
+              Milestones run in your trade's usual build order. New ones you add join the
+              bottom of the list.
+            </Text>
+          )}
+
           {!isLoading && milestones.length === 0 && (
             <Text style={[t.type.body, { color: t.colors.text.tertiary }]}>
               No milestones yet. Add a few below to give your customer a roadmap.

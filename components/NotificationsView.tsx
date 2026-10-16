@@ -16,6 +16,8 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import {
+  clearAllNotifications,
+  deleteNotification,
   fetchMyNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -54,6 +56,24 @@ export function NotificationsView() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications', userId] }),
   });
 
+  const clearAllMutation = useMutation({
+    mutationFn: clearAllNotifications,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications', userId] }),
+  });
+
+  const dismissMutation = useMutation({
+    mutationFn: deleteNotification,
+    // Optimistic removal — the row disappears instantly, the server catches up.
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['notifications', userId] });
+      queryClient.setQueryData<NotificationRow[]>(
+        ['notifications', userId],
+        (old) => (old ?? []).filter((n) => n.id !== id),
+      );
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['notifications', userId] }),
+  });
+
   function onItemPress(n: NotificationRow) {
     if (!n.read_at) {
       // Fire-and-forget — UI will refresh via realtime + invalidation.
@@ -68,11 +88,18 @@ export function NotificationsView() {
     <View style={{ flex: 1, backgroundColor: t.colors.bg.canvas }}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={[t.type.title1, { color: t.colors.text.primary }]}>Inbox</Text>
-        {unreadCount > 0 && (
-          <Pressable onPress={() => markAllMutation.mutate()} hitSlop={6}>
-            <Text style={[t.type.bodyLg, { color: t.colors.text.link }]}>Mark all read</Text>
-          </Pressable>
-        )}
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          {unreadCount > 0 && (
+            <Pressable onPress={() => markAllMutation.mutate()} hitSlop={6}>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.link }]}>Mark all read</Text>
+            </Pressable>
+          )}
+          {items.length > 0 && (
+            <Pressable onPress={() => clearAllMutation.mutate()} hitSlop={6}>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.link }]}>Clear all</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
 
       {isLoading && (
@@ -140,7 +167,13 @@ export function NotificationsView() {
                     {relativeTime(n.created_at)}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={t.colors.text.tertiary} />
+                <Pressable
+                  onPress={() => dismissMutation.mutate(n.id)}
+                  hitSlop={10}
+                  accessibilityLabel="Dismiss notification"
+                >
+                  <Ionicons name="close" size={20} color={t.colors.text.tertiary} />
+                </Pressable>
               </Pressable>
             </Card>
           ))}

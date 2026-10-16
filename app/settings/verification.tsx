@@ -56,6 +56,7 @@ export default function VerificationSettingsScreen() {
 
   const [insuranceProvider, setInsuranceProvider] = useState('');
   const [insuranceExpiry, setInsuranceExpiry] = useState<Date | null>(null);
+  const [companyNumber, setCompanyNumber] = useState('');
   const [vat, setVat] = useState('');
   const [utr, setUtr] = useState('');
 
@@ -63,6 +64,7 @@ export default function VerificationSettingsScreen() {
     if (!profile) return;
     setInsuranceProvider(profile.insurance_provider ?? '');
     setInsuranceExpiry(profile.insurance_expiry ? new Date(profile.insurance_expiry) : null);
+    setCompanyNumber(profile.company_number ?? '');
     setVat(profile.vat_number ?? '');
     setUtr(profile.utr_number ?? '');
   }, [profile]);
@@ -72,6 +74,7 @@ export default function VerificationSettingsScreen() {
       updateTradesmanProfile({
         insurance_provider: insuranceProvider.trim() || null,
         insurance_expiry: insuranceExpiry ? insuranceExpiry.toISOString().slice(0, 10) : null,
+        company_number: companyNumber.trim() || null,
         vat_number: vat.trim() || null,
         utr_number: utr.trim() || null,
       }),
@@ -179,7 +182,7 @@ export default function VerificationSettingsScreen() {
             >
               <Ionicons name="add" size={20} color={t.colors.text.link} />
               <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.link }]}>
-                Add a card
+                Add document
               </Text>
             </Pressable>
           </View>
@@ -243,6 +246,15 @@ export default function VerificationSettingsScreen() {
             <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
               Tax info (private)
             </Text>
+
+            <InputField
+              label="Company number"
+              value={companyNumber}
+              onChangeText={setCompanyNumber}
+              autoCapitalize="characters"
+              placeholder="12345678"
+              helper="Your Companies House number, if you trade as a limited company."
+            />
 
             <InputField
               label="VAT number"
