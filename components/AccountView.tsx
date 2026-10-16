@@ -5,6 +5,7 @@ import {
   Alert,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -161,39 +162,64 @@ export function AccountView() {
           </>
         )}
 
-        {/* Enter a crew invite code — open to any signed-in user. */}
-        <Card>
-          <Pressable
-            onPress={() => {
-              Alert.prompt(
-                'Enter invite code',
-                'Paste the 6-character code your tradesman shared with you.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Go',
-                    onPress: (input?: string) => {
-                      const code = (input ?? '').trim().toUpperCase();
-                      if (code.length === 6) {
-                        router.push({ pathname: '/crew-invite/[code]', params: { code } });
-                      }
+        {/* Crew invite codes are a trade-side thing; customers instead get a
+            "tell a friend" share row (beta feedback 16 Oct). */}
+        {profile?.role === 'customer' ? (
+          <Card>
+            <Pressable
+              onPress={() =>
+                void Share.share({
+                  message:
+                    "I'm following my building project on Phase — photo updates, " +
+                    'progress and prices, all in one place. Worth a look if you have ' +
+                    'work planned: ask your tradesman to invite you on Phase.',
+                })
+              }
+              style={styles.rowBetween}
+            >
+              <View>
+                <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Enjoying Phase?</Text>
+                <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                  Tell a friend about Phase
+                </Text>
+              </View>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+            </Pressable>
+          </Card>
+        ) : (
+          <Card>
+            <Pressable
+              onPress={() => {
+                Alert.prompt(
+                  'Enter invite code',
+                  'Paste the 6-character code your tradesman shared with you.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Go',
+                      onPress: (input?: string) => {
+                        const code = (input ?? '').trim().toUpperCase();
+                        if (code.length === 6) {
+                          router.push({ pathname: '/crew-invite/[code]', params: { code } });
+                        }
+                      },
                     },
-                  },
-                ],
-                'plain-text',
-              );
-            }}
-            style={styles.rowBetween}
-          >
-            <View>
-              <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Have an invite?</Text>
-              <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
-                Enter a crew invite code
-              </Text>
-            </View>
-            <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
-          </Pressable>
-        </Card>
+                  ],
+                  'plain-text',
+                );
+              }}
+              style={styles.rowBetween}
+            >
+              <View>
+                <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Have an invite?</Text>
+                <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                  Enter a crew invite code
+                </Text>
+              </View>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+            </Pressable>
+          </Card>
+        )}
 
         {/* Sign out */}
         <View style={{ marginTop: t.space[8] }}>

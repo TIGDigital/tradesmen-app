@@ -32,6 +32,7 @@ import {
   type CrewMember,
 } from '@/services/crew';
 import { relativeTime } from '@/services/projects';
+import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
 /**
@@ -48,6 +49,7 @@ export default function ProjectCrewScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const role = useAuthStore((s) => s.profile?.role);
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['project-crew', id],
@@ -125,17 +127,22 @@ export default function ProjectCrewScreen() {
           <Text style={[t.type.bodyLg, { color: t.colors.text.link }]}>Done</Text>
         </Pressable>
         <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>Crew</Text>
-        <Pressable
-          onPress={() => {
-            setGeneratedInvite(null);
-            setInviteeName('');
-            setInviteState('form');
-          }}
-          hitSlop={12}
-          accessibilityLabel="Invite crew"
-        >
-          <Ionicons name="add-circle" size={28} color={t.colors.text.link} />
-        </Pressable>
+        {/* Inviting crew is the tradesman's job — customers see the list read-only. */}
+        {role === 'tradesman' ? (
+          <Pressable
+            onPress={() => {
+              setGeneratedInvite(null);
+              setInviteeName('');
+              setInviteState('form');
+            }}
+            hitSlop={12}
+            accessibilityLabel="Invite crew"
+          >
+            <Ionicons name="add-circle" size={28} color={t.colors.text.link} />
+          </Pressable>
+        ) : (
+          <View style={{ width: 28 }} />
+        )}
       </View>
 
       {isLoading && (

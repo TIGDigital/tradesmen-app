@@ -373,3 +373,44 @@ Todd ran the first full tradesman pass on #19 and filed 14 notes.
   register a (free) Companies House API key.
 - Swipe-to-dismiss inbox rows (gesture library not installed; ✕ button
   shipped instead).
+
+---
+
+## 14. 16 Oct — beta feedback batch 2 (customer pass) + the crew-signup bug
+
+**Crew signup was broken for everyone** — "new row violates row-level
+security policy for project_crew" on Create account & join. Root cause
+found by impersonating the failing user in SQL: the RLS policy passed a
+plain INSERT but failed ANY `ON CONFLICT` form — exactly what the
+client's upsert sends. Bonus finds in the same policies: self-insert
+didn't require knowing the code (anyone could join a project with a live
+invite), and self-update let crew promote themselves to lead. All three
+fixed by migration `20261016000200`: a SECURITY DEFINER
+`accept_crew_invite(code)` RPC — atomic, race-safe, code-as-capability —
+and both policies dropped. Verified live by impersonated RPC call.
+Shipped in build #20.
+
+**Customer-pass fixes (build #21):**
+- Jobs card shows the actual customer's name once joined (was a generic
+  "Customer joined"); "No customer yet" before an invite is out.
+- "This week" tiles (Photos / Updates / Days left) are now buttons:
+  photos screen, Updates tab, schedule.
+- "Booked — 0" state reworded: "Booked in · Work starts {day}".
+- "Your tradesman" card leads with the business name (person's name
+  beneath). jobs list + project fetch now join business_name.
+- Customer role-gating: no document upload (view/download only), no
+  milestone editing from the schedule (read-only), no crew invite button.
+- Snag actions role-gated: customers only sign off or re-open; "Mark in
+  progress"/"Mark resolved" are trade-side. (Snag creation already
+  notifies the other party — inbox row + push; re-verify on #20+.)
+- Customer account: "Enter a crew invite code" replaced with "Tell a
+  friend about Phase" share sheet (crew code entry stays for trade roles).
+- Inbox renamed **Activity** everywhere (tab + header) to stop the
+  Messages-vs-Inbox confusion.
+- Unread chat messages now badge the Messages tab (30s polling, both
+  roles) and show a brand-blue "N unread messages" banner on the home
+  feed via components/UnreadMessagesBanner.tsx.
+
+**Backlog added from this pass:** prompt for company name during
+tradesman onboarding; snag severity/timelines; read receipts; quote
+builder (next big design); range picker; drag-reorder milestones.

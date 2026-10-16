@@ -87,7 +87,7 @@ export function NotificationsView() {
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg.canvas }}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Text style={[t.type.title1, { color: t.colors.text.primary }]}>Inbox</Text>
+        <Text style={[t.type.title1, { color: t.colors.text.primary }]}>Activity</Text>
         <View style={{ flexDirection: 'row', gap: 16 }}>
           {unreadCount > 0 && (
             <Pressable onPress={() => markAllMutation.mutate()} hitSlop={6}>

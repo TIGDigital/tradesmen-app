@@ -370,8 +370,13 @@ function Content({
             <View>
               <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Your tradesman</Text>
               <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
-                {project.tradesman.full_name ?? '—'}
+                {project.tradesman.business?.business_name ?? project.tradesman.full_name ?? '—'}
               </Text>
+              {project.tradesman.business?.business_name && project.tradesman.full_name && (
+                <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 2 }]}>
+                  {project.tradesman.full_name}
+                </Text>
+              )}
             </View>
             <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
           </Pressable>

@@ -47,6 +47,7 @@ export default function SnagDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const myId = useAuthStore((s) => s.profile?.id);
+  const role = useAuthStore((s) => s.profile?.role);
   const queryClient = useQueryClient();
 
   const [mode, setMode] = useState<'view' | 'resolve' | 'reopen'>('view');
@@ -350,14 +351,16 @@ export default function SnagDetailScreen() {
                 gap: 8,
               }}
             >
-              {snag.status === 'open' && (
+              {/* Working the snag (progress / resolve) is the trade side's job.
+                  Customers only sign off or re-open (beta feedback 16 Oct). */}
+              {role !== 'customer' && snag.status === 'open' && (
                 <PrimaryButton
                   title="Mark in progress"
                   onPress={() => inProgressMutation.mutate()}
                   loading={inProgressMutation.isPending}
                 />
               )}
-              {(snag.status === 'open' || snag.status === 'in_progress') && (
+              {role !== 'customer' && (snag.status === 'open' || snag.status === 'in_progress') && (
                 <PrimaryButton title="Mark resolved with proof…" onPress={() => setMode('resolve')} />
               )}
               {canSignOff && (

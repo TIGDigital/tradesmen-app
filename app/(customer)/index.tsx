@@ -505,11 +505,24 @@ function ProjectContent({
           This week
         </Text>
         <View style={{ flexDirection: 'row', gap: t.space[3] }}>
-          <Stat label="Photos" value={photosThisWeek.toString()} />
-          <Stat label="Updates" value={updatesThisWeek.toString()} />
+          <Stat
+            label="Photos"
+            value={photosThisWeek.toString()}
+            onPress={() =>
+              router.push({ pathname: '/project/[id]/photos', params: { id: data.id } })
+            }
+          />
+          <Stat
+            label="Updates"
+            value={updatesThisWeek.toString()}
+            onPress={() => router.push('/(customer)/updates')}
+          />
           <Stat
             label="Days left"
             value={daysLeft != null ? daysLeft.toString() : '—'}
+            onPress={() =>
+              router.push({ pathname: '/project/[id]/schedule', params: { id: data.id } })
+            }
           />
         </View>
       </View>
@@ -663,15 +676,17 @@ function ProjectContent({
 }
 
 // ── Small dashboard primitives ─────────────────────────────────────
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, onPress }: { label: string; value: string; onPress?: () => void }) {
   const t = lightTheme;
   return (
-    <View
-      style={[
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => [
         t.elevation[1],
         {
           flex: 1,
-          backgroundColor: t.colors.bg.surface,
+          backgroundColor: pressed ? t.colors.bg.surface2 : t.colors.bg.surface,
           borderColor: t.colors.border.subtle,
           borderWidth: 1,
           borderRadius: t.radius.lg,
@@ -692,7 +707,7 @@ function Stat({ label, value }: { label: string; value: string }) {
       <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginTop: 4 }]}>
         {label}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 

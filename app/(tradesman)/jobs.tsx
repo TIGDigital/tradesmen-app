@@ -401,7 +401,7 @@ export default function JobsScreen() {
                         style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 2 }]}
                         numberOfLines={1}
                       >
-                        {p.pending_customer_name ?? 'Customer joined'} · {p.city ?? '—'}
+                        {p.customer?.full_name ?? p.pending_customer_name ?? 'No customer yet'} · {p.city ?? '—'}
                       </Text>
                       {stale && (
                         <Text style={[t.type.footnote, { color: '#C0392B', marginTop: 4 }]}>

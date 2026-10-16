@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { Tabs } from 'expo-router';
 
+import { fetchUnreadMessageCount } from '@/services/messages';
 import { lightTheme } from '@/theme/light';
 
 /**
@@ -10,6 +12,13 @@ import { lightTheme } from '@/theme/light';
  */
 export default function TradesmanLayout() {
   const t = lightTheme;
+  // Unread chat badge on the Messages tab; same query key as the home-feed
+  // banner so one fetch serves both (beta feedback 16 Oct).
+  const { data: unreadMessages = 0 } = useQuery({
+    queryKey: ['unread-messages'],
+    queryFn: fetchUnreadMessageCount,
+    refetchInterval: 30_000,
+  });
 
   return (
     <Tabs
@@ -43,6 +52,7 @@ export default function TradesmanLayout() {
         name="messages"
         options={{
           title: 'Messages',
+          tabBarBadge: unreadMessages > 0 ? unreadMessages : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubble-outline" color={color} size={size} />
           ),
@@ -60,7 +70,7 @@ export default function TradesmanLayout() {
       <Tabs.Screen
         name="notifications"
         options={{
-          title: 'Inbox',
+          title: 'Activity',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="notifications-outline" color={color} size={size} />
           ),

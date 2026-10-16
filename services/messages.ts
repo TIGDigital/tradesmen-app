@@ -65,6 +65,26 @@ export async function sendMessage(project_id: string, body: string) {
   return data;
 }
 
+/**
+ * Unread messages addressed to me, across every project RLS lets me see.
+ * Head-only count — no rows transferred. Feeds the Messages tab badge and
+ * the home-screen banner (beta feedback 16 Oct).
+ */
+export async function fetchUnreadMessageCount(): Promise<number> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 0;
+  const { count, error } = await supabase
+    .from('messages')
+    .select('id', { count: 'exact', head: true })
+    .neq('sender_id', user.id)
+    .is('read_at', null);
+  if (error) {
+    console.warn('[fetchUnreadMessageCount] failed', error.message);
+    return 0;
+  }
+  return count ?? 0;
+}
+
 export async function markChatRead(project_id: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;

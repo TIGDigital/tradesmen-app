@@ -13,6 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { fetchMilestones, fetchProject } from '@/services/projects';
+import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
 /**
@@ -31,6 +32,7 @@ export default function ScheduleScreen() {
   const t = lightTheme;
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const role = useAuthStore((s) => s.profile?.role);
   const { width: screenWidth } = useWindowDimensions();
 
   const projectQuery = useQuery({
@@ -152,9 +154,14 @@ export default function ScheduleScreen() {
               return (
                 <Pressable
                   key={m.id}
-                  onPress={() =>
-                    router.push({ pathname: '/milestone/[id]', params: { id: m.id } })
+                  // The milestone editor is tradesman-only — customers see the
+                  // schedule read-only (beta feedback 16 Oct).
+                  onPress={
+                    role === 'customer'
+                      ? undefined
+                      : () => router.push({ pathname: '/milestone/[id]', params: { id: m.id } })
                   }
+                  disabled={role === 'customer'}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',

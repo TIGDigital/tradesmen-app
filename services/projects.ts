@@ -77,7 +77,8 @@ export async function fetchMyProjects() {
     .select(`
       id, title, status, trade_type, city, postcode,
       expected_start_date, expected_end_date, actual_start_date,
-      created_at, last_update_at, pending_customer_name, customer_id
+      created_at, last_update_at, pending_customer_name, customer_id,
+      customer:profiles!projects_customer_id_fkey ( full_name )
     `)
     .or(filter)
     .is('archived_at', null)
@@ -97,7 +98,7 @@ export async function fetchProject(projectId: string) {
       expected_start_date, expected_end_date, actual_start_date, actual_end_date,
       pending_customer_name, pending_customer_phone,
       customer_id, invite_code, invite_sent_at, invite_accepted_at,
-      tradesman:profiles!projects_tradesman_id_fkey ( id, full_name, avatar_url ),
+      tradesman:profiles!projects_tradesman_id_fkey ( id, full_name, avatar_url, business:tradesman_profiles!tradesman_profiles_id_fkey ( business_name ) ),
       customer:profiles!projects_customer_id_fkey ( id, full_name, avatar_url )
     `)
     .eq('id', projectId)
@@ -795,7 +796,10 @@ export function statusHeadline(
         subhead: ctx.day && ctx.total ? `Day ${ctx.day} of ${ctx.total}` : '',
       };
     case 'scheduled':
-      return { headline: 'Booked', subhead: ctx.endDate ? `Starts ${formatDay(ctx.endDate)}` : '' };
+      return {
+        headline: 'Booked in',
+        subhead: ctx.endDate ? `Work starts ${formatDay(ctx.endDate)}` : 'Start date being confirmed',
+      };
     case 'materials_ordered':
       return { headline: 'Materials on order', subhead: 'Expected back on site soon' };
     case 'delayed':

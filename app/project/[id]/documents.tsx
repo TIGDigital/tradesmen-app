@@ -22,6 +22,7 @@ import {
   uploadDocument,
 } from '@/services/documents';
 import { relativeTime } from '@/services/projects';
+import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
 /**
@@ -34,6 +35,7 @@ export default function DocumentsScreen() {
   const t = lightTheme;
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const role = useAuthStore((s) => s.profile?.role);
   const queryClient = useQueryClient();
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
@@ -69,18 +71,23 @@ export default function DocumentsScreen() {
         <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
           Documents
         </Text>
-        <Pressable
-          onPress={() => uploadMutation.mutate()}
-          hitSlop={12}
-          disabled={uploadMutation.isPending}
-          accessibilityLabel="Upload a document"
-        >
-          <Ionicons
-            name="add-circle"
-            size={28}
-            color={uploadMutation.isPending ? t.colors.text.tertiary : t.colors.text.link}
-          />
-        </Pressable>
+        {/* Customers read documents; uploading is for the tradesman side. */}
+        {role !== 'customer' ? (
+          <Pressable
+            onPress={() => uploadMutation.mutate()}
+            hitSlop={12}
+            disabled={uploadMutation.isPending}
+            accessibilityLabel="Upload a document"
+          >
+            <Ionicons
+              name="add-circle"
+              size={28}
+              color={uploadMutation.isPending ? t.colors.text.tertiary : t.colors.text.link}
+            />
+          </Pressable>
+        ) : (
+          <View style={{ width: 28 }} />
+        )}
       </View>
 
       {isLoading && (
