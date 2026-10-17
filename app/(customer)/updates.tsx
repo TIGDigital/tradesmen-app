@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { router } from 'expo-router';
 import {
   Pressable,
@@ -18,6 +19,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useRealtimeProject } from '@/hooks/useRealtimeProject';
 import {
+  markUpdatesSeen,
   fetchMyCurrentProject,
   fetchProjectUpdates,
   formatEta,
@@ -42,6 +44,12 @@ export default function CustomerUpdatesScreen() {
   const projectId = projectQuery.data?.id ?? null;
 
   useRealtimeProject(projectId);
+
+  // Read receipt: opening this feed marks the project's updates as seen
+  // (idempotent server-side; tradesman then sees 'Seen ✓').
+  useEffect(() => {
+    if (projectId) void markUpdatesSeen(projectId);
+  }, [projectId]);
 
   const updatesQuery = useQuery({
     queryKey: ['updates', projectId],

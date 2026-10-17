@@ -115,7 +115,7 @@ export async function fetchProjectUpdates(projectId: string) {
   const { data, error } = await supabase
     .from('project_updates')
     .select(`
-      id, body, type, created_at, author_id, eta_at,
+      id, body, type, created_at, author_id, eta_at, customer_seen_at,
       approval_status, approval_decided_at, rejection_reason,
       author:profiles!project_updates_author_id_fkey ( id, full_name ),
       media:project_update_media ( id, storage_path, sort_order, media_type ),
@@ -127,6 +127,19 @@ export async function fetchProjectUpdates(projectId: string) {
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data ?? [];
+}
+
+/**
+ * Customer marks everything on a project as seen (server-side RPC; only
+ * the project's customer can, and it only ever sets the timestamp once).
+ * Fire-and-forget from the customer's Updates feed.
+ */
+export async function markUpdatesSeen(projectId: string): Promise<void> {
+  try {
+    await supabase.rpc('mark_updates_seen', { p_project_id: projectId });
+  } catch (e) {
+    devLog('[markUpdatesSeen] failed', e);
+  }
 }
 
 /** Lead-only: list updates awaiting approval for a project. */

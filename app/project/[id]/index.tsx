@@ -737,6 +737,9 @@ function Content({
                 </Text>
                 <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>
                   {relativeTime(u.created_at!)}
+                  {isTradesman && (u as { customer_seen_at?: string | null }).customer_seen_at
+                    ? ' · Seen ✓'
+                    : ''}
                 </Text>
               </View>
             </View>
