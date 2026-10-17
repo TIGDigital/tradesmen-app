@@ -153,6 +153,36 @@ export async function updateTradesmanProfile(patch: Partial<{
 
 /** Public-read fields for showing a tradesman to a customer. RLS allows
  *  reading verified tradesmen + counterparty tradesmen on a shared project. */
+export type CompanyLookupResult = {
+  company_number: string;
+  company_name: string;
+  company_status: string;
+  company_type: string;
+  date_of_creation: string | null;
+  registered_office: string;
+};
+
+/**
+ * Look up a company on the Companies House register (via the company-lookup
+ * Edge Function — the API key stays server-side).
+ */
+export async function lookupCompany(company_number: string): Promise<CompanyLookupResult> {
+  const { data, error } = await supabase.functions.invoke('company-lookup', {
+    body: { company_number },
+  });
+  if (error) {
+    // Non-2xx responses land here; surface the function's own message.
+    try {
+      const body = await (error as { context?: Response }).context?.json();
+      if (body?.error) throw new Error(body.error);
+    } catch (e) {
+      if (e instanceof Error && e.message && !e.message.includes('json')) throw e;
+    }
+    throw new Error('Lookup failed — check the number and try again');
+  }
+  return data as CompanyLookupResult;
+}
+
 export async function getPublicTradesmanProfile(id: string) {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')

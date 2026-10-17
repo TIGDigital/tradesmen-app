@@ -18,6 +18,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import {
+  lookupCompany,
   CERTIFICATE_LABELS,
   daysUntilExpiry,
   fetchMyCertificates,
@@ -68,6 +69,34 @@ export default function VerificationSettingsScreen() {
     setVat(profile.vat_number ?? '');
     setUtr(profile.utr_number ?? '');
   }, [profile]);
+
+  const lookupMutation = useMutation({
+    mutationFn: () => lookupCompany(companyNumber),
+    onSuccess: (c) => {
+      const statusLine =
+        c.company_status === 'active' ? '' : `\n\n⚠️ Register status: ${c.company_status}`;
+      Alert.alert(
+        c.company_name,
+        `No. ${c.company_number} · incorporated ${c.date_of_creation ?? '—'}\n${c.registered_office}${statusLine}`,
+        [
+          {
+            text: 'Use as business name',
+            onPress: async () => {
+              try {
+                await updateTradesmanProfile({ business_name: c.company_name });
+                await queryClient.invalidateQueries({ queryKey: ['tradesman-profile'] });
+                Alert.alert('Saved', `Your business name is now "${c.company_name}".`);
+              } catch (e) {
+                Alert.alert("Couldn't save", (e as Error).message);
+              }
+            },
+          },
+          { text: 'Close', style: 'cancel' },
+        ],
+      );
+    },
+    onError: (e) => Alert.alert('Not found', (e as Error).message),
+  });
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -255,6 +284,19 @@ export default function VerificationSettingsScreen() {
               placeholder="12345678"
               helper="Your Companies House number, if you trade as a limited company."
             />
+            {companyNumber.trim().length >= 6 && (
+              <Pressable
+                onPress={() => lookupMutation.mutate()}
+                disabled={lookupMutation.isPending}
+                hitSlop={6}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+              >
+                <Ionicons name="search" size={16} color={t.colors.text.link} />
+                <Text style={[t.type.body, { color: t.colors.text.link }]}>
+                  {lookupMutation.isPending ? 'Checking the register…' : 'Check on Companies House'}
+                </Text>
+              </Pressable>
+            )}
 
             <InputField
               label="VAT number"
