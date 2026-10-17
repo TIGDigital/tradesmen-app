@@ -678,6 +678,36 @@ export async function setMilestoneStatus(args: {
   return data;
 }
 
+/**
+ * Move a milestone one place up or down by swapping sort_order with its
+ * neighbour. Caller passes the already-sorted list so we don't refetch.
+ */
+export async function moveMilestone(
+  milestones: Array<{ id: string; sort_order: number }>,
+  id: string,
+  direction: 'up' | 'down',
+): Promise<void> {
+  const sorted = [...milestones].sort((a, b) => a.sort_order - b.sort_order);
+  const idx = sorted.findIndex((m) => m.id === id);
+  const swapWith = direction === 'up' ? idx - 1 : idx + 1;
+  if (idx < 0 || swapWith < 0 || swapWith >= sorted.length) return;
+
+  const a = sorted[idx];
+  const b = sorted[swapWith];
+  // Two updates; identical sort_orders (legacy data) get nudged apart.
+  const aOrder = a.sort_order === b.sort_order ? b.sort_order + (direction === 'up' ? -1 : 1) : b.sort_order;
+  const { error: e1 } = await supabase
+    .from('project_milestones')
+    .update({ sort_order: aOrder })
+    .eq('id', a.id);
+  if (e1) throw e1;
+  const { error: e2 } = await supabase
+    .from('project_milestones')
+    .update({ sort_order: a.sort_order })
+    .eq('id', b.id);
+  if (e2) throw e2;
+}
+
 /** Delete a milestone. (No reorder of remaining sort_orders — gaps are fine.) */
 export async function deleteMilestone(milestone_id: string) {
   const { error } = await supabase

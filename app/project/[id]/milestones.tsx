@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -16,7 +17,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Milestone } from '@/components/Milestone';
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { createMilestone, deleteMilestone, fetchMilestones } from '@/services/projects';
+import {
+  moveMilestone, createMilestone, deleteMilestone, fetchMilestones } from '@/services/projects';
 import { lightTheme } from '@/theme/light';
 
 export default function MilestonesScreen() {
@@ -50,6 +52,16 @@ export default function MilestonesScreen() {
       queryClient.invalidateQueries({ queryKey: ['my-current-project'] });
     },
     onError: (e) => Alert.alert("Couldn't delete milestone", (e as Error).message),
+  });
+
+  const moveMutation = useMutation({
+    mutationFn: (args: { id: string; direction: 'up' | 'down' }) =>
+      moveMilestone(milestones, args.id, args.direction),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['milestones', id] });
+      queryClient.invalidateQueries({ queryKey: ['my-current-project'] });
+    },
+    onError: (e) => Alert.alert("Couldn't move milestone", (e as Error).message),
   });
 
   function onAdd() {
@@ -101,7 +113,7 @@ export default function MilestonesScreen() {
             </Text>
           )}
 
-          {milestones.map((m) => (
+          {milestones.map((m, idx) => (
             <View
               key={m.id}
               style={{
@@ -109,13 +121,43 @@ export default function MilestonesScreen() {
                 borderBottomColor: t.colors.border.subtle,
               }}
             >
-              <Milestone
-                title={m.title}
-                status={m.status}
-                expectedDate={m.expected_date}
-                onPress={() => router.push({ pathname: '/milestone/[id]', params: { id: m.id } })}
-                onLongPress={() => onDelete(m.id, m.title)}
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ flex: 1 }}>
+                  <Milestone
+                    title={m.title}
+                    status={m.status}
+                    expectedDate={m.expected_date}
+                    onPress={() => router.push({ pathname: '/milestone/[id]', params: { id: m.id } })}
+                    onLongPress={() => onDelete(m.id, m.title)}
+                  />
+                </View>
+                <View style={{ gap: 2, paddingLeft: 8 }}>
+                  <Pressable
+                    onPress={() => moveMutation.mutate({ id: m.id, direction: 'up' })}
+                    hitSlop={8}
+                    disabled={idx === 0 || moveMutation.isPending}
+                    accessibilityLabel="Move milestone up"
+                  >
+                    <Ionicons
+                      name="chevron-up"
+                      size={18}
+                      color={idx === 0 ? t.colors.border.subtle : t.colors.text.tertiary}
+                    />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => moveMutation.mutate({ id: m.id, direction: 'down' })}
+                    hitSlop={8}
+                    disabled={idx === milestones.length - 1 || moveMutation.isPending}
+                    accessibilityLabel="Move milestone down"
+                  >
+                    <Ionicons
+                      name="chevron-down"
+                      size={18}
+                      color={idx === milestones.length - 1 ? t.colors.border.subtle : t.colors.text.tertiary}
+                    />
+                  </Pressable>
+                </View>
+              </View>
             </View>
           ))}
 
