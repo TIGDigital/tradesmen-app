@@ -448,3 +448,41 @@ captures.
 AI extracts the line items to prefill the builder. Needs an Anthropic
 API key as an Edge Function secret (Todd to create). Companies House
 lookup still waiting on Todd registering the free CH API key.
+
+---
+
+## 16. 17 Oct — THE GRIND: full beta backlog cleared (build #23)
+
+Everything still open from Todd's two feedback batches, built in one
+sitting, plus the day's requests:
+
+- **PDF quote import** — parse-quote-pdf Edge Function (Claude reads the
+  attached PDF; items/discount/VAT/notes prefill the builder for review).
+  E2E-verified with a synthetic plumber's quote: 4/4 items, qty, discount,
+  VAT, terms all correct. Gotcha logged: Claude 5.5 models reject the
+  temperature param.
+- **Companies House** — lookup by number, then upgraded to one search
+  accepting name OR number (search mode on the Edge Function, top-3 picker).
+  Keys for CH + Anthropic verified and stored as function secrets.
+- **Address lookup self-heals** — paid premise-level (credit restored via
+  auto top-up) with automatic free town-level fallback (postcodes.io) when
+  credit runs out: city+postcode prefill, user types line 1.
+- **Snag severity** (low / needs attention / urgent) with urgent-to-crew
+  push routing + trade-set fix-by dates (migration 20261017000300).
+- **Read receipts** — mark_updates_seen RPC on the customer feed;
+  tradesman sees "Seen ✓".
+- **One-session date range picker** — single inline calendar, Start/End
+  chips, auto-advance.
+- **Milestone reorder** (chevrons) + visible delete (was long-press only).
+- **Business-name prompt** on tradesman onboarding (optional, saves to
+  profile).
+- Quote declines require a reason (client + RPC enforcement).
+
+Infra/accounts sorted with Todd live: Ideal Postcodes auto top-up,
+Companies House app + key, Anthropic key, getphase.co.uk domain bought
+(+ one M365 mailbox, aliases for the rest), Twilio identity upgrade
+deferred. Builds #20/#22 shipped to TestFlight (#21 was a dud artifact,
+skipped). Smoke-tested the new screens in-sim before cutting #23.
+
+**Still open (external dependency only):** app-download link in invite
+messages — needs a public TestFlight link or App Store listing.
