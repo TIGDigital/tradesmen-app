@@ -48,7 +48,17 @@ export default function ScheduleScreen() {
   });
 
   const project = projectQuery.data;
-  const milestones = milestonesQuery.data ?? [];
+  // The Gantt orders itself by TIME, not by the manually dragged list
+  // order — dated milestones chronologically, undated ones after in
+  // list order (Todd's call, 17 Oct: drag is visual for the list only).
+  const milestones = [...(milestonesQuery.data ?? [])].sort((a, b) => {
+    if (a.expected_start_date && b.expected_start_date) {
+      return a.expected_start_date.localeCompare(b.expected_start_date);
+    }
+    if (a.expected_start_date) return -1;
+    if (b.expected_start_date) return 1;
+    return a.sort_order - b.sort_order;
+  });
 
   // Compute the global window. We prefer expected_start..expected_end at
   // project level, then fall back to min/max across milestone start+end.
