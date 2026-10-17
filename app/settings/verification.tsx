@@ -96,20 +96,31 @@ export default function VerificationSettingsScreen() {
     onError: (e) => Alert.alert("Couldn't search", (e as Error).message),
   });
 
-  function onFindByName() {
+  function onSearchRegister() {
     Alert.prompt(
-      'Find your company',
-      'Type the name as registered with Companies House.',
+      'Search Companies House',
+      'Type your company name or company number.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Search',
-          onPress: (q?: string) => {
-            if ((q ?? '').trim().length >= 3) searchMutation.mutate(q!.trim());
+          onPress: (input?: string) => {
+            const q = (input ?? '').trim();
+            if (!q) return;
+            // A number (with optional 2-letter prefix like SC/NI) goes
+            // straight to the profile lookup; anything else is a name search.
+            const compact = q.replace(/\s/g, '').toUpperCase();
+            if (/^[A-Z]{0,2}\d{5,8}$/.test(compact)) {
+              setCompanyNumber(compact);
+              lookupMutation.mutate(compact);
+            } else if (q.length >= 3) {
+              searchMutation.mutate(q);
+            }
           },
         },
       ],
       'plain-text',
+      companyNumber || undefined,
     );
   }
 
@@ -328,9 +339,7 @@ export default function VerificationSettingsScreen() {
               helper="Your Companies House number, if you trade as a limited company."
             />
             <Pressable
-              onPress={() =>
-                companyNumber.trim().length >= 6 ? lookupMutation.mutate(undefined) : onFindByName()
-              }
+              onPress={onSearchRegister}
               disabled={lookupMutation.isPending || searchMutation.isPending}
               hitSlop={6}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
@@ -339,9 +348,7 @@ export default function VerificationSettingsScreen() {
               <Text style={[t.type.body, { color: t.colors.text.link }]}>
                 {lookupMutation.isPending || searchMutation.isPending
                   ? 'Checking the register…'
-                  : companyNumber.trim().length >= 6
-                    ? 'Check on Companies House'
-                    : 'Find my company by name'}
+                  : 'Search Companies House — name or number'}
               </Text>
             </Pressable>
 
