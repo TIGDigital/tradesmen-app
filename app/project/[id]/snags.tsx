@@ -110,7 +110,9 @@ export default function SnagsScreen() {
                       </Text>
                     )}
                     <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 4 }]}>
+                      {s.severity === 'urgent' ? '🔴 Urgent · ' : s.severity === 'low' ? 'Low · ' : ''}
                       {s.reporter?.full_name ?? 'Someone'} · {relativeTime(s.created_at)}
+                      {s.due_date ? ` · fix by ${new Date(s.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}
                       {s.status === 'resolved' && s.confirmed_at ? ' · ✓ signed off' : ''}
                     </Text>
                   </View>

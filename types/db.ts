@@ -1218,6 +1218,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           description: string | null
+          due_date: string | null
           id: string
           location_hint: string | null
           project_id: string
@@ -1225,6 +1226,7 @@ export type Database = {
           resolution_note: string | null
           resolved_at: string | null
           resolved_by: string | null
+          severity: string
           status: Database["public"]["Enums"]["snag_status"]
           title: string
         }
@@ -1234,6 +1236,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           location_hint?: string | null
           project_id: string
@@ -1241,6 +1244,7 @@ export type Database = {
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          severity?: string
           status?: Database["public"]["Enums"]["snag_status"]
           title: string
         }
@@ -1250,6 +1254,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           location_hint?: string | null
           project_id?: string
@@ -1257,6 +1262,7 @@ export type Database = {
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          severity?: string
           status?: Database["public"]["Enums"]["snag_status"]
           title?: string
         }
@@ -1424,6 +1430,7 @@ export type Database = {
           author_id: string
           body: string | null
           created_at: string | null
+          customer_seen_at: string | null
           delay_new_eta: string | null
           delay_reason: Database["public"]["Enums"]["delay_reason"] | null
           deleted_at: string | null
@@ -1445,6 +1452,7 @@ export type Database = {
           author_id: string
           body?: string | null
           created_at?: string | null
+          customer_seen_at?: string | null
           delay_new_eta?: string | null
           delay_reason?: Database["public"]["Enums"]["delay_reason"] | null
           deleted_at?: string | null
@@ -1466,6 +1474,7 @@ export type Database = {
           author_id?: string
           body?: string | null
           created_at?: string | null
+          customer_seen_at?: string | null
           delay_new_eta?: string | null
           delay_reason?: Database["public"]["Enums"]["delay_reason"] | null
           deleted_at?: string | null
@@ -1971,6 +1980,7 @@ export type Database = {
       is_project_crew: { Args: { p_id: string }; Returns: boolean }
       is_project_participant: { Args: { p_id: string }; Returns: boolean }
       is_project_tradesman: { Args: { p_id: string }; Returns: boolean }
+      mark_updates_seen: { Args: { p_project_id: string }; Returns: undefined }
     }
     Enums: {
       certificate_kind:

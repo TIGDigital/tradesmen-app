@@ -23,6 +23,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { getSignedUrl, pickPhotos, type PickedPhoto } from '@/services/media';
 import { relativeTime } from '@/services/projects';
 import {
+  setSnagDueDate,
   fetchSnag,
   markSnagInProgress,
   reopenSnag,
@@ -48,6 +49,27 @@ export default function SnagDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const myId = useAuthStore((s) => s.profile?.id);
   const role = useAuthStore((s) => s.profile?.role);
+
+  const dueDateMutation = useMutation({
+    mutationFn: (date: string | null) => setSnagDueDate(id!, date),
+    onSuccess: () => invalidate(),
+    onError: (e) => Alert.alert("Couldn't set the date", (e as Error).message),
+  });
+
+  function onSetDueDate() {
+    const inDays = (n: number) => {
+      const d = new Date();
+      d.setDate(d.getDate() + n);
+      return d.toISOString().slice(0, 10);
+    };
+    Alert.alert('Fix by when?', 'The customer sees this date on the snag.', [
+      { text: 'Tomorrow', onPress: () => dueDateMutation.mutate(inDays(1)) },
+      { text: 'In 3 days', onPress: () => dueDateMutation.mutate(inDays(3)) },
+      { text: 'Next week', onPress: () => dueDateMutation.mutate(inDays(7)) },
+      { text: 'Clear date', style: 'destructive', onPress: () => dueDateMutation.mutate(null) },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
   const queryClient = useQueryClient();
 
   const [mode, setMode] = useState<'view' | 'resolve' | 'reopen'>('view');
@@ -179,9 +201,23 @@ export default function SnagDetailScreen() {
                   </Text>
                 )}
                 <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 6 }]}>
+                  {snag.severity === 'urgent' ? '🔴 Urgent · ' : snag.severity === 'low' ? 'Low priority · ' : ''}
                   Flagged by {snag.reporter?.full_name ?? 'someone'} ·{' '}
                   {relativeTime(snag.created_at)}
                 </Text>
+                {role !== 'customer' && snag.status !== 'resolved' ? (
+                  <Pressable onPress={onSetDueDate} hitSlop={6} style={{ marginTop: 4 }}>
+                    <Text style={[t.type.footnote, { color: t.colors.text.link }]}>
+                      {snag.due_date
+                        ? `Fix by ${new Date(snag.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} — change`
+                        : '+ Set a fix-by date'}
+                    </Text>
+                  </Pressable>
+                ) : snag.due_date ? (
+                  <Text style={[t.type.footnote, { color: t.colors.text.secondary, marginTop: 4 }]}>
+                    Fix by {new Date(snag.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
+                  </Text>
+                ) : null}
               </View>
               <StatusPill status={snag.status} />
             </View>

@@ -12,6 +12,8 @@ export type SnagPhoto = {
   kind: 'report' | 'resolution';
 };
 
+export type SnagSeverity = 'low' | 'normal' | 'urgent';
+
 export type ProjectSnag = {
   id: string;
   project_id: string;
@@ -20,6 +22,8 @@ export type ProjectSnag = {
   description: string | null;
   location_hint: string | null;
   status: SnagStatus;
+  severity: SnagSeverity;
+  due_date: string | null;
   resolved_at: string | null;
   resolved_by: string | null;
   resolution_note: string | null;
@@ -36,6 +40,7 @@ export async function fetchProjectSnags(project_id: string): Promise<ProjectSnag
     .from('project_snags')
     .select(`
       id, project_id, reporter_id, title, description, location_hint, status,
+      severity, due_date,
       resolved_at, resolved_by, resolution_note, confirmed_at, confirmed_by, created_at,
       reporter:profiles!project_snags_reporter_id_fkey ( id, full_name, avatar_url ),
       photos:project_snag_photos ( id, storage_path, sort_order, kind )
@@ -62,6 +67,7 @@ export async function createSnag(args: {
   description?: string | null;
   location_hint?: string | null;
   photos?: PickedPhoto[];
+  severity?: SnagSeverity;
 }): Promise<ProjectSnag> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not signed in');
@@ -78,6 +84,7 @@ export async function createSnag(args: {
       title: trimmedTitle,
       description: args.description?.trim() || null,
       location_hint: args.location_hint?.trim() || null,
+      severity: args.severity ?? 'normal',
     })
     .select('id, project_id')
     .single();
@@ -114,8 +121,12 @@ export async function createSnag(args: {
     if (linkErr) throw linkErr;
   }
 
-  // 3. Notify the counterparty (project participant who isn't us).
+  // 3. Notify the counterparty — and, for urgent snags, the whole crew
+  //    (beta feedback 16 Oct: route by severity).
   void notifyCounterpartyOfSnag(snag.id, snag.project_id, user.id, trimmedTitle);
+  if ((args.severity ?? 'normal') === 'urgent') {
+    void notifyCrewOfUrgentSnag(snag.id, snag.project_id, user.id, trimmedTitle);
+  }
 
   // 4. Return the full snag row.
   const full = await fetchSnag(snag.id);
@@ -129,6 +140,7 @@ export async function fetchSnag(id: string): Promise<ProjectSnag | null> {
     .from('project_snags')
     .select(`
       id, project_id, reporter_id, title, description, location_hint, status,
+      severity, due_date,
       resolved_at, resolved_by, resolution_note, confirmed_at, confirmed_by, created_at,
       reporter:profiles!project_snags_reporter_id_fkey ( id, full_name, avatar_url ),
       photos:project_snag_photos ( id, storage_path, sort_order, kind )
@@ -154,6 +166,56 @@ export async function softDeleteSnag(id: string) {
  * Mirrors the notifyCounterparty pattern in services/projects.ts; we
  * inline it here to avoid importing private helpers.
  */
+/** Urgent snags ping every live crew member (except the reporter) too. */
+async function notifyCrewOfUrgentSnag(
+  snag_id: string,
+  project_id: string,
+  reporter_id: string,
+  title: string,
+) {
+  try {
+    const { data: crew } = await supabase
+      .from('project_crew')
+      .select('user_id')
+      .eq('project_id', project_id)
+      .is('removed_at', null)
+      .neq('user_id', reporter_id);
+    if (!crew || crew.length === 0) return;
+
+    for (const member of crew) {
+      await recordNotification({
+        user_id: member.user_id,
+        kind: 'new_update',
+        project_id,
+        title: '🔴 Urgent snag',
+        body: title,
+        data: { project_id, snag_id },
+      });
+    }
+
+    const { data: tokens } = await supabase
+      .from('push_tokens')
+      .select('token')
+      .in('user_id', crew.map((c) => c.user_id));
+    if (tokens && tokens.length > 0) {
+      await sendPush({
+        tokens: tokens.map((t) => t.token),
+        title: '🔴 Urgent snag',
+        body: title,
+        data: { project_id, snag_id },
+      });
+    }
+  } catch (e) {
+    console.warn('[notifyCrewOfUrgentSnag] failed', e);
+  }
+}
+
+/** Trade side sets (or clears) the "fix by" date on a snag. */
+export async function setSnagDueDate(id: string, due_date: string | null) {
+  const { error } = await supabase.from('project_snags').update({ due_date }).eq('id', id);
+  if (error) throw error;
+}
+
 async function notifyCounterpartyOfSnag(
   snag_id: string,
   project_id: string,

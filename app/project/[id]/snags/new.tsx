@@ -18,7 +18,7 @@ import { PhotoStrip } from '@/components/PhotoStrip';
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { type PickedPhoto, pickPhotos } from '@/services/media';
-import { createSnag } from '@/services/snags';
+import { createSnag, type SnagSeverity } from '@/services/snags';
 import { lightTheme } from '@/theme/light';
 
 const DESCRIPTION_MAX = 2000;
@@ -40,6 +40,7 @@ export default function NewSnagScreen() {
   const [locationHint, setLocationHint] = useState('');
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
+  const [severity, setSeverity] = useState<SnagSeverity>('normal');
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -49,6 +50,7 @@ export default function NewSnagScreen() {
         location_hint: locationHint || null,
         description: description || null,
         photos,
+        severity,
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['snags', id] });
@@ -101,6 +103,51 @@ export default function NewSnagScreen() {
             autoCapitalize="sentences"
             placeholder="Grout uneven behind toilet"
           />
+
+          <View>
+            <Text style={[t.type.footnote, { color: t.colors.text.secondary, marginBottom: 6 }]}>
+              How serious is it?
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {(
+                [
+                  { value: 'low', label: 'Low' },
+                  { value: 'normal', label: 'Needs attention' },
+                  { value: 'urgent', label: 'Urgent' },
+                ] as const
+              ).map((o) => {
+                const active = severity === o.value;
+                return (
+                  <Pressable
+                    key={o.value}
+                    onPress={() => setSeverity(o.value)}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: active ? t.colors.brand.primary : t.colors.border.subtle,
+                      backgroundColor: active ? t.colors.brand.tint : t.colors.bg.surface,
+                    }}
+                  >
+                    <Text
+                      style={[
+                        t.type.body,
+                        { color: active ? t.colors.brand.primary : t.colors.text.secondary },
+                      ]}
+                    >
+                      {o.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {severity === 'urgent' && (
+              <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 6 }]}>
+                Urgent snags alert the whole crew as well.
+              </Text>
+            )}
+          </View>
 
           <InputField
             label="Where? (optional)"
