@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -19,7 +20,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { pickDocument, uploadDocument } from '@/services/documents';
 import { formatGbp } from '@/services/pricing';
-import { createAndSendQuote, quoteTotals } from '@/services/quotes';
+import { createAndSendQuote, parseQuotePdf, quoteTotals } from '@/services/quotes';
 import { getMyTradesmanProfile } from '@/services/tradesman';
 import { lightTheme } from '@/theme/light';
 
@@ -70,6 +71,28 @@ export default function NewQuoteScreen() {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
   }
 
+  const parseMutation = useMutation({
+    mutationFn: (document_id: string) => parseQuotePdf(document_id),
+    onSuccess: (parsed) => {
+      setLines(
+        parsed.items.map((i) => ({
+          description: i.description,
+          qty: String(i.qty),
+          price: String(i.unit_price),
+        })),
+      );
+      if (parsed.discount_amount > 0) setDiscount(String(parsed.discount_amount));
+      setVatRegistered(parsed.vat_registered);
+      if (parsed.notes) setNotes(parsed.notes);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        `${parsed.items.length} ${parsed.items.length === 1 ? 'line' : 'lines'} imported`,
+        'Check every figure before sending — the reader drafts, you decide.',
+      );
+    },
+    onError: (e) => Alert.alert("Couldn't read the PDF", (e as Error).message),
+  });
+
   const attachMutation = useMutation({
     mutationFn: async () => {
       const asset = await pickDocument();
@@ -77,7 +100,19 @@ export default function NewQuoteScreen() {
       return uploadDocument({ project_id: id!, asset });
     },
     onSuccess: (doc) => {
-      if (doc) setAttachedPdf({ id: doc.id, name: doc.file_name });
+      if (doc) {
+        setAttachedPdf({ id: doc.id, name: doc.file_name });
+        if (doc.mime_type === 'application/pdf') {
+          Alert.alert(
+            'Read this PDF?',
+            'The line items, discount and VAT can be read out of the document to pre-fill the quote for you to check.',
+            [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Read it', onPress: () => parseMutation.mutate(doc.id) },
+            ],
+          );
+        }
+      }
     },
     onError: (e) => Alert.alert("Couldn't attach", (e as Error).message),
   });
@@ -204,9 +239,11 @@ export default function NewQuoteScreen() {
             <Text style={[t.type.body, { color: t.colors.text.link }]} numberOfLines={1}>
               {attachMutation.isPending
                 ? 'Attaching…'
-                : attachedPdf
-                  ? attachedPdf.name
-                  : 'Attach your PDF quote (optional)'}
+                : parseMutation.isPending
+                  ? 'Reading the PDF…'
+                  : attachedPdf
+                    ? attachedPdf.name
+                    : 'Attach your PDF quote (optional)'}
             </Text>
           </Pressable>
 

@@ -182,6 +182,34 @@ export async function decideQuote(args: {
   }
 }
 
+export type ParsedQuotePdf = {
+  items: QuoteItemInput[];
+  discount_amount: number;
+  vat_registered: boolean;
+  notes: string;
+  document_total: number | null;
+};
+
+/**
+ * AI-read an uploaded quote PDF into builder-ready line items (parse-quote-pdf
+ * Edge Function; the tradesman reviews everything before sending).
+ */
+export async function parseQuotePdf(document_id: string): Promise<ParsedQuotePdf> {
+  const { data, error } = await supabase.functions.invoke('parse-quote-pdf', {
+    body: { document_id },
+  });
+  if (error) {
+    try {
+      const body = await (error as { context?: Response }).context?.json();
+      if (body?.error) throw new Error(body.error);
+    } catch (e) {
+      if (e instanceof Error && e.message && !e.message.includes('json')) throw e;
+    }
+    throw new Error("Couldn't read that PDF — you can still type the lines in");
+  }
+  return data as ParsedQuotePdf;
+}
+
 /** Tradesman withdraws a sent quote (e.g. priced wrong). */
 export async function withdrawQuote(id: string): Promise<void> {
   const { error } = await supabase
