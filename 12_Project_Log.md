@@ -414,3 +414,37 @@ Shipped in build #20.
 **Backlog added from this pass:** prompt for company name during
 tradesman onboarding; snag severity/timelines; read receipts; quote
 builder (next big design); range picker; drag-reorder milestones.
+
+---
+
+## 15. 17 Oct — itemised quotes shipped (Sprint 53) + pricing walkthrough
+
+**Quote design (agreed with Todd):** itemised builder + optional PDF
+attach, one VAT toggle (prefilled from the business profile), customer
+approves in-app. Built same night: migration `20261017000100`
+(project_quotes, project_quote_items, decide_quote SECURITY DEFINER RPC
+that sets projects.quoted_amount and writes the price-change audit row),
+services/quotes.ts, composer at project/[id]/quote-new, detail at
+quote/[id], Quotes section on the pricing screen.
+
+**Verified end-to-end in the simulator** with seeded demo data (Mark
+Daly / Sarah Mitchell / Kitchen renovation): composer maths correct
+(£6,500 − £200 + VAT = £7,560), send → customer review → decide_quote
+RPC approved as the real customer → agreed price landed + audit trail.
+Six-step screenshot walkthrough captured for Todd's cofounder.
+
+**Latent bug found during capture:** fetchMyCurrentProject never
+selected quoted_amount / tradesman_id, so the pricing screen's "current
+agreed price" was permanently "No quote set yet" and its isLead check
+couldn't resolve. Fixed + verified live.
+
+**New dev tooling:** app/dev-login.tsx (__DEV__-only deep-link account
+switcher) + SQL-seeded demo users (sim-mark/sim-sarah @tigrowth.com) —
+simulator demo sessions no longer need typing, which the Simulator
+blocks in background control. Demo rows stay in the dev DB for future
+captures.
+
+**Next (requested by Todd):** PDF quote parsing — upload a PDF quote,
+AI extracts the line items to prefill the builder. Needs an Anthropic
+API key as an Edge Function secret (Todd to create). Companies House
+lookup still waiting on Todd registering the free CH API key.
