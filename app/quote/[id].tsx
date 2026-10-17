@@ -83,13 +83,26 @@ export default function QuoteScreen() {
   function onDecline() {
     Alert.prompt(
       'Decline this quote?',
-      "Optional: tell them why, so the next quote is right.",
+      "Tell them why — what would need to change for a yes? They'll see this note.",
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Decline',
           style: 'destructive',
-          onPress: (note?: string) => decideMutation.mutate({ approve: false, note }),
+          onPress: (note?: string) => {
+            const trimmed = (note ?? '').trim();
+            if (!trimmed) {
+              // A reason is required — a silent "no" is exactly the
+              // communication vacuum Phase exists to prevent.
+              Alert.alert(
+                'Add a quick note',
+                'A reason helps your tradesman come back with the right quote.',
+                [{ text: 'OK', onPress: onDecline }],
+              );
+              return;
+            }
+            decideMutation.mutate({ approve: false, note: trimmed });
+          },
         },
       ],
       'plain-text',
