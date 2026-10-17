@@ -183,6 +183,22 @@ export async function lookupCompany(company_number: string): Promise<CompanyLook
   return data as CompanyLookupResult;
 }
 
+export type CompanyMatch = {
+  company_number: string;
+  company_name: string;
+  company_status: string;
+  address: string;
+};
+
+/** Free-text company-name search on the Companies House register (top 5). */
+export async function searchCompanies(query: string): Promise<CompanyMatch[]> {
+  const { data, error } = await supabase.functions.invoke('company-lookup', {
+    body: { query },
+  });
+  if (error) throw new Error('Search failed — try again');
+  return ((data as { matches?: CompanyMatch[] })?.matches ?? []);
+}
+
 export async function getPublicTradesmanProfile(id: string) {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')

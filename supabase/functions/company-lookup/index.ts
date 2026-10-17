@@ -17,7 +17,9 @@ import { corsHeaders } from '../_shared/cors.ts';
 const CH_KEY = Deno.env.get('COMPANIES_HOUSE_API_KEY')!;
 
 interface RequestBody {
-  company_number: string;
+  company_number?: string;
+  /** Free-text name search — returns the top matches instead of one profile. */
+  query?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -26,7 +28,28 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { company_number } = (await req.json()) as RequestBody;
+    const { company_number, query } = (await req.json()) as RequestBody;
+
+    // ── Name search mode ─────────────────────────────────────────
+    if (query && query.trim().length >= 3) {
+      const res = await fetch(
+        `https://api.company-information.service.gov.uk/search/companies?q=${encodeURIComponent(query.trim())}&items_per_page=5`,
+        { headers: { Authorization: `Basic ${btoa(`${CH_KEY}:`)}` } },
+      );
+      if (!res.ok) {
+        return json({ error: `Companies House returned ${res.status}` }, 502);
+      }
+      const data = await res.json();
+      return json({
+        matches: (data.items ?? []).map((i: Record<string, unknown>) => ({
+          company_number: i.company_number,
+          company_name: i.title,
+          company_status: i.company_status,
+          address: i.address_snippet ?? '',
+        })),
+      });
+    }
+
     const cleaned = (company_number ?? '').replace(/\s/g, '').toUpperCase();
     // Company numbers are 8 chars: digits, or a 2-letter prefix (SC/NI/OC…).
     if (!/^[A-Z0-9]{6,8}$/.test(cleaned)) {

@@ -18,6 +18,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import {
+  searchCompanies,
   lookupCompany,
   CERTIFICATE_LABELS,
   daysUntilExpiry,
@@ -70,8 +71,50 @@ export default function VerificationSettingsScreen() {
     setUtr(profile.utr_number ?? '');
   }, [profile]);
 
+  const searchMutation = useMutation({
+    mutationFn: (query: string) => searchCompanies(query),
+    onSuccess: (matches) => {
+      if (matches.length === 0) {
+        Alert.alert('No companies found', 'Try the exact registered name, or enter your company number instead.');
+        return;
+      }
+      Alert.alert(
+        'Select your company',
+        'Top matches from the register:',
+        [
+          ...matches.slice(0, 3).map((m) => ({
+            text: `${m.company_name} (${m.company_number})`,
+            onPress: () => {
+              setCompanyNumber(m.company_number);
+              lookupMutation.mutate(m.company_number);
+            },
+          })),
+          { text: 'Cancel', style: 'cancel' as const },
+        ],
+      );
+    },
+    onError: (e) => Alert.alert("Couldn't search", (e as Error).message),
+  });
+
+  function onFindByName() {
+    Alert.prompt(
+      'Find your company',
+      'Type the name as registered with Companies House.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Search',
+          onPress: (q?: string) => {
+            if ((q ?? '').trim().length >= 3) searchMutation.mutate(q!.trim());
+          },
+        },
+      ],
+      'plain-text',
+    );
+  }
+
   const lookupMutation = useMutation({
-    mutationFn: () => lookupCompany(companyNumber),
+    mutationFn: (num?: string) => lookupCompany(num ?? companyNumber),
     onSuccess: (c) => {
       const statusLine =
         c.company_status === 'active' ? '' : `\n\n⚠️ Register status: ${c.company_status}`;
@@ -284,19 +327,23 @@ export default function VerificationSettingsScreen() {
               placeholder="12345678"
               helper="Your Companies House number, if you trade as a limited company."
             />
-            {companyNumber.trim().length >= 6 && (
-              <Pressable
-                onPress={() => lookupMutation.mutate()}
-                disabled={lookupMutation.isPending}
-                hitSlop={6}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-              >
-                <Ionicons name="search" size={16} color={t.colors.text.link} />
-                <Text style={[t.type.body, { color: t.colors.text.link }]}>
-                  {lookupMutation.isPending ? 'Checking the register…' : 'Check on Companies House'}
-                </Text>
-              </Pressable>
-            )}
+            <Pressable
+              onPress={() =>
+                companyNumber.trim().length >= 6 ? lookupMutation.mutate(undefined) : onFindByName()
+              }
+              disabled={lookupMutation.isPending || searchMutation.isPending}
+              hitSlop={6}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+            >
+              <Ionicons name="search" size={16} color={t.colors.text.link} />
+              <Text style={[t.type.body, { color: t.colors.text.link }]}>
+                {lookupMutation.isPending || searchMutation.isPending
+                  ? 'Checking the register…'
+                  : companyNumber.trim().length >= 6
+                    ? 'Check on Companies House'
+                    : 'Find my company by name'}
+              </Text>
+            </Pressable>
 
             <InputField
               label="VAT number"
