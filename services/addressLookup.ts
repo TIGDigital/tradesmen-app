@@ -100,6 +100,56 @@ export function isValidUKPostcode(input: string): boolean {
  * Empty result (postcode valid but no addresses on record) returns an
  * empty array, not an error — caller shows "no addresses found".
  */
+/**
+ * Outcome of a postcode lookup. 'addresses' is the full premise list from
+ * the paid provider; 'town-only' is the free fallback (postcodes.io) used
+ * when the paid provider is out of credit or misconfigured — the postcode
+ * resolved to a town, and the user types the first address line themselves.
+ */
+export type AddressLookupOutcome =
+  | { kind: 'addresses'; addresses: FoundAddress[] }
+  | { kind: 'town-only'; town: string };
+
+/**
+ * Free fallback: postcodes.io (open data, no key, no premise-level
+ * addresses). Resolves a postcode to its district/town so the form can
+ * prefill city + postcode and only ask for the first address line.
+ */
+async function lookupTownFallback(normalised: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.postcodes.io/postcodes/${encodeURIComponent(normalised.replace(/\s/g, ''))}`,
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.result?.admin_district ?? data?.result?.region ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Postcode lookup with graceful degradation: paid premise-level lookup
+ * first; if that is out of credit / unauthorised / unconfigured, fall
+ * back to the free town-level lookup rather than dead-ending the form
+ * (beta feedback 17 Oct — Ideal Postcodes credit ran out mid-testing).
+ */
+export async function findAddressesOutcome(postcode: string): Promise<AddressLookupOutcome> {
+  const normalised = normaliseUKPostcode(postcode);
+  if (!isValidUKPostcode(normalised)) {
+    throw new Error("That doesn't look like a UK postcode");
+  }
+
+  try {
+    const addresses = await findAddressesByPostcode(postcode);
+    return { kind: 'addresses', addresses };
+  } catch (e) {
+    const town = await lookupTownFallback(normalised);
+    if (town) return { kind: 'town-only', town };
+    throw e;
+  }
+}
+
 export async function findAddressesByPostcode(
   postcode: string,
 ): Promise<FoundAddress[]> {

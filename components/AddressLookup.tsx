@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
+  TextInput,
   Pressable,
   StyleSheet,
   Text,
@@ -10,6 +11,7 @@ import {
 import { InputField } from '@/components/ui/InputField';
 import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 import {
+  findAddressesOutcome,
   findAddressesByPostcode,
   isValidUKPostcode,
   normaliseUKPostcode,
@@ -53,6 +55,10 @@ export function AddressLookup({
   const [results, setResults] = useState<FoundAddress[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'empty'>('idle');
   const [error, setError] = useState<string | null>(null);
+  // Free-fallback mode: postcode resolved to a town but premise-level data
+  // was unavailable (paid lookup out of credit) — user types line 1.
+  const [fallbackTown, setFallbackTown] = useState<string | null>(null);
+  const [fallbackLine1, setFallbackLine1] = useState('');
 
   // ── Chosen state ─────────────────────────────────────────────────────
   if (value && value.address_line_1) {
@@ -103,14 +109,20 @@ export function AddressLookup({
   async function onFind() {
     setError(null);
     setResults([]);
+    setFallbackTown(null);
     setStatus('loading');
     try {
-      const list = await findAddressesByPostcode(postcode);
-      if (list.length === 0) {
+      const outcome = await findAddressesOutcome(postcode);
+      if (outcome.kind === 'town-only') {
+        setFallbackTown(outcome.town);
+        setStatus('idle');
+        return;
+      }
+      if (outcome.addresses.length === 0) {
         setStatus('empty');
         return;
       }
-      setResults(list);
+      setResults(outcome.addresses);
       setStatus('idle');
     } catch (e) {
       setError((e as Error).message);
@@ -199,6 +211,51 @@ export function AddressLookup({
         </Text>
       ) : null}
 
+      {/* Town-level fallback: postcode resolved, premise list unavailable —
+          prefill town + postcode, ask for the first line only. */}
+      {fallbackTown ? (
+        <View style={{ marginTop: 12, gap: 8 }}>
+          <Text style={[t.type.body, { color: t.colors.text.secondary }]}>
+            {normalised} · {fallbackTown} ✓ — now type the first line of the address:
+          </Text>
+          <TextInput
+            style={[
+              styles.fallbackInput,
+              { borderColor: t.colors.border.subtle, color: t.colors.text.primary },
+            ]}
+            placeholder="e.g. 14 Spring Grove"
+            placeholderTextColor={t.colors.text.tertiary}
+            value={fallbackLine1}
+            onChangeText={setFallbackLine1}
+            autoCapitalize="words"
+          />
+          <Pressable
+            onPress={() =>
+              onChange({
+                address_line_1: fallbackLine1.trim(),
+                city: fallbackTown,
+                postcode: normalised,
+              })
+            }
+            disabled={fallbackLine1.trim().length < 3}
+            style={({ pressed }) => [
+              styles.findBtn,
+              {
+                marginTop: 0,
+                backgroundColor:
+                  fallbackLine1.trim().length < 3 ? t.colors.bg.surface2 : t.colors.brand.primary,
+                opacity: pressed ? 0.85 : 1,
+                borderColor: 'transparent',
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Use this address"
+          >
+            <Text style={[t.type.bodyLgEmphasis, { color: '#FFFFFF' }]}>Use this address</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       {results.length > 0 ? (
         <View
           style={[
@@ -271,6 +328,13 @@ export function AddressLookup({
 }
 
 const styles = StyleSheet.create({
+  fallbackInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+  },
   findBtn: {
     marginTop: 10,
     height: 48,
