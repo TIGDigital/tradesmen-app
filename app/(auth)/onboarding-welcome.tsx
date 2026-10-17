@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PhaseLogo } from '@/components/PhaseLogo';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { InputField } from '@/components/ui/InputField';
+import { updateTradesmanProfile } from '@/services/tradesman';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
@@ -58,7 +60,19 @@ export default function OnboardingWelcomeScreen() {
     ]).start();
   }, [opacity, translateY]);
 
+  const [businessName, setBusinessName] = useState('');
+
   async function onContinue() {
+    // Save the business name first if the tradesman gave one — it fronts
+    // their public profile and the customer's 'Your tradesman' card.
+    const trimmed = businessName.trim();
+    if (trimmed && profile?.role === 'tradesman') {
+      try {
+        await updateTradesmanProfile({ business_name: trimmed });
+      } catch {
+        // Non-blocking — they can set it later in Business details.
+      }
+    }
     await markOnboardingWelcomeSeen();
     // If the user hasn't seen the tour yet, route there next; otherwise
     // skip straight to home (AuthGate would do this anyway, but explicit
@@ -172,6 +186,19 @@ export default function OnboardingWelcomeScreen() {
             ),
           )}
         </View>
+
+        {role === 'tradesman' && (
+          <View style={{ marginTop: t.space[8] }}>
+            <InputField
+              label="Your business name (optional)"
+              value={businessName}
+              onChangeText={setBusinessName}
+              autoCapitalize="words"
+              placeholder="e.g. Daly Building Co"
+              helper="Shown to customers on your profile and projects. You can add or change it later."
+            />
+          </View>
+        )}
 
         <View style={{ marginTop: t.space[10] }}>
           <PrimaryButton title="Let's get started" onPress={() => void onContinue()} />

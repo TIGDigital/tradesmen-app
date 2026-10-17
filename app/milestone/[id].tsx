@@ -87,12 +87,23 @@ export default function MilestoneEditScreen() {
     onError: (e) => Alert.alert("Couldn't save", (e as Error).message),
   });
 
-  function onStartChange(_: DateTimePickerEvent, picked?: Date) {
-    if (picked) setStartDate(picked);
+  // One calendar, two targets: picking a start auto-advances to the end
+  // date, so both land in a single session (beta feedback 16 Oct).
+  const [dateTarget, setDateTarget] = useState<'start' | 'end'>('start');
+
+  function onDateChange(_: DateTimePickerEvent, picked?: Date) {
+    if (!picked) return;
+    if (dateTarget === 'start') {
+      setStartDate(picked);
+      if (endDate && endDate < picked) setEndDate(null);
+      setDateTarget('end');
+    } else {
+      setEndDate(picked);
+    }
   }
-  function onEndChange(_: DateTimePickerEvent, picked?: Date) {
-    if (picked) setEndDate(picked);
-  }
+
+  const fmtChip = (d: Date | null) =>
+    d ? d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Set';
 
   const canSave = title.trim().length > 0 && !mutation.isPending;
 
@@ -219,45 +230,65 @@ export default function MilestoneEditScreen() {
             <Card>
               <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Dates</Text>
 
-              {/* Start date — `compact` is the native iOS pattern: a small
-                  pill that pops a popover calendar on tap and auto-dismisses
-                  after pick. No open/close state to manage. */}
-              <View style={[styles.dateRow, { borderBottomColor: t.colors.border.subtle }]}>
-                <Text style={[t.type.body, { color: t.colors.text.primary }]}>Start</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <DateTimePicker
-                    value={startDate ?? new Date()}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                    onChange={onStartChange}
-                  />
-                  {startDate && (
-                    <Pressable onPress={() => setStartDate(null)} hitSlop={6}>
-                      <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>Clear</Text>
+              {/* One calendar, Start/End toggle — picking a start auto-moves
+                  the toggle to End so both dates land in one session. */}
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                {(['start', 'end'] as const).map((target) => {
+                  const active = dateTarget === target;
+                  const d = target === 'start' ? startDate : endDate;
+                  return (
+                    <Pressable
+                      key={target}
+                      onPress={() => setDateTarget(target)}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 8,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        alignItems: 'center',
+                        borderColor: active ? t.colors.brand.primary : t.colors.border.subtle,
+                        backgroundColor: active ? t.colors.brand.tint : t.colors.bg.surface,
+                      }}
+                    >
+                      <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
+                        {target === 'start' ? 'Start' : 'End'}
+                      </Text>
+                      <Text
+                        style={[
+                          t.type.body,
+                          { color: active ? t.colors.brand.primary : t.colors.text.primary },
+                        ]}
+                      >
+                        {fmtChip(d)}
+                      </Text>
                     </Pressable>
-                  )}
-                </View>
+                  );
+                })}
               </View>
-
-              <View style={[styles.dateRow, { borderBottomWidth: 0 }]}>
-                <Text style={[t.type.body, { color: t.colors.text.primary }]}>End</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <DateTimePicker
-                    value={endDate ?? new Date()}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                    onChange={onEndChange}
-                  />
-                  {endDate && (
-                    <Pressable onPress={() => setEndDate(null)} hitSlop={6}>
-                      <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>Clear</Text>
-                    </Pressable>
-                  )}
-                </View>
+              <DateTimePicker
+                value={(dateTarget === 'start' ? startDate : endDate) ?? startDate ?? new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                minimumDate={dateTarget === 'end' ? startDate ?? undefined : undefined}
+                onChange={onDateChange}
+              />
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>
+                  Pick the start — the calendar flips to the end date for you.
+                </Text>
+                {(startDate || endDate) && (
+                  <Pressable
+                    onPress={() => {
+                      setStartDate(null);
+                      setEndDate(null);
+                      setDateTarget('start');
+                    }}
+                    hitSlop={6}
+                  >
+                    <Text style={[t.type.footnote, { color: t.colors.text.link }]}>Clear dates</Text>
+                  </Pressable>
+                )}
               </View>
-              <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 8 }]}>
-                Tap a date to change it. Hit Save when both are set.
-              </Text>
             </Card>
           </ScrollView>
 

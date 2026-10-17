@@ -131,7 +131,15 @@ export default function MilestonesScreen() {
                     onLongPress={() => onDelete(m.id, m.title)}
                   />
                 </View>
-                <View style={{ gap: 2, paddingLeft: 8 }}>
+                <Pressable
+                  onPress={() => onDelete(m.id, m.title)}
+                  hitSlop={8}
+                  style={{ paddingLeft: 8 }}
+                  accessibilityLabel="Delete milestone"
+                >
+                  <Ionicons name="trash-outline" size={17} color={t.colors.destructive.text} />
+                </Pressable>
+                <View style={{ gap: 2, paddingLeft: 10 }}>
                   <Pressable
                     onPress={() => moveMutation.mutate({ id: m.id, direction: 'up' })}
                     hitSlop={8}
