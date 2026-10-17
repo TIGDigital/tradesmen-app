@@ -27,6 +27,7 @@ import {
   setInitialQuote,
   withdrawPriceChange,
 } from '@/services/pricing';
+import { fetchQuotes } from '@/services/quotes';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
@@ -80,6 +81,13 @@ export default function PricingScreen() {
     quoted_amount?: number | null;
   };
   const project = projectQ.data as ProjectShape | undefined;
+
+  const quotesQ = useQuery({
+    queryKey: ['quotes', id],
+    queryFn: () => fetchQuotes(id!),
+    enabled: !!id,
+  });
+  const quotes = quotesQ.data ?? [];
   const pending = pendingQ.data;
   const history = historyQ.data ?? [];
 
@@ -309,6 +317,59 @@ export default function PricingScreen() {
                   onPress={onSetInitial}
                 />
               </View>
+            </View>
+          )}
+
+          {/* QUOTES — itemised quotes, sent in-app (Sprint 53) */}
+          {(isLead || quotes.length > 0) && (
+            <View style={{ marginTop: t.space[5], gap: t.space[3] }}>
+              <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Quotes</Text>
+              {quotes.map((q) => (
+                <Pressable
+                  key={q.id}
+                  onPress={() => router.push({ pathname: '/quote/[id]', params: { id: q.id } })}
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor: t.colors.bg.surface,
+                      borderColor:
+                        q.status === 'sent' ? t.colors.brand.primary : t.colors.border.subtle,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    },
+                  ]}
+                >
+                  <View>
+                    <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
+                      {formatGbp(q.total)}
+                    </Text>
+                    <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 2 }]}>
+                      {q.items.length} {q.items.length === 1 ? 'item' : 'items'} ·{' '}
+                      {q.status === 'sent'
+                        ? 'awaiting approval'
+                        : q.status === 'approved'
+                          ? 'approved ✓'
+                          : q.status}
+                    </Text>
+                  </View>
+                  <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+                </Pressable>
+              ))}
+              {isLead && !quotes.some((q) => q.status === 'sent') && (
+                <Pressable
+                  onPress={() =>
+                    router.push({ pathname: '/project/[id]/quote-new', params: { id: id! } })
+                  }
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  hitSlop={6}
+                >
+                  <Ionicons name="add" size={18} color={t.colors.text.link} />
+                  <Text style={[t.type.body, { color: t.colors.text.link }]}>
+                    Send an itemised quote
+                  </Text>
+                </Pressable>
+              )}
             </View>
           )}
 

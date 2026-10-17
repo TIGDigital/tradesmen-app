@@ -1010,6 +1010,127 @@ export type Database = {
           },
         ]
       }
+      project_quote_items: {
+        Row: {
+          description: string
+          id: string
+          qty: number
+          quote_id: string
+          sort_order: number
+          unit_price: number
+        }
+        Insert: {
+          description: string
+          id?: string
+          qty?: number
+          quote_id: string
+          sort_order?: number
+          unit_price?: number
+        }
+        Update: {
+          description?: string
+          id?: string
+          qty?: number
+          quote_id?: string
+          sort_order?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "project_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_quotes: {
+        Row: {
+          created_at: string
+          created_by: string
+          decided_at: string | null
+          decided_by: string | null
+          discount_amount: number
+          id: string
+          notes: string | null
+          pdf_document_id: string | null
+          project_id: string
+          response_note: string | null
+          status: string
+          subtotal: number
+          total: number
+          vat_amount: number
+          vat_rate: number
+          vat_registered: boolean
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          decided_at?: string | null
+          decided_by?: string | null
+          discount_amount?: number
+          id?: string
+          notes?: string | null
+          pdf_document_id?: string | null
+          project_id: string
+          response_note?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          vat_amount?: number
+          vat_rate?: number
+          vat_registered?: boolean
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          discount_amount?: number
+          id?: string
+          notes?: string | null
+          pdf_document_id?: string | null
+          project_id?: string
+          response_note?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          vat_amount?: number
+          vat_rate?: number
+          vat_registered?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_quotes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_quotes_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_quotes_pdf_document_id_fkey"
+            columns: ["pdf_document_id"]
+            isOneToOne: false
+            referencedRelation: "project_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_quotes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_reminders: {
         Row: {
           created_at: string | null
@@ -1842,6 +1963,10 @@ export type Database = {
     }
     Functions: {
       accept_crew_invite: { Args: { p_code: string }; Returns: string }
+      decide_quote: {
+        Args: { p_approve: boolean; p_note?: string; p_quote_id: string }
+        Returns: undefined
+      }
       is_admin: { Args: never; Returns: boolean }
       is_project_crew: { Args: { p_id: string }; Returns: boolean }
       is_project_participant: { Args: { p_id: string }; Returns: boolean }
