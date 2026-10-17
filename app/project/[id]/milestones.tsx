@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
   KeyboardAvoidingView,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -18,7 +20,7 @@ import { Milestone } from '@/components/Milestone';
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import {
-  moveMilestone, createMilestone, deleteMilestone, fetchMilestones } from '@/services/projects';
+  createMilestone, deleteMilestone, fetchMilestones, reorderMilestones } from '@/services/projects';
 import { lightTheme } from '@/theme/light';
 
 export default function MilestonesScreen() {
@@ -54,15 +56,110 @@ export default function MilestonesScreen() {
     onError: (e) => Alert.alert("Couldn't delete milestone", (e as Error).message),
   });
 
-  const moveMutation = useMutation({
-    mutationFn: (args: { id: string; direction: 'up' | 'down' }) =>
-      moveMilestone(milestones, args.id, args.direction),
+  // ── Drag-to-reorder (PanResponder — no native dependency) ─────────
+  // localOrder overrides the server order between a drop and the refetch.
+  const [localOrder, setLocalOrder] = useState<string[] | null>(null);
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const dragY = useRef(new Animated.Value(0)).current;
+  const rowHeights = useRef<Record<string, number>>({});
+  const dragState = useRef<{ id: string; index: number; ids: string[] } | null>(null);
+
+  const ordered = useMemo(() => {
+    const sorted = [...milestones].sort((a, b) => a.sort_order - b.sort_order);
+    if (!localOrder) return sorted;
+    const byId = new Map(sorted.map((m) => [m.id, m]));
+    const fromLocal = localOrder.map((mid) => byId.get(mid)).filter(Boolean) as typeof sorted;
+    const missing = sorted.filter((m) => !localOrder.includes(m.id));
+    return [...fromLocal, ...missing];
+  }, [milestones, localOrder]);
+
+  const reorderMutation = useMutation({
+    mutationFn: (ids: string[]) => reorderMilestones(id!, ids),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['milestones', id] });
       queryClient.invalidateQueries({ queryKey: ['my-current-project'] });
     },
-    onError: (e) => Alert.alert("Couldn't move milestone", (e as Error).message),
+    onError: (e) => {
+      setLocalOrder(null); // snap back to the server's truth
+      Alert.alert("Couldn't save the new order", (e as Error).message);
+    },
   });
+
+  function targetIndexFor(fromIndex: number, dy: number, ids: string[]): number {
+    let idx = fromIndex;
+    let remaining = dy;
+    if (dy > 0) {
+      while (idx < ids.length - 1) {
+        const h = rowHeights.current[ids[idx + 1]] ?? 64;
+        if (remaining > h / 2) {
+          remaining -= h;
+          idx += 1;
+        } else break;
+      }
+    } else {
+      while (idx > 0) {
+        const h = rowHeights.current[ids[idx - 1]] ?? 64;
+        if (-remaining > h / 2) {
+          remaining += h;
+          idx -= 1;
+        } else break;
+      }
+    }
+    return idx;
+  }
+
+  function makeDragHandlers(mid: string, index: number) {
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        dragState.current = { id: mid, index, ids: ordered.map((m) => m.id) };
+        setDragging(mid);
+        setHoverIndex(index);
+        dragY.setValue(0);
+      },
+      onPanResponderMove: (_evt, gesture) => {
+        dragY.setValue(gesture.dy);
+        const st = dragState.current;
+        if (!st) return;
+        const target = targetIndexFor(st.index, gesture.dy, st.ids);
+        setHoverIndex((prev) => (prev === target ? prev : target));
+      },
+      onPanResponderRelease: (_evt, gesture) => {
+        const st = dragState.current;
+        dragState.current = null;
+        setDragging(null);
+        setHoverIndex(null);
+        dragY.setValue(0);
+        if (!st) return;
+        const target = targetIndexFor(st.index, gesture.dy, st.ids);
+        if (target === st.index) return;
+        const ids = [...st.ids];
+        ids.splice(st.index, 1);
+        ids.splice(target, 0, st.id);
+        setLocalOrder(ids);
+        reorderMutation.mutate(ids);
+      },
+      onPanResponderTerminate: () => {
+        dragState.current = null;
+        setDragging(null);
+        setHoverIndex(null);
+        dragY.setValue(0);
+      },
+    }).panHandlers;
+  }
+
+  /** Static shift for the rows the dragged one has passed over. */
+  function shiftFor(index: number, mid: string): number {
+    if (!dragging || hoverIndex === null || mid === dragging) return 0;
+    const st = dragState.current;
+    if (!st) return 0;
+    const dragHeight = rowHeights.current[st.id] ?? 64;
+    if (st.index < hoverIndex && index > st.index && index <= hoverIndex) return -dragHeight;
+    if (st.index > hoverIndex && index >= hoverIndex && index < st.index) return dragHeight;
+    return 0;
+  }
 
   function onAdd() {
     if (!newTitle.trim()) return;
@@ -93,6 +190,7 @@ export default function MilestonesScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: t.space[5] }}
           keyboardShouldPersistTaps="handled"
+          scrollEnabled={!dragging}
         >
           {isLoading && (
             <Text style={[t.type.body, { color: t.colors.text.tertiary }]}>Loading…</Text>
@@ -113,64 +211,69 @@ export default function MilestonesScreen() {
             </Text>
           )}
 
-          {milestones.map((m, idx) => (
-            <View
-              key={m.id}
-              style={{
-                borderBottomWidth: 1,
-                borderBottomColor: t.colors.border.subtle,
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ flex: 1 }}>
-                  <Milestone
-                    title={m.title}
-                    status={m.status}
-                    expectedDate={m.expected_date}
-                    onPress={() => router.push({ pathname: '/milestone/[id]', params: { id: m.id } })}
-                    onLongPress={() => onDelete(m.id, m.title)}
-                  />
-                </View>
-                <Pressable
-                  onPress={() => onDelete(m.id, m.title)}
-                  hitSlop={8}
-                  style={{ paddingLeft: 8 }}
-                  accessibilityLabel="Delete milestone"
-                >
-                  <Ionicons name="trash-outline" size={17} color={t.colors.destructive.text} />
-                </Pressable>
-                <View style={{ gap: 2, paddingLeft: 10 }}>
+          {ordered.map((m, idx) => {
+            const isDragged = dragging === m.id;
+            return (
+              <Animated.View
+                key={m.id}
+                onLayout={(e) => {
+                  rowHeights.current[m.id] = e.nativeEvent.layout.height;
+                }}
+                style={{
+                  borderBottomWidth: 1,
+                  borderBottomColor: t.colors.border.subtle,
+                  transform: [
+                    isDragged ? { translateY: dragY } : { translateY: shiftFor(idx, m.id) },
+                  ],
+                  zIndex: isDragged ? 10 : 0,
+                  backgroundColor: isDragged ? t.colors.bg.surface : 'transparent',
+                  ...(isDragged
+                    ? {
+                        shadowColor: '#000',
+                        shadowOpacity: 0.12,
+                        shadowRadius: 10,
+                        shadowOffset: { width: 0, height: 4 },
+                        elevation: 4,
+                      }
+                    : null),
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
+                    <Milestone
+                      title={m.title}
+                      status={m.status}
+                      expectedDate={m.expected_date}
+                      onPress={() => router.push({ pathname: '/milestone/[id]', params: { id: m.id } })}
+                      onLongPress={() => onDelete(m.id, m.title)}
+                    />
+                  </View>
                   <Pressable
-                    onPress={() => moveMutation.mutate({ id: m.id, direction: 'up' })}
+                    onPress={() => onDelete(m.id, m.title)}
                     hitSlop={8}
-                    disabled={idx === 0 || moveMutation.isPending}
-                    accessibilityLabel="Move milestone up"
+                    style={{ paddingLeft: 8 }}
+                    accessibilityLabel="Delete milestone"
+                  >
+                    <Ionicons name="trash-outline" size={17} color={t.colors.destructive.text} />
+                  </Pressable>
+                  <View
+                    {...makeDragHandlers(m.id, idx)}
+                    style={{ paddingLeft: 12, paddingVertical: 14 }}
+                    accessibilityLabel="Drag to reorder"
                   >
                     <Ionicons
-                      name="chevron-up"
-                      size={18}
-                      color={idx === 0 ? t.colors.border.subtle : t.colors.text.tertiary}
+                      name="reorder-three-outline"
+                      size={22}
+                      color={isDragged ? t.colors.brand.primary : t.colors.text.tertiary}
                     />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => moveMutation.mutate({ id: m.id, direction: 'down' })}
-                    hitSlop={8}
-                    disabled={idx === milestones.length - 1 || moveMutation.isPending}
-                    accessibilityLabel="Move milestone down"
-                  >
-                    <Ionicons
-                      name="chevron-down"
-                      size={18}
-                      color={idx === milestones.length - 1 ? t.colors.border.subtle : t.colors.text.tertiary}
-                    />
-                  </Pressable>
+                  </View>
                 </View>
-              </View>
-            </View>
-          ))}
+              </Animated.View>
+            );
+          })}
 
           <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: t.space[3] }]}>
-            Tap to edit dates, status, and notes. Long-press to delete.
+            Tap to edit dates, status, and notes. Drag ≡ to reorder.
           </Text>
         </ScrollView>
 

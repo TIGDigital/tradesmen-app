@@ -1981,6 +1981,10 @@ export type Database = {
       is_project_participant: { Args: { p_id: string }; Returns: boolean }
       is_project_tradesman: { Args: { p_id: string }; Returns: boolean }
       mark_updates_seen: { Args: { p_project_id: string }; Returns: undefined }
+      reorder_milestones: {
+        Args: { p_ids: string[]; p_project_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       certificate_kind:
