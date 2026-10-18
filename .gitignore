@@ -46,3 +46,5 @@ supabase/.branches/
 # generated native folders
 /ios
 /android
+
+.env.local

@@ -20,6 +20,7 @@ import { installCrashTrap, readLastFatalError } from '@/services/crash-trap';
 import { identifyUser, initTelemetry } from '@/services/telemetry';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
+import * as Sentry from '@sentry/react-native';
 
 // Install as early as possible so even errors during module init of
 // later imports get recorded. Beta-only tooling — see crash-trap.ts.
@@ -28,7 +29,7 @@ initTelemetry();
 
 const queryClient = new QueryClient();
 
-export default function RootLayout() {
+export default Sentry.wrap(function RootLayout() {
   const [fontsLoaded] = useFonts({
     Geist_400Regular,
     Geist_500Medium,
@@ -154,7 +155,7 @@ export default function RootLayout() {
       </SafeAreaProvider>
     </QueryClientProvider>
   );
-}
+});
 
 /**
  * Watches the auth store and redirects the navigator to the right "zone":

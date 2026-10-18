@@ -156,7 +156,15 @@
           "iosUrlScheme": "com.googleusercontent.apps.966214438385-mp4cghtsh01ei22sou256s623ap0l0g6"
         }
       ],
-      "@sentry/react-native"
+      "@sentry/react-native",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "phase-ios",
+          "organization": "tig-digital-ltd"
+        }
+      ]
     ],
     "extra": {
       "router": {},

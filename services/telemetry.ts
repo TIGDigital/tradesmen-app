@@ -14,7 +14,9 @@ import PostHog from 'posthog-react-native';
  * tie crashes to accounts), no session replay, no autocapture of text.
  */
 
-const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN ?? '';
+const SENTRY_DSN =
+  process.env.EXPO_PUBLIC_SENTRY_DSN ??
+  'https://c93f341bc255b05a28328fb8d6006ece@o4512279077781504.ingest.de.sentry.io/4512279088660560';
 const POSTHOG_KEY = process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '';
 const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com';
 
