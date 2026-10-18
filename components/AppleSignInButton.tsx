@@ -1,9 +1,9 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, Text, View } from 'react-native';
 
-import { signInWithApple } from '@/services/social-auth';
+import { isGoogleSignInAvailable, signInWithApple, signInWithGoogle } from '@/services/social-auth';
 import { lightTheme } from '@/theme/light';
 
 /**
@@ -25,15 +25,26 @@ export function AppleSignInButton() {
     void AppleAuthentication.isAvailableAsync().then(setAvailable);
   }, []);
 
-  if (!available) return null;
+  const googleAvailable = isGoogleSignInAvailable();
+  if (!available && !googleAvailable) return null;
 
-  async function onPress() {
+  async function onApple() {
     try {
       const res = await signInWithApple();
       if (!res) return; // user cancelled the Apple sheet
       if (res.isNewUser) router.push('/(auth)/role-select');
     } catch (e) {
       Alert.alert("Couldn't sign in with Apple", (e as Error).message);
+    }
+  }
+
+  async function onGoogle() {
+    try {
+      const res = await signInWithGoogle();
+      if (!res) return; // cancelled
+      if (res.isNewUser) router.push('/(auth)/role-select');
+    } catch (e) {
+      Alert.alert("Couldn't sign in with Google", (e as Error).message);
     }
   }
 
@@ -44,13 +55,35 @@ export function AppleSignInButton() {
         <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>or</Text>
         <View style={{ flex: 1, height: 1, backgroundColor: t.colors.border.subtle }} />
       </View>
-      <AppleAuthentication.AppleAuthenticationButton
-        buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-        cornerRadius={12}
-        style={{ height: 50 }}
-        onPress={() => void onPress()}
-      />
+      {available && (
+        <AppleAuthentication.AppleAuthenticationButton
+          buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+          cornerRadius={12}
+          style={{ height: 50 }}
+          onPress={() => void onApple()}
+        />
+      )}
+      {googleAvailable && (
+        <Pressable
+          onPress={() => void onGoogle()}
+          style={({ pressed }) => ({
+            height: 50,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: t.colors.border.strong,
+            backgroundColor: pressed ? t.colors.bg.surface2 : t.colors.bg.surface,
+            alignItems: 'center',
+            justifyContent: 'center',
+          })}
+          accessibilityRole="button"
+          accessibilityLabel="Continue with Google"
+        >
+          <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
+            Continue with Google
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }

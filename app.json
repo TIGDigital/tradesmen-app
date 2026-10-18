@@ -149,7 +149,13 @@
       ],
       "expo-sharing",
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.966214438385-mp4cghtsh01ei22sou256s623ap0l0g6"
+        }
+      ]
     ],
     "extra": {
       "router": {},
