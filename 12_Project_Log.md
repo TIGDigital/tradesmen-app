@@ -523,3 +523,30 @@ server-side (no app build needed), each verified by impersonated attack:
 Still recommended (Todd/dashboard): Supabase Auth leaked-password
 protection + sign-in rate limits; Supabase Pro for backups + no
 auto-pause. Next on the bench: Maestro E2E scripts.
+
+---
+
+## 18. Updated device test script — for build #24 onwards
+
+Supersedes §6 (written for build #11, pre-quotes). Report failures by code.
+
+**A — Fresh signup:** A1 welcome → account created, no crash · A2 pick
+tradesman · A3 Hi-name screen + business-name field · A4 tour → Jobs.
+**B — First project:** B1 postcode → tap-to-pick list · B2 milestones:
+drag ≡ to reorder, 🗑 delete · B3 milestone editor: one calendar,
+Start/End chips · B4 schedule rows ordered by date.
+**C — Quotes:** C1 itemised quote → totals → send · C2 attach PDF →
+"Read this PDF?" → lines pre-fill · C3 Companies House search (name or
+number) in business details.
+**D — Daily loop:** D1 update + photos (faster uploads) · D2 end-of-day ·
+D3 document upload confirmation · D4 urgent snag + fix-by date.
+**E — Customer:** E1 join via code, dashboard tiles tap through ·
+E2 approve quote (locks price); decline demands a reason · E3 "Seen ✓"
+read receipts · E4 can't upload docs / edit schedule / invite crew /
+work snags · E5 price change request → approve → audit.
+**F — Crew:** F1 pending invite visible · F2 join via code (no crash) ·
+F3 apprentice update → approvals queue → customer sees it · F4 urgent
+snag pings tradesman + crew.
+
+Supabase upgraded to PRO 18 Oct (no auto-pause, daily backups); HIBP
+leaked-password protection enabled; rate limits confirmed on.
