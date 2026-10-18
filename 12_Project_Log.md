@@ -486,3 +486,40 @@ skipped). Smoke-tested the new screens in-sim before cutting #23.
 
 **Still open (external dependency only):** app-download link in invite
 messages — needs a public TestFlight link or App Store listing.
+
+---
+
+## 17. 18 Oct — security audit: six holes found, fixed, attack-tested
+
+Systematic audit of all 94 RLS policies, 15 SECURITY DEFINER functions,
+13 storage policies and 4 buckets (dumped from the live DB). RLS was
+enabled on every table with full CRUD coverage — the posture was good;
+the details weren't. Fixed in migration `20261018000100`, all
+server-side (no app build needed), each verified by impersonated attack:
+
+- **H1** Any user could UPDATE their own profiles.role to **admin**
+  (role self-selection between the three public roles is by design;
+  admin escalation is not) → trigger blocks it. ✓ refused live.
+- **H2** The read-receipt policy let a participant UPDATE the OTHER
+  party's message rows with no column limit — **you could rewrite what
+  your counterparty said** → UPDATE privilege now covers read_at only.
+  ✓ body edit refused, read receipt still works.
+- **H3** Customers could UPDATE any project column **including
+  quoted_amount** — a silent bypass of the whole pricing promise →
+  general project updates are lead-only; customers keep just the
+  accept-invite transition. ✓
+- **H4** crew_invitations update policy contained "OR auth.uid() IS NOT
+  NULL" — any signed-in user could claim or kill ANY invitation →
+  lead-only (acceptance lives in the RPC). ✓
+- **H5** The lead could UPDATE a sent quote's status to 'approved'
+  (faking customer approval) or edit its totals → lead writes must land
+  status='withdrawn'; decisions only via decide_quote. ✓ both ways.
+- **H6** Leftover `avatars_write_authenticated_DEBUG` storage policy:
+  any user could overwrite/delete ANY avatar → scoped to own folder.
+- **M7** Authors could UPDATE their own approval_status — an apprentice
+  could self-approve past the lead's queue → trigger restricts approval
+  fields to the project lead.
+
+Still recommended (Todd/dashboard): Supabase Auth leaked-password
+protection + sign-in rate limits; Supabase Pro for backups + no
+auto-pause. Next on the bench: Maestro E2E scripts.
