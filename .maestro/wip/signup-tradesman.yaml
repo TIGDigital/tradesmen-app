@@ -1,0 +1,47 @@
+# E2E: the crash gauntlet — fresh tradesman signup end to end.
+# Covers the exact journey that was broken all July: signup → role
+# select → onboarding welcome (+ business name) → tour → Jobs.
+# Uses a unique email per run so it never collides.
+# Run:  maestro test .maestro/signup-tradesman.yaml
+appId: host.exp.Exponent
+---
+- evalScript: ${output.email = 'maestro-' + Date.now() + '@tigrowth.com'}
+- openLink: exp://localhost:8081/--/dev-login?signout=1
+- extendedWaitUntil:
+    visible: "Start your phase"
+    timeout: 20000
+- tapOn: "Start your phase"
+- tapOn:
+    id: "signup-name"
+- inputText: "Maestro Bot"
+- pressKey: Enter   # return chains focus to email
+- inputText: ${output.email}
+- pressKey: Enter   # … then to password
+- inputText: "maestro123"
+- pressKey: Enter   # password field submits on return
+# iOS may offer to save the password — decline if the sheet appears.
+- runFlow:
+    when:
+      visible: "Save Password?"
+    commands:
+      - tapOn: "Not Now"
+- extendedWaitUntil:
+    visible: "Which describes you?"
+    timeout: 20000
+- tapOn: "I'm a tradesman"
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible: ".*Hi Maestro.*"
+    timeout: 20000
+- tapOn: "Let's get started"
+- extendedWaitUntil:
+    visible: "Next"
+    timeout: 15000
+- repeat:
+    times: 4
+    commands:
+      - tapOn: "Next"
+- extendedWaitUntil:
+    visible: "Jobs"
+    timeout: 20000
+- assertVisible: ".*, Maestro.*"

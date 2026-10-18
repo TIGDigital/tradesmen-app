@@ -12,10 +12,22 @@ import { useAuthStore } from '@/stores/auth';
  * credentials it accepts only exist as seeded demo rows in the dev database.
  */
 export default function DevLogin() {
-  const { email, pw } = useLocalSearchParams<{ email?: string; pw?: string }>();
+  const { email, pw, signout } = useLocalSearchParams<{
+    email?: string;
+    pw?: string;
+    signout?: string;
+  }>();
 
   useEffect(() => {
-    if (!__DEV__ || !email || !pw) return;
+    if (!__DEV__) return;
+    if (signout === '1') {
+      void supabase.auth.signOut().then(() => {
+        console.log('[dev-login] signed out');
+        router.replace('/');
+      });
+      return;
+    }
+    if (!email || !pw) return;
     void (async () => {
       // No signOut first and no manual redirect — signInWithPassword replaces
       // any existing session, and AuthGate routes on the SIGNED_IN event.
@@ -28,8 +40,11 @@ export default function DevLogin() {
       store.markWelcomeShown();
       await store.markTourSeen();
       await store.markOnboardingWelcomeSeen();
+      // Flags are set BEFORE this replace, so AuthGate routes straight
+      // home (the earlier race came from a signOut-then-signIn pair).
+      router.replace('/');
     })();
-  }, [email, pw]);
+  }, [email, pw, signout]);
 
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

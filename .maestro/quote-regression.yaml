@@ -1,0 +1,20 @@
+# Regression: the quote system renders correctly for the lead.
+# Deep-link based (no typing) — deterministic in the simulator.
+appId: host.exp.Exponent
+---
+- openLink: exp://localhost:8081/--/dev-login?email=sim-mark%40tigrowth.com&pw=demo1234
+- extendedWaitUntil:
+    visible: "Jobs"
+    timeout: 25000
+- openLink: exp://localhost:8081/--/quote/44444444-4444-4444-8444-444444444444
+- extendedWaitUntil:
+    visible: ".*7,560.*"
+    timeout: 15000
+- assertVisible: "Approved"
+- assertVisible: ".*Strip out existing kitchen.*"
+- openLink: exp://localhost:8081/--/project/33333333-3333-4333-8333-333333333333/pricing
+- extendedWaitUntil:
+    visible: ".*Current agreed price.*"
+    timeout: 15000
+- assertVisible: ".*7,560.*"
+- assertVisible: ".*Change history.*"

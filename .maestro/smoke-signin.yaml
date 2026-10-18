@@ -1,0 +1,10 @@
+# Smoke: dev-login as the seeded demo tradesman, assert the Jobs screen.
+# Run:  maestro test .maestro/smoke-signin.yaml
+# Needs: Metro running (npx expo start --ios) + booted simulator with Expo Go.
+appId: host.exp.Exponent
+---
+- openLink: exp://localhost:8081/--/dev-login?email=sim-mark%40tigrowth.com&pw=demo1234
+- extendedWaitUntil:
+    visible: "Jobs"
+    timeout: 20000
+- assertVisible: ".*, Mark.*"

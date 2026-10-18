@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState, useRef } from 'react';
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View , type TextInput } from 'react-native';
 // Pressable + Text + Alert already imported above; bottom cross-link to sign-in.
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,6 +15,8 @@ export default function SignUpScreen() {
   const t = lightTheme;
 
   const [fullName, setFullName] = useState('');
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -85,6 +87,7 @@ export default function SignUpScreen() {
 
           <View style={{ gap: t.space[4], marginTop: t.space[8] }}>
             <InputField
+              testID="signup-name"
               label="Full name"
               value={fullName}
               onChangeText={setFullName}
@@ -92,8 +95,11 @@ export default function SignUpScreen() {
               autoComplete="name"
               textContentType="name"
               returnKeyType="next"
+              onSubmitEditing={() => emailRef.current?.focus()}
             />
             <InputField
+              ref={emailRef}
+              testID="signup-email"
               label="Email"
               value={email}
               onChangeText={setEmail}
@@ -102,8 +108,11 @@ export default function SignUpScreen() {
               keyboardType="email-address"
               textContentType="emailAddress"
               returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
             />
             <InputField
+              ref={passwordRef}
+              testID="signup-password"
               label="Password"
               value={password}
               onChangeText={setPassword}

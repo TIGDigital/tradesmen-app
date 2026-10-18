@@ -1,0 +1,12 @@
+# Regression: customer dashboard + quote view render for the customer.
+appId: host.exp.Exponent
+---
+- openLink: exp://localhost:8081/--/dev-login?email=sim-sarah%40tigrowth.com&pw=demo1234
+- extendedWaitUntil:
+    visible: ".*This week.*"
+    timeout: 25000
+- assertVisible: ".*Days left.*"
+- openLink: exp://localhost:8081/--/quote/44444444-4444-4444-8444-444444444444
+- extendedWaitUntil:
+    visible: "Approved"
+    timeout: 15000

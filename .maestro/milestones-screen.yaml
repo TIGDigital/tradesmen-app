@@ -1,0 +1,12 @@
+# Regression: milestones manage screen renders with reorder affordances.
+appId: host.exp.Exponent
+---
+- openLink: exp://localhost:8081/--/dev-login?email=sim-mark%40tigrowth.com&pw=demo1234
+- extendedWaitUntil:
+    visible: "Jobs"
+    timeout: 25000
+- openLink: exp://localhost:8081/--/project/33333333-3333-4333-8333-333333333333/milestones
+- extendedWaitUntil:
+    visible: ".*Strip out.*"
+    timeout: 15000
+- assertVisible: ".*Drag.*to reorder.*"
