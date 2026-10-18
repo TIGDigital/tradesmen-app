@@ -155,7 +155,8 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.966214438385-mp4cghtsh01ei22sou256s623ap0l0g6"
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "extra": {
       "router": {},

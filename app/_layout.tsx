@@ -17,12 +17,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 import { installCrashTrap, readLastFatalError } from '@/services/crash-trap';
+import { identifyUser, initTelemetry } from '@/services/telemetry';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
 // Install as early as possible so even errors during module init of
 // later imports get recorded. Beta-only tooling — see crash-trap.ts.
 installCrashTrap();
+initTelemetry();
 
 const queryClient = new QueryClient();
 

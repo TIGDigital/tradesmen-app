@@ -1,4 +1,5 @@
 import { notifyCounterparty } from '@/services/projects';
+import { track } from '@/services/telemetry';
 import { supabase } from '@/services/supabase';
 
 /**
@@ -119,6 +120,7 @@ export async function createAndSendQuote(args: {
     throw itemsErr;
   }
 
+  track('quote_sent', { items: cleanItems.length, total: totals.total });
   void notifyCounterparty({
     project_id: args.project_id,
     sender_id: user.id,
@@ -162,6 +164,7 @@ export async function decideQuote(args: {
     p_note: args.note?.trim() || undefined,
   });
   if (error) throw new Error(error.message);
+  track(args.approve ? 'quote_approved' : 'quote_declined');
 
   // Ping the tradesman — fire-and-forget, mirrors the send direction.
   const { data: { user } } = await supabase.auth.getUser();

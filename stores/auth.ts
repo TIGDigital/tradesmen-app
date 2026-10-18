@@ -6,6 +6,7 @@ import { getMyProfile } from '@/services/auth';
 import { registerForPush } from '@/services/notifications';
 import { rehydrateAllProjectReminders } from '@/services/reminders';
 import { supabase } from '@/services/supabase';
+import { identifyUser } from '@/services/telemetry';
 import type { Database } from '@/types/db';
 
 type Profile = Pick<
@@ -155,6 +156,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         try { profile = await getMyProfile(); } catch { profile = null; }
         if (event === 'SIGNED_IN') void registerForPush();
       }
+      identifyUser(session?.user?.id ?? null, profile?.role ?? null);
       set({ session, profile });
     });
 
