@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppleSignInButton } from '@/components/AppleSignInButton';
 import { PhaseLogo } from '@/components/PhaseLogo';
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
@@ -109,6 +110,8 @@ export default function SignInScreen() {
 
           <View style={{ marginTop: t.space[6] }}>
             <PrimaryButton title="Sign in" onPress={onSubmit} loading={submitting} />
+
+            <AppleSignInButton />
           </View>
 
           <Pressable

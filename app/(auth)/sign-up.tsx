@@ -5,6 +5,7 @@ import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView,
 // Pressable + Text + Alert already imported above; bottom cross-link to sign-in.
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppleSignInButton } from '@/components/AppleSignInButton';
 import { PhaseLogo } from '@/components/PhaseLogo';
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
@@ -130,6 +131,8 @@ export default function SignUpScreen() {
 
           <View style={{ marginTop: t.space[8] }}>
             <PrimaryButton title="Create account" onPress={onSubmit} loading={submitting} />
+
+            <AppleSignInButton />
           </View>
 
           <Pressable
