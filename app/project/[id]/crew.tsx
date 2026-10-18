@@ -31,6 +31,7 @@ import {
   type CrewInvite,
   type CrewMember,
 } from '@/services/crew';
+import { APP_DOWNLOAD_URL } from '@/constants/links';
 import { relativeTime } from '@/services/projects';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
@@ -94,7 +95,8 @@ export default function ProjectCrewScreen() {
     const inviterName = generatedInvite.inviter?.full_name ?? 'your lead';
     const message =
       `${inviterName} has invited you to join ${projectTitle} on Phase.\n\n` +
-      `Open the app and enter this code:\n${generatedInvite.invite_code}\n\n` +
+      `1. Get the app: ${APP_DOWNLOAD_URL}\n` +
+      `2. Open it and enter this code:\n${generatedInvite.invite_code}\n\n` +
       `Expires in 14 days.`;
     try {
       await Share.share({ message });
@@ -346,7 +348,8 @@ export default function ProjectCrewScreen() {
                         void Share.share({
                           message:
                             `You've been invited to join a project on Phase.\n\n` +
-                            `Open the app and enter this code:\n${inv.invite_code}`,
+                            `1. Get the app: ${APP_DOWNLOAD_URL}\n` +
+                            `2. Open it and enter this code:\n${inv.invite_code}`,
                         })
                       }
                       hitSlop={6}

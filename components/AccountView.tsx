@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PhaseLogo } from '@/components/PhaseLogo';
+import { APP_DOWNLOAD_URL } from '@/constants/links';
 import { Card } from '@/components/ui/Card';
 import { signOut, updateProfile } from '@/services/auth';
 import { pickAvatar, uploadAvatar } from '@/services/media';
@@ -170,9 +171,10 @@ export function AccountView() {
               onPress={() =>
                 void Share.share({
                   message:
-                    "I'm following my building project on Phase — photo updates, " +
+                    "I'm following my building project on Phase: photo updates, " +
                     'progress and prices, all in one place. Worth a look if you have ' +
-                    'work planned: ask your tradesman to invite you on Phase.',
+                    `work planned. Get it here: ${APP_DOWNLOAD_URL} (customers join ` +
+                    "via their tradesman's invite code).",
                 })
               }
               style={styles.rowBetween}
