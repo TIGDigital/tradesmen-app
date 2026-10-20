@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -16,7 +17,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { getMyTradesmanProfile, updateTradesmanProfile } from '@/services/tradesman';
+import {
+  getMyTradesmanProfile,
+  lookupCompany,
+  searchCompanies,
+  updateTradesmanProfile,
+} from '@/services/tradesman';
 import { lightTheme } from '@/theme/light';
 import type { Database } from '@/types/db';
 
@@ -58,6 +64,8 @@ export default function BusinessSettingsScreen() {
   const [yearsTrading, setYearsTrading] = useState('');
   const [postcodesText, setPostcodesText] = useState('');
   const [website, setWebsite] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [companyNumber, setCompanyNumber] = useState('');
 
   // Hydrate the form once when profile loads.
   useEffect(() => {
@@ -68,7 +76,76 @@ export default function BusinessSettingsScreen() {
     setYearsTrading(profile.years_trading?.toString() ?? '');
     setPostcodesText((profile.service_postcodes ?? []).join(', '));
     setWebsite(profile.website ?? '');
+    setCompanyName(profile.company_name ?? '');
+    setCompanyNumber(profile.company_number ?? '');
   }, [profile]);
+
+  const lookupMutation = useMutation({
+    mutationFn: (num: string) => lookupCompany(num),
+    onSuccess: (c) => {
+      setCompanyName(c.company_name);
+      setCompanyNumber(c.company_number);
+      // Most sole traders-turned-ltd use the registered name as the
+      // trading name too — prefill it only when it's empty.
+      if (!businessName.trim()) setBusinessName(c.company_name);
+      if (c.company_status !== 'active') {
+        Alert.alert(
+          'Check the register',
+          `Companies House lists ${c.company_name} as "${c.company_status}". You can still save it, but customers may notice.`,
+        );
+      }
+    },
+    onError: (e) => Alert.alert('Not found', (e as Error).message),
+  });
+
+  const searchMutation = useMutation({
+    mutationFn: (query: string) => searchCompanies(query),
+    onSuccess: (matches) => {
+      if (matches.length === 0) {
+        Alert.alert('No companies found', 'Try the exact registered name, or enter your company number instead.');
+        return;
+      }
+      Alert.alert(
+        'Select your company',
+        'Top matches from the register:',
+        [
+          ...matches.slice(0, 3).map((m) => ({
+            text: `${m.company_name} (${m.company_number})`,
+            onPress: () => lookupMutation.mutate(m.company_number),
+          })),
+          { text: 'Cancel', style: 'cancel' as const },
+        ],
+      );
+    },
+    onError: (e) => Alert.alert("Couldn't search", (e as Error).message),
+  });
+
+  function onSearchRegister() {
+    Alert.prompt(
+      'Search Companies House',
+      'Type your company name or company number.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Search',
+          onPress: (input?: string) => {
+            const q = (input ?? '').trim();
+            if (!q) return;
+            // A number (with optional 2-letter prefix like SC/NI) goes
+            // straight to the profile lookup; anything else is a name search.
+            const compact = q.replace(/\s/g, '').toUpperCase();
+            if (/^[A-Z]{0,2}\d{5,8}$/.test(compact)) {
+              lookupMutation.mutate(compact);
+            } else if (q.length >= 3) {
+              searchMutation.mutate(q);
+            }
+          },
+        },
+      ],
+      'plain-text',
+      companyName || companyNumber || undefined,
+    );
+  }
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -84,6 +161,8 @@ export default function BusinessSettingsScreen() {
         service_postcodes: postcodes,
         bio: bio.trim() || null,
         website: website.trim() || null,
+        company_name: companyName.trim() || null,
+        company_number: companyNumber.trim() || null,
       });
     },
     onSuccess: async () => {
@@ -230,6 +309,44 @@ export default function BusinessSettingsScreen() {
             keyboardType="url"
             placeholder="https://yourbusiness.co.uk"
           />
+
+          {/* ── Limited company ─────────────────────────────────── */}
+          <View style={{ gap: t.space[3], marginTop: t.space[2] }}>
+            <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
+              Limited company
+            </Text>
+
+            <InputField
+              label="Company name"
+              value={companyName}
+              onChangeText={setCompanyName}
+              autoCapitalize="words"
+              placeholder="Smith & Sons Plumbing Ltd"
+              helper="Your registered name at Companies House, if you trade as a limited company."
+            />
+
+            <InputField
+              label="Company number"
+              value={companyNumber}
+              onChangeText={setCompanyNumber}
+              autoCapitalize="characters"
+              placeholder="12345678"
+            />
+
+            <Pressable
+              onPress={onSearchRegister}
+              disabled={lookupMutation.isPending || searchMutation.isPending}
+              hitSlop={6}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+            >
+              <Ionicons name="search" size={16} color={t.colors.text.link} />
+              <Text style={[t.type.body, { color: t.colors.text.link }]}>
+                {lookupMutation.isPending || searchMutation.isPending
+                  ? 'Checking the register…'
+                  : 'Search Companies House, name or number'}
+              </Text>
+            </Pressable>
+          </View>
         </ScrollView>
 
         <View

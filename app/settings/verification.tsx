@@ -18,8 +18,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import {
-  searchCompanies,
-  lookupCompany,
   CERTIFICATE_LABELS,
   daysUntilExpiry,
   fetchMyCertificates,
@@ -58,7 +56,6 @@ export default function VerificationSettingsScreen() {
 
   const [insuranceProvider, setInsuranceProvider] = useState('');
   const [insuranceExpiry, setInsuranceExpiry] = useState<Date | null>(null);
-  const [companyNumber, setCompanyNumber] = useState('');
   const [vat, setVat] = useState('');
   const [utr, setUtr] = useState('');
 
@@ -66,98 +63,15 @@ export default function VerificationSettingsScreen() {
     if (!profile) return;
     setInsuranceProvider(profile.insurance_provider ?? '');
     setInsuranceExpiry(profile.insurance_expiry ? new Date(profile.insurance_expiry) : null);
-    setCompanyNumber(profile.company_number ?? '');
     setVat(profile.vat_number ?? '');
     setUtr(profile.utr_number ?? '');
   }, [profile]);
-
-  const searchMutation = useMutation({
-    mutationFn: (query: string) => searchCompanies(query),
-    onSuccess: (matches) => {
-      if (matches.length === 0) {
-        Alert.alert('No companies found', 'Try the exact registered name, or enter your company number instead.');
-        return;
-      }
-      Alert.alert(
-        'Select your company',
-        'Top matches from the register:',
-        [
-          ...matches.slice(0, 3).map((m) => ({
-            text: `${m.company_name} (${m.company_number})`,
-            onPress: () => {
-              setCompanyNumber(m.company_number);
-              lookupMutation.mutate(m.company_number);
-            },
-          })),
-          { text: 'Cancel', style: 'cancel' as const },
-        ],
-      );
-    },
-    onError: (e) => Alert.alert("Couldn't search", (e as Error).message),
-  });
-
-  function onSearchRegister() {
-    Alert.prompt(
-      'Search Companies House',
-      'Type your company name or company number.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Search',
-          onPress: (input?: string) => {
-            const q = (input ?? '').trim();
-            if (!q) return;
-            // A number (with optional 2-letter prefix like SC/NI) goes
-            // straight to the profile lookup; anything else is a name search.
-            const compact = q.replace(/\s/g, '').toUpperCase();
-            if (/^[A-Z]{0,2}\d{5,8}$/.test(compact)) {
-              setCompanyNumber(compact);
-              lookupMutation.mutate(compact);
-            } else if (q.length >= 3) {
-              searchMutation.mutate(q);
-            }
-          },
-        },
-      ],
-      'plain-text',
-      companyNumber || undefined,
-    );
-  }
-
-  const lookupMutation = useMutation({
-    mutationFn: (num?: string) => lookupCompany(num ?? companyNumber),
-    onSuccess: (c) => {
-      const statusLine =
-        c.company_status === 'active' ? '' : `\n\n⚠️ Register status: ${c.company_status}`;
-      Alert.alert(
-        c.company_name,
-        `No. ${c.company_number} · incorporated ${c.date_of_creation ?? '—'}\n${c.registered_office}${statusLine}`,
-        [
-          {
-            text: 'Use as business name',
-            onPress: async () => {
-              try {
-                await updateTradesmanProfile({ business_name: c.company_name });
-                await queryClient.invalidateQueries({ queryKey: ['tradesman-profile'] });
-                Alert.alert('Saved', `Your business name is now "${c.company_name}".`);
-              } catch (e) {
-                Alert.alert("Couldn't save", (e as Error).message);
-              }
-            },
-          },
-          { text: 'Close', style: 'cancel' },
-        ],
-      );
-    },
-    onError: (e) => Alert.alert('Not found', (e as Error).message),
-  });
 
   const mutation = useMutation({
     mutationFn: () =>
       updateTradesmanProfile({
         insurance_provider: insuranceProvider.trim() || null,
         insurance_expiry: insuranceExpiry ? insuranceExpiry.toISOString().slice(0, 10) : null,
-        company_number: companyNumber.trim() || null,
         vat_number: vat.trim() || null,
         utr_number: utr.trim() || null,
       }),
@@ -330,27 +244,9 @@ export default function VerificationSettingsScreen() {
               Tax info (private)
             </Text>
 
-            <InputField
-              label="Company number"
-              value={companyNumber}
-              onChangeText={setCompanyNumber}
-              autoCapitalize="characters"
-              placeholder="12345678"
-              helper="Your Companies House number, if you trade as a limited company."
-            />
-            <Pressable
-              onPress={onSearchRegister}
-              disabled={lookupMutation.isPending || searchMutation.isPending}
-              hitSlop={6}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-            >
-              <Ionicons name="search" size={16} color={t.colors.text.link} />
-              <Text style={[t.type.body, { color: t.colors.text.link }]}>
-                {lookupMutation.isPending || searchMutation.isPending
-                  ? 'Checking the register…'
-                  : 'Search Companies House — name or number'}
-              </Text>
-            </Pressable>
+            <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>
+              Company name and number now live in Business settings.
+            </Text>
 
             <InputField
               label="VAT number"

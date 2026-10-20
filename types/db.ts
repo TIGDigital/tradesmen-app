@@ -1854,6 +1854,7 @@ export type Database = {
           avg_rating: number | null
           bio: string | null
           business_name: string
+          company_name: string | null
           company_number: string | null
           completed_projects: number | null
           created_at: string | null
@@ -1887,6 +1888,7 @@ export type Database = {
           avg_rating?: number | null
           bio?: string | null
           business_name: string
+          company_name?: string | null
           company_number?: string | null
           completed_projects?: number | null
           created_at?: string | null
@@ -1920,6 +1922,7 @@ export type Database = {
           avg_rating?: number | null
           bio?: string | null
           business_name?: string
+          company_name?: string | null
           company_number?: string | null
           completed_projects?: number | null
           created_at?: string | null
