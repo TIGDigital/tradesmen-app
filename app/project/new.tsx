@@ -289,7 +289,7 @@ export default function NewProjectScreen() {
               placeholder="+447700900002"
               keyboardType="phone-pad"
               textContentType="telephoneNumber"
-              helper="No SMS sent yet — invite link comes in a later sprint."
+              helper="You'll share their invite from the project screen, over WhatsApp or text."
             />
 
             {/* "Bring your crew?" — only renders if the tradesman has past crew.

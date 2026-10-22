@@ -21,7 +21,7 @@ import { Card } from '@/components/ui/Card';
 import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useRealtimeProject } from '@/hooks/useRealtimeProject';
-import { sendInviteSms } from '@/services/invites';
+import { ensureInviteCode, inviteShareMessage, markInviteShared } from '@/services/invites';
 import { logLeaveSite } from '@/services/location';
 import { fireLeaveSiteNudge } from '@/services/notifications';
 import {
@@ -247,22 +247,18 @@ export default function ProjectDetailScreen() {
           onSetReminder={() => router.push({ pathname: '/project/[id]/reminders', params: { id: id! } })}
           onChangeStatus={() => router.push({ pathname: '/project/[id]/status', params: { id: id! } })}
           onMilestoneTap={onMilestoneTap}
-          onSendInviteSms={async () => {
+          onShareInvite={async () => {
             try {
-              const res = await sendInviteSms(id!);
-              queryClient.invalidateQueries({ queryKey: ['project', id] });
-              Alert.alert('SMS sent', `Customer will get a text with code ${res.invite_code}.`);
-            } catch (e) {
-              Alert.alert("Couldn't send SMS", (e as Error).message);
-            }
-          }}
-          onShareInvite={async (code) => {
-            try {
-              await Share.share({
-                message: `Your project invite code: ${code}\n\nOpen the Phase app and enter it on the home screen.`,
+              const code = await ensureInviteCode(id!);
+              const result = await Share.share({
+                message: inviteShareMessage(code, projectQuery.data?.pending_customer_name),
               });
-            } catch {
-              // user cancelled
+              if (result.action === Share.sharedAction) {
+                await markInviteShared(id!);
+              }
+              queryClient.invalidateQueries({ queryKey: ['project', id] });
+            } catch (e) {
+              Alert.alert("Couldn't share invite", (e as Error).message);
             }
           }}
         />
@@ -284,7 +280,6 @@ function Content({
   onSetReminder,
   onChangeStatus,
   onMilestoneTap,
-  onSendInviteSms,
   onShareInvite,
 }: {
   project: NonNullable<Awaited<ReturnType<typeof fetchProject>>>;
@@ -299,8 +294,7 @@ function Content({
   onSetReminder: () => void;
   onChangeStatus: () => void;
   onMilestoneTap: (milestone_id: string, current_status: string, title: string) => void;
-  onSendInviteSms: () => void;
-  onShareInvite: (code: string) => void;
+  onShareInvite: () => void;
 }) {
   const t = lightTheme;
 
@@ -407,10 +401,7 @@ function Content({
                 >
                   {project.invite_code}
                 </Text>
-                <Pressable
-                  onPress={() => onShareInvite(project.invite_code!)}
-                  hitSlop={8}
-                >
+                <Pressable onPress={onShareInvite} hitSlop={8}>
                   <Text style={[t.type.footnote, { color: t.colors.text.link }]}>Share</Text>
                 </Pressable>
               </View>
@@ -421,8 +412,8 @@ function Content({
                 ]}
               >
                 {project.invite_sent_at
-                  ? `SMS sent ${relativeTime(project.invite_sent_at)}`
-                  : 'Not sent yet'}
+                  ? `Shared ${relativeTime(project.invite_sent_at)}`
+                  : 'Not shared yet'}
               </Text>
             </>
           ) : (
@@ -432,13 +423,13 @@ function Content({
                 { color: t.colors.text.secondary, marginTop: t.space[2] },
               ]}
             >
-              No code yet — tap below to generate + send.
+              Tap below to create their invite and send it over WhatsApp, text or email.
             </Text>
           )}
           <View style={{ marginTop: t.space[3] }}>
             <PrimaryButton
-              title={project.invite_code ? 'Re-send SMS' : 'Send SMS invite'}
-              onPress={onSendInviteSms}
+              title={project.invite_code ? 'Share invite' : 'Create + share invite'}
+              onPress={onShareInvite}
             />
           </View>
         </Card>

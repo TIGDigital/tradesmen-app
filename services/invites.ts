@@ -50,45 +50,67 @@ export async function acceptInvite(code: string) {
 }
 
 /**
- * Ask the Edge Function to text the invite SMS to the project's
- * pending_customer_phone. Server-side: looks up project, generates an
- * invite_code if missing, calls Twilio.
- *
- * On non-2xx we surface the function's JSON body so the Alert shows the
- * real cause (e.g. "project not found or not authorised", or a Twilio
- * rejection message).
+ * The invite now travels through the tradesman's own channels (WhatsApp,
+ * their SMS, email) via the native share sheet — no Twilio, no per-message
+ * cost, and the message arrives from a number the customer already trusts.
+ * The share links to getphase.co.uk/invite/CODE, which unfurls as a Phase
+ * card and carries the download link, so swapping TestFlight for the App
+ * Store at launch is a website change, not an app update.
  */
-export async function sendInviteSms(project_id: string) {
-  const { data, error } = await supabase.functions.invoke<{
-    ok?: boolean;
-    invite_code?: string;
-    twilio_sid?: string;
-    error?: string;
-    twilio_status?: number;
-    twilio_message?: string;
-  }>('send-invite-sms', { body: { project_id } });
 
-  if (error) {
-    // Try to extract the function's JSON error body from FunctionsHttpError.
-    // supabase-js attaches the Response on error.context.
-    const ctx = (error as { context?: Response }).context;
-    if (ctx && typeof ctx.json === 'function') {
-      try {
-        const body = await ctx.json();
-        const detail = body?.twilio_message ? ` (${body.twilio_message})` : '';
-        throw new Error(`${body?.error ?? error.message}${detail}`);
-      } catch (parseErr) {
-        // Fallthrough to generic error if the body wasn't JSON
-        if (parseErr instanceof Error && parseErr.message !== error.message) {
-          throw parseErr;
-        }
-      }
-    }
-    throw error;
+/** Short, hard-to-typo: 6 chars from an unambiguous alphabet (no 0/O/1/I).
+ *  Mirrors the server-side generator so codes look identical either way. */
+function generateInviteCode(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = new Uint8Array(6);
+  crypto.getRandomValues(bytes);
+  let out = '';
+  for (const b of bytes) out += alphabet[b % alphabet.length];
+  return out;
+}
+
+/**
+ * Return the project's invite code, generating + persisting one if missing.
+ * RLS: only the project lead can update their own project, so this is
+ * tradesman-only by construction. Retries on the (unlikely) unique clash.
+ */
+export async function ensureInviteCode(project_id: string): Promise<string> {
+  const { data: project, error } = await supabase
+    .from('projects')
+    .select('invite_code')
+    .eq('id', project_id)
+    .single();
+  if (error) throw error;
+  if (project.invite_code) return project.invite_code;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const code = generateInviteCode();
+    const { error: updateError } = await supabase
+      .from('projects')
+      .update({ invite_code: code })
+      .eq('id', project_id)
+      .is('invite_code', null);
+    if (!updateError) return code;
+    if (updateError.code !== '23505') throw updateError; // not a unique clash
   }
-  if (data?.error) {
-    const detail = data.twilio_message ? ` (${data.twilio_message})` : '';
-    throw new Error(`${data.error}${detail}`);
-  }
-  return data!;
+  throw new Error("Couldn't generate an invite code — try again");
+}
+
+/** Stamp when the invite was last shared (drives the "Shared 2h ago" line). */
+export async function markInviteShared(project_id: string): Promise<void> {
+  await supabase
+    .from('projects')
+    .update({ invite_sent_at: new Date().toISOString() })
+    .eq('id', project_id);
+}
+
+/** The message dropped into WhatsApp/SMS/email via the share sheet. */
+export function inviteShareMessage(code: string, customerName?: string | null): string {
+  const hi = customerName ? `Hi ${customerName.split(' ')[0]}, ` : '';
+  return (
+    `${hi}I'll be running our project on Phase. You'll see photo updates, ` +
+    `what's happening next and the agreed price, all in one place.\n\n` +
+    `Your invite code: ${code}\n\n` +
+    `https://getphase.co.uk/invite/${code}`
+  );
 }
