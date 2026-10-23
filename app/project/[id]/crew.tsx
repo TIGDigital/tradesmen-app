@@ -93,11 +93,12 @@ export default function ProjectCrewScreen() {
   // Invite UI state: 'idle' (no form), 'form' (entering name), 'ready' (showing code + share).
   const [inviteState, setInviteState] = useState<'idle' | 'form' | 'ready'>('idle');
   const [inviteeName, setInviteeName] = useState('');
+  const [inviteRole, setInviteRole] = useState<'apprentice' | 'helper'>('apprentice');
   const [generatedInvite, setGeneratedInvite] = useState<CrewInvite | null>(null);
 
   const inviteMutation = useMutation({
     mutationFn: () =>
-      createCrewInvite({ project_id: id!, invitee_name: inviteeName }),
+      createCrewInvite({ project_id: id!, invitee_name: inviteeName, role_on_project: inviteRole }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['project-crew-pending', id] }),
     onSuccess: (row) => {
       setGeneratedInvite(row);
@@ -219,6 +220,37 @@ export default function ProjectCrewScreen() {
                   },
                 ]}
               />
+              <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginTop: 14 }]}>
+                Their role
+              </Text>
+              <View style={{ gap: 8, marginTop: 8 }}>
+                {([
+                  { value: 'apprentice', label: 'Apprentice', hint: 'Their posts wait in your approval queue. Right for subcontractors too.' },
+                  { value: 'helper', label: 'Helper', hint: 'Trusted crew: posts go straight to the customer.' },
+                ] as const).map((o) => {
+                  const active = inviteRole === o.value;
+                  return (
+                    <Pressable
+                      key={o.value}
+                      onPress={() => setInviteRole(o.value)}
+                      style={{
+                        padding: 12,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: active ? t.colors.brand.primary : t.colors.border.subtle,
+                        backgroundColor: active ? t.colors.brand.tint : t.colors.bg.surface,
+                      }}
+                    >
+                      <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
+                        {o.label}
+                      </Text>
+                      <Text style={[t.type.footnote, { color: t.colors.text.secondary, marginTop: 2 }]}>
+                        {o.hint}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
               <View style={{ gap: 8, marginTop: 14 }}>
                 <PrimaryButton
                   title="Generate invite code"

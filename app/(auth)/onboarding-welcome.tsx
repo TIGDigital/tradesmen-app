@@ -292,6 +292,52 @@ export default function OnboardingWelcomeScreen() {
 
         {isTradesman && (
           <View style={{ marginTop: t.space[8], gap: t.space[4] }}>
+            {/* Register search leads: one search fills the company fields
+                and the business name (Todd, 23 Oct). */}
+            <Pressable
+              onPress={onSearchRegister}
+              disabled={lookupMutation.isPending || searchMutation.isPending}
+              hitSlop={6}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                padding: t.space[4],
+                borderWidth: 1,
+                borderStyle: 'dashed',
+                borderRadius: t.radius.md,
+                borderColor: t.colors.brand.primary,
+                backgroundColor: t.colors.brand.tint,
+              }}
+            >
+              <Ionicons name="search" size={18} color={t.colors.brand.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
+                  {lookupMutation.isPending || searchMutation.isPending
+                    ? 'Checking the register…'
+                    : 'Find your company on Companies House'}
+                </Text>
+                <Text style={[t.type.footnote, { color: t.colors.text.secondary, marginTop: 2 }]}>
+                  Search by name or number and the details below fill themselves.
+                </Text>
+              </View>
+            </Pressable>
+
+            <InputField
+              label="Company name (Companies House)"
+              value={companyName}
+              onChangeText={setCompanyName}
+              autoCapitalize="words"
+              placeholder="Smith & Sons Plumbing Ltd"
+            />
+            <InputField
+              label="Company number"
+              value={companyNumber}
+              onChangeText={setCompanyNumber}
+              autoCapitalize="characters"
+              placeholder="12345678"
+            />
+
             <InputField
               label="Business name"
               value={businessName}
@@ -326,34 +372,6 @@ export default function OnboardingWelcomeScreen() {
                 ]}
               />
             </View>
-
-            <InputField
-              label="Company name (Companies House)"
-              value={companyName}
-              onChangeText={setCompanyName}
-              autoCapitalize="words"
-              placeholder="Smith & Sons Plumbing Ltd"
-            />
-            <InputField
-              label="Company number"
-              value={companyNumber}
-              onChangeText={setCompanyNumber}
-              autoCapitalize="characters"
-              placeholder="12345678"
-            />
-            <Pressable
-              onPress={onSearchRegister}
-              disabled={lookupMutation.isPending || searchMutation.isPending}
-              hitSlop={6}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-            >
-              <Ionicons name="search" size={16} color={t.colors.text.link} />
-              <Text style={[t.type.body, { color: t.colors.text.link }]}>
-                {lookupMutation.isPending || searchMutation.isPending
-                  ? 'Checking the register…'
-                  : 'Search Companies House, name or number'}
-              </Text>
-            </Pressable>
           </View>
         )}
 
