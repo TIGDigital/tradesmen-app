@@ -18,7 +18,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { pickDocument, uploadDocument } from '@/services/documents';
+import { listProjectDocuments, pickDocument, uploadDocument } from '@/services/documents';
 import { formatGbp } from '@/services/pricing';
 import { createAndSendQuote, parseQuotePdf, quoteTotals } from '@/services/quotes';
 import { getMyTradesmanProfile } from '@/services/tradesman';
@@ -93,6 +93,42 @@ export default function NewQuoteScreen() {
     onError: (e) => Alert.alert("Couldn't read the PDF", (e as Error).message),
   });
 
+  // PDFs already uploaded to the project's Documents — testers kept
+  // uploading there first, then looking for the prices (23 Oct).
+  const projectPdfsQuery = useQuery({
+    queryKey: ['project-documents', id],
+    queryFn: () => listProjectDocuments(id!),
+    enabled: !!id,
+  });
+  const projectPdfs = (projectPdfsQuery.data ?? []).filter(
+    (d) => d.mime_type === 'application/pdf',
+  );
+
+  function onImportPress() {
+    if (projectPdfs.length === 0) {
+      attachMutation.mutate();
+      return;
+    }
+    Alert.alert('Read in a PDF quote', 'Where is the PDF?', [
+      { text: 'Choose a file', onPress: () => attachMutation.mutate() },
+      {
+        text: 'Use a project document',
+        onPress: () =>
+          Alert.alert('Pick a document', undefined, [
+            ...projectPdfs.slice(0, 5).map((d) => ({
+              text: d.file_name,
+              onPress: () => {
+                setAttachedPdf({ id: d.id, name: d.file_name });
+                parseMutation.mutate(d.id);
+              },
+            })),
+            { text: 'Cancel', style: 'cancel' as const },
+          ]),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
+
   const attachMutation = useMutation({
     mutationFn: async () => {
       const asset = await pickDocument();
@@ -150,6 +186,41 @@ export default function NewQuoteScreen() {
           contentContainerStyle={{ padding: t.space[5], gap: t.space[4] }}
           keyboardShouldPersistTaps="handled"
         >
+          {/* ── PDF import — front and centre, the fastest path ── */}
+          <Pressable
+            onPress={onImportPress}
+            disabled={attachMutation.isPending || parseMutation.isPending}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              padding: t.space[4],
+              borderWidth: 1,
+              borderStyle: 'dashed',
+              borderRadius: t.radius.md,
+              borderColor: t.colors.brand.primary,
+              backgroundColor: t.colors.brand.tint,
+            }}
+          >
+            <Ionicons name="sparkles" size={20} color={t.colors.brand.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
+                {attachMutation.isPending
+                  ? 'Attaching…'
+                  : parseMutation.isPending
+                    ? 'Reading the PDF…'
+                    : attachedPdf
+                      ? attachedPdf.name
+                      : 'Already have this quote as a PDF?'}
+              </Text>
+              <Text style={[t.type.footnote, { color: t.colors.text.secondary, marginTop: 2 }]}>
+                {attachedPdf
+                  ? 'Attached. Tap to read it in again or swap it.'
+                  : 'Read it in and the lines, VAT and discount fill themselves. You check, then send.'}
+              </Text>
+            </View>
+          </Pressable>
+
           {/* ── Line items ─────────────────────────────────────── */}
           <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Line items</Text>
           {lines.map((line, idx) => (
