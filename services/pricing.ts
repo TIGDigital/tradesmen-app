@@ -162,6 +162,8 @@ export async function proposePriceChange(args: {
     body: direction
       ? `Tap to review the ${direction} on ${project?.title ?? 'your project'}.`
       : `Tap to review the proposed change on ${project?.title ?? 'your project'}.`,
+  
+    data: { screen: 'pricing' },
   });
 
   return data as PriceChange;
@@ -214,6 +216,8 @@ export async function respondToPriceChange(args: {
       args.decision === 'approved'
         ? `${project?.title ?? 'Your customer'} accepted the new price.`
         : `${project?.title ?? 'Your customer'} declined the proposed change.`,
+  
+    data: { screen: 'pricing' },
   });
 
   return data as PriceChange;

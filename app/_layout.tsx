@@ -191,14 +191,21 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       const data = response.notification.request.content.data ?? {};
       const projectId = typeof data.project_id === 'string' ? data.project_id : null;
       const quoteId = typeof data.quote_id === 'string' ? data.quote_id : null;
+      const snagId = typeof data.snag_id === 'string' ? data.snag_id : null;
+      // Each notification lands in its own context, not the project front
+      // door (beta feedback 23 Oct).
       if (quoteId) {
-        // Quote pushes land ON the quote — hunting for it was beta
-        // feedback (23 Oct).
         router.push({ pathname: '/quote/[id]', params: { id: quoteId } });
         return;
       }
       if (!projectId) return;
-      if (data.action === 'end_of_day') {
+      if (snagId) {
+        router.push({ pathname: '/snag/[id]', params: { id: snagId } });
+      } else if (data.screen === 'chat') {
+        router.push({ pathname: '/project/[id]/chat', params: { id: projectId } });
+      } else if (data.screen === 'pricing') {
+        router.push({ pathname: '/project/[id]/pricing', params: { id: projectId } });
+      } else if (data.action === 'end_of_day') {
         router.push({ pathname: '/project/[id]/end-of-day', params: { id: projectId } });
       } else {
         router.push({ pathname: '/project/[id]', params: { id: projectId } });

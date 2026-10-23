@@ -60,6 +60,7 @@ export async function sendMessage(project_id: string, body: string) {
     sender_id: user.id,
     title: profile?.role === 'customer' ? 'Message from your customer' : 'New message',
     body: preview,
+    data: { screen: 'chat' },
   });
 
   return data;

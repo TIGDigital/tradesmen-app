@@ -79,13 +79,23 @@ export function NotificationsView() {
       // Fire-and-forget — UI will refresh via realtime + invalidation.
       void markNotificationRead(n.id);
     }
-    // Quote notifications land on the quote itself, not the project.
-    const quoteId = (n.data as { quote_id?: string } | null)?.quote_id;
-    if (quoteId) {
-      router.push({ pathname: '/quote/[id]', params: { id: quoteId } });
+    // Each notification lands in its own context, mirroring the push tap
+    // handler in app/_layout.tsx.
+    const d = (n.data ?? {}) as { quote_id?: string; snag_id?: string; screen?: string };
+    if (d.quote_id) {
+      router.push({ pathname: '/quote/[id]', params: { id: d.quote_id } });
       return;
     }
-    if (n.project_id) {
+    if (d.snag_id) {
+      router.push({ pathname: '/snag/[id]', params: { id: d.snag_id } });
+      return;
+    }
+    if (!n.project_id) return;
+    if (d.screen === 'chat') {
+      router.push({ pathname: '/project/[id]/chat', params: { id: n.project_id } });
+    } else if (d.screen === 'pricing') {
+      router.push({ pathname: '/project/[id]/pricing', params: { id: n.project_id } });
+    } else {
       router.push({ pathname: '/project/[id]', params: { id: n.project_id } });
     }
   }

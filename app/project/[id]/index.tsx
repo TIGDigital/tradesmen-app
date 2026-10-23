@@ -704,6 +704,13 @@ function Content({
           })
           .map((u) => (
           <Card key={u.id}>
+            {/* The whole card opens the update's comment thread — the small
+                link below stays as the labelled affordance (23 Oct). */}
+            <Pressable
+              onPress={() =>
+                router.push({ pathname: '/comments/[update_id]', params: { update_id: u.id } })
+              }
+            >
             {(u as { approval_status?: string }).approval_status === 'pending' && (
               <View
                 style={{
@@ -769,6 +776,7 @@ function Content({
                 </Text>
               </View>
             )}
+            </Pressable>
             <Reactions update_id={u.id} project_id={project.id} reactions={u.reactions} />
             <Pressable
               onPress={() =>
