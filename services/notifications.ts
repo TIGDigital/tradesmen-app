@@ -249,6 +249,24 @@ export async function markNotificationRead(id: string) {
   if (error) throw error;
 }
 
+/**
+ * Remove THIS device's push registration for the signed-in user. Called on
+ * sign-out so a shared phone stops receiving the previous account's pushes
+ * (23 Oct beta: customer pushes kept arriving while signed in as crew).
+ * Other devices' tokens are untouched. Best-effort — never blocks sign-out.
+ */
+export async function unregisterPushForThisDevice(): Promise<void> {
+  try {
+    if (Platform.OS === 'web' || !PROJECT_ID) return;
+    const perm = await Notifications.getPermissionsAsync();
+    if (perm.status !== 'granted') return; // never registered
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId: PROJECT_ID });
+    await supabase.from('push_tokens').delete().eq('token', tokenData.data);
+  } catch (e) {
+    console.warn('[notifications] unregister failed', e);
+  }
+}
+
 /** Unread inbox count for the signed-in user — drives the tab badge. */
 export async function fetchUnreadNotificationCount(): Promise<number> {
   const { data: { user } } = await supabase.auth.getUser();

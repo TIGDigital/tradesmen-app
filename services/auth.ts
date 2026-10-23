@@ -1,3 +1,4 @@
+import { unregisterPushForThisDevice } from '@/services/notifications';
 import { supabase } from '@/services/supabase';
 import type { Database } from '@/types/db';
 
@@ -32,6 +33,9 @@ export async function signInWithEmail(email: string, password: string) {
 }
 
 export async function signOut() {
+  // Stop this phone receiving the outgoing account's pushes — must run
+  // BEFORE the session dies (RLS needs the user to delete their row).
+  await unregisterPushForThisDevice();
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }
