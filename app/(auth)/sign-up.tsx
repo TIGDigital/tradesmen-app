@@ -47,7 +47,14 @@ export default function SignUpScreen() {
       });
       router.push('/(auth)/role-select');
     } catch (e) {
-      Alert.alert("Couldn't sign up", (e as Error).message);
+      // The breached-password check returns server jargon — translate it.
+      const msg = (e as Error).message ?? '';
+      Alert.alert(
+        "Couldn't sign up",
+        /pwned|breach|weak|compromised/i.test(msg)
+          ? 'That password appears in lists of leaked passwords, so it is not safe to use. Pick something more personal to you.'
+          : msg,
+      );
     } finally {
       setSubmitting(false);
     }
@@ -123,7 +130,7 @@ export default function SignUpScreen() {
               // suggestion overlay — the native UI implicated in the
               // iOS 26.5 teardown crash. Keychain auto-suggest traded
               // for stability.
-              helper="At least 6 characters."
+              helper="At least 6 characters. Very common passwords are rejected, so make it personal to you."
               returnKeyType="done"
               onSubmitEditing={onSubmit}
             />
