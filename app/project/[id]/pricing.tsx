@@ -366,7 +366,7 @@ export default function PricingScreen() {
                 >
                   <Ionicons name="add" size={18} color={t.colors.text.link} />
                   <Text style={[t.type.body, { color: t.colors.text.link }]}>
-                    Send an itemised quote
+                    Build an itemised quote
                   </Text>
                 </Pressable>
               )}
