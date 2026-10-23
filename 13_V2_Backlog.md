@@ -20,7 +20,25 @@ assume one customer, so this is a structural change, not a field:
 Interim workaround (fine for beta): the household shares one login on two
 phones — sessions persist per device.
 
-### 2. Quote payment schedule (records, not rails)
+### 2. Crew access tiers / subcontractors
+Decided principle (23 Oct 2026): **invite authority never leaves the lead** —
+one level deep, always. A subcontractor's team gets in by the lead inviting
+each person; a subbie can never invite people the lead hasn't met onto the
+lead's customer-facing project.
+
+Today's model already half-covers it: crew invites carry `role_on_project`
+(`apprentice` = posts queue for lead approval, `helper` = posts direct).
+**Beta guidance: invite a subcontractor as apprentice-role** — wrong label,
+right behaviour (everything reviewed before the customer sees it).
+
+V2 adds a proper `subcontractor` tier: queued posts like an apprentice,
+plus scoped visibility — their own phase of the schedule and their snags
+only, never quotes or pricing — and access that auto-expires when their
+milestones complete or the lead removes them. Mostly new visibility rules
+on existing mechanics, so V1.1-sized. Consider renaming roles to match
+reality (crew / apprentice / subcontractor) at the same time.
+
+### 3. Quote payment schedule (records, not rails)
 If beta testers ask to "track money": deposit / stage payments / final
 balance lines on an approved quote, each with a manual "mark as paid" tick.
 Pure record-keeping — no Stripe Connect, no money movement, no disputes.
@@ -30,7 +48,7 @@ a day on top of project_quotes.
 **Decided and standing:** Phase never moves job money. Card rails don't fit
 £5k–£100k UK trade jobs (fees, chargebacks, bank-transfer culture).
 
-### 3. Pricing + billing (monetisation)
+### 4. Pricing + billing (monetisation)
 Model agreed 21 Oct 2026: charge the tradesperson, homeowners free forever,
 crew seats under the lead's subscription.
 
