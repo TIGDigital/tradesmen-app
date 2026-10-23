@@ -249,6 +249,19 @@ export async function markNotificationRead(id: string) {
   if (error) throw error;
 }
 
+/** Unread inbox count for the signed-in user — drives the tab badge. */
+export async function fetchUnreadNotificationCount(): Promise<number> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 0;
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .is('read_at', null);
+  if (error) return 0;
+  return count ?? 0;
+}
+
 /** Mark every unread notification for the signed-in user as read. */
 export async function markAllNotificationsRead() {
   const { data: { user } } = await supabase.auth.getUser();

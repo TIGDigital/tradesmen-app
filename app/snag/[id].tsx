@@ -5,6 +5,7 @@ import { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -447,21 +448,44 @@ function PhotoStripFromPaths({ paths }: { paths: string[] }) {
     enabled: paths.length > 0,
     staleTime: 50 * 60 * 1000,
   });
+  // Tap any thumbnail to view it full screen (beta feedback 23 Oct).
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
   if (paths.length === 0) return null;
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-      {paths.map((p, i) => {
-        const uri = urls?.[i];
-        return (
-          <View
-            key={p}
-            style={{ width: 110, height: 110, borderRadius: 8, overflow: 'hidden', backgroundColor: '#EEE' }}
-          >
-            {uri && <Image source={{ uri }} style={{ width: '100%', height: '100%' }} contentFit="cover" />}
-          </View>
-        );
-      })}
-    </ScrollView>
+    <>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+        {paths.map((p, i) => {
+          const uri = urls?.[i];
+          return (
+            <Pressable
+              key={p}
+              onPress={() => uri && setViewerUri(uri)}
+              style={{ width: 110, height: 110, borderRadius: 8, overflow: 'hidden', backgroundColor: '#EEE' }}
+            >
+              {uri && <Image source={{ uri }} style={{ width: '100%', height: '100%' }} contentFit="cover" />}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+      <Modal
+        visible={!!viewerUri}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setViewerUri(null)}
+      >
+        <Pressable
+          onPress={() => setViewerUri(null)}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.94)', justifyContent: 'center' }}
+        >
+          {viewerUri && (
+            <Image source={{ uri: viewerUri }} style={{ width: '100%', height: '85%' }} contentFit="contain" />
+          )}
+          <Text style={{ color: '#FFFFFF99', textAlign: 'center', paddingTop: 12 }}>
+            Tap anywhere to close
+          </Text>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 

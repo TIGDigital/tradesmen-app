@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Tabs } from 'expo-router';
 
 import { fetchUnreadMessageCount } from '@/services/messages';
+import { fetchUnreadNotificationCount } from '@/services/notifications';
 import { lightTheme } from '@/theme/light';
 
 /**
@@ -16,6 +17,13 @@ export default function CustomerLayout() {
   const { data: unreadMessages = 0 } = useQuery({
     queryKey: ['unread-messages'],
     queryFn: fetchUnreadMessageCount,
+    refetchInterval: 30_000,
+  });
+  // Same cadence for the inbox badge (snag/quote/price notifications were
+  // landing silently — beta feedback 23 Oct).
+  const { data: unreadNotifications = 0 } = useQuery({
+    queryKey: ['unread-notifications'],
+    queryFn: fetchUnreadNotificationCount,
     refetchInterval: 30_000,
   });
 
@@ -71,6 +79,7 @@ export default function CustomerLayout() {
       <Tabs.Screen
         name="notifications"
         options={{
+          tabBarBadge: unreadNotifications > 0 ? unreadNotifications : undefined,
           title: 'Activity',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="notifications-outline" color={color} size={size} />

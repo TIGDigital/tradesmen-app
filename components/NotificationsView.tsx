@@ -53,12 +53,12 @@ export function NotificationsView() {
 
   const markAllMutation = useMutation({
     mutationFn: markAllNotificationsRead,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications', userId] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['notifications', userId] }); queryClient.invalidateQueries({ queryKey: ['unread-notifications'] }); },
   });
 
   const clearAllMutation = useMutation({
     mutationFn: clearAllNotifications,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications', userId] }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['notifications', userId] }); queryClient.invalidateQueries({ queryKey: ['unread-notifications'] }); },
   });
 
   const dismissMutation = useMutation({
@@ -71,13 +71,14 @@ export function NotificationsView() {
         (old) => (old ?? []).filter((n) => n.id !== id),
       );
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['notifications', userId] }),
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: ['notifications', userId] }); queryClient.invalidateQueries({ queryKey: ['unread-notifications'] }); },
   });
 
   function onItemPress(n: NotificationRow) {
     if (!n.read_at) {
       // Fire-and-forget — UI will refresh via realtime + invalidation.
       void markNotificationRead(n.id);
+      queryClient.invalidateQueries({ queryKey: ['unread-notifications'] });
     }
     // Each notification lands in its own context, mirroring the push tap
     // handler in app/_layout.tsx.
