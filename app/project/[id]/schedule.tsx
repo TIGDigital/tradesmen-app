@@ -11,6 +11,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ErrorState } from '@/components/ui/ErrorState';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { fetchMilestones, fetchProject } from '@/services/projects';
 import { useAuthStore } from '@/stores/auth';
@@ -106,11 +107,27 @@ export default function ScheduleScreen() {
       )}
 
       {!isLoading && !error && milestones.length === 0 && (
-        <ErrorState
-          tone="empty"
-          title="No milestones yet"
-          message="Add milestones to the project to see the schedule."
-        />
+        <View style={{ flex: 1 }}>
+          <ErrorState
+            tone="empty"
+            title="No milestones yet"
+            message={
+              role === 'customer'
+                ? "Your tradesperson hasn't added the schedule yet. It'll appear here when they do."
+                : 'The schedule is built from milestones. Add the phases of the job and the timeline draws itself.'
+            }
+          />
+          {role !== 'customer' && (
+            <View style={{ paddingHorizontal: 24, marginTop: -8 }}>
+              <PrimaryButton
+                title="Add milestones"
+                onPress={() =>
+                  router.push({ pathname: '/project/[id]/milestones', params: { id: id! } })
+                }
+              />
+            </View>
+          )}
+        </View>
       )}
 
       {!isLoading && !error && milestones.length > 0 && range && (
