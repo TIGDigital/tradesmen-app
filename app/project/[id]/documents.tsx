@@ -62,6 +62,15 @@ export default function DocumentsScreen() {
 
   const items = data ?? [];
 
+  // Two sections: the viewer's own uploads, then the other side's — so a
+  // customer sees "Your documents" and "Dave's documents" (23 Oct).
+  const myId = useAuthStore((s) => s.profile?.id);
+  const mine = items.filter((d) => d.uploader_id === myId);
+  const theirs = items.filter((d) => d.uploader_id !== myId);
+  const theirName =
+    theirs[0]?.uploader?.full_name?.split(' ')[0] ??
+    (role === 'customer' ? 'Your tradesman' : 'Your customer');
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['bottom']}>
       <View style={[styles.navBar, { paddingTop: insets.top, height: 44 + insets.top }]}>
@@ -71,23 +80,20 @@ export default function DocumentsScreen() {
         <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
           Documents
         </Text>
-        {/* Customers read documents; uploading is for the tradesman side. */}
-        {role !== 'customer' ? (
-          <Pressable
-            onPress={() => uploadMutation.mutate()}
-            hitSlop={12}
-            disabled={uploadMutation.isPending}
-            accessibilityLabel="Upload a document"
-          >
-            <Ionicons
-              name="add-circle"
-              size={28}
-              color={uploadMutation.isPending ? t.colors.text.tertiary : t.colors.text.link}
-            />
-          </Pressable>
-        ) : (
-          <View style={{ width: 28 }} />
-        )}
+        {/* Both parties upload (customer plans etc. — 23 Oct); RLS already
+            scoped inserts to project participants. */}
+        <Pressable
+          onPress={() => uploadMutation.mutate()}
+          hitSlop={12}
+          disabled={uploadMutation.isPending}
+          accessibilityLabel="Upload a document"
+        >
+          <Ionicons
+            name="add-circle"
+            size={28}
+            color={uploadMutation.isPending ? t.colors.text.tertiary : t.colors.text.link}
+          />
+        </Pressable>
       </View>
 
       {isLoading && (
@@ -128,54 +134,67 @@ export default function DocumentsScreen() {
           contentContainerStyle={{ padding: t.space[5], gap: t.space[3] }}
           refreshControl={<RefreshControl tintColor={t.colors.brand.primary} refreshing={isRefetching} onRefresh={refetch} />}
         >
-          {items.map((d) => {
-            const isPdf = d.mime_type === 'application/pdf';
-            const isImage = d.mime_type.startsWith('image/');
-            const iconName: keyof typeof Ionicons.glyphMap = isPdf
-              ? 'document-text'
-              : isImage
-                ? 'image'
-                : 'document';
-            const iconColor = isPdf ? '#C0392B' : isImage ? '#1F9C56' : t.colors.text.secondary;
-            return (
-              <Card key={d.id}>
-                <Pressable
-                  onPress={() =>
-                    router.push({ pathname: '/document/[id]', params: { id: d.id } })
-                  }
-                  style={styles.row}
-                >
-                  <View
-                    style={[
-                      styles.iconBox,
-                      { backgroundColor: t.colors.bg.surface2 },
-                    ]}
-                  >
-                    <Ionicons name={iconName} size={22} color={iconColor} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}
-                      numberOfLines={1}
-                    >
-                      {d.file_name}
-                    </Text>
-                    <Text
-                      style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 2 }]}
-                      numberOfLines={1}
-                    >
-                      {(d.uploader?.full_name ?? 'Someone')} ·{' '}
-                      {relativeTime(d.created_at)} · {formatBytes(d.size_bytes)}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={t.colors.text.tertiary} />
-                </Pressable>
-              </Card>
-            );
-          })}
+          {mine.length > 0 && (
+            <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
+              Your documents
+            </Text>
+          )}
+          {mine.map((d) => (
+            <DocRow key={d.id} doc={d} />
+          ))}
+          {theirs.length > 0 && (
+            <Text
+              style={[
+                t.type.caption,
+                { color: t.colors.text.tertiary, marginTop: mine.length > 0 ? t.space[3] : 0 },
+              ]}
+            >
+              {theirName}'s documents
+            </Text>
+          )}
+          {theirs.map((d) => (
+            <DocRow key={d.id} doc={d} />
+          ))}
         </ScrollView>
       )}
     </SafeAreaView>
+  );
+}
+
+function DocRow({ doc: d }: { doc: Awaited<ReturnType<typeof listProjectDocuments>>[number] }) {
+  const t = lightTheme;
+  const isPdf = d.mime_type === 'application/pdf';
+  const isImage = d.mime_type.startsWith('image/');
+  const iconName: keyof typeof Ionicons.glyphMap = isPdf
+    ? 'document-text'
+    : isImage
+      ? 'image'
+      : 'document';
+  const iconColor = isPdf ? '#C0392B' : isImage ? '#1F9C56' : t.colors.text.secondary;
+  return (
+    <Card>
+      <Pressable
+        onPress={() => router.push({ pathname: '/document/[id]', params: { id: d.id } })}
+        style={styles.row}
+      >
+        <View style={[styles.iconBox, { backgroundColor: t.colors.bg.surface2 }]}>
+          <Ionicons name={iconName} size={22} color={iconColor} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]} numberOfLines={1}>
+            {d.file_name}
+          </Text>
+          <Text
+            style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 2 }]}
+            numberOfLines={1}
+          >
+            {(d.uploader?.full_name ?? 'Someone')} · {relativeTime(d.created_at)} ·{' '}
+            {formatBytes(d.size_bytes)}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={t.colors.text.tertiary} />
+      </Pressable>
+    </Card>
   );
 }
 
