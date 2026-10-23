@@ -1,7 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect, router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -45,6 +46,32 @@ export default function JobsScreen() {
     queryFn: fetchMyProjects,
     enabled: !!profile && profile.role === 'tradesman',
   });
+
+  // One-time nudge on the first empty Jobs visit: offer the first project,
+  // but let them just look around (Todd, 23 Oct — never force the form).
+  // One-shot by design: state guards the session, AsyncStorage the install.
+  const [firstPromptChecked, setFirstPromptChecked] = useState(false);
+  useEffect(() => {
+    if (firstPromptChecked || !data || data.length > 0) return;
+    setFirstPromptChecked(true);
+    void (async () => {
+      try {
+        const seen = await AsyncStorage.getItem('first-project-prompt-shown');
+        if (seen) return;
+        await AsyncStorage.setItem('first-project-prompt-shown', '1');
+        Alert.alert(
+          'Ready when you are',
+          'Create your first project now, or have a look around first — the checklist below walks you through everything.',
+          [
+            { text: 'Create my first project', onPress: () => router.push('/project/new') },
+            { text: 'Look around first', style: 'cancel' },
+          ],
+        );
+      } catch {
+        // Storage hiccup: skip the nudge rather than risk repeating it.
+      }
+    })();
+  }, [firstPromptChecked, data]);
 
   // Onboarding progress — derived from existing data on every screen
   // mount. Stays stale-while-revalidate so the checklist doesn't lag a
