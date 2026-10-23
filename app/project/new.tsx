@@ -19,6 +19,7 @@ import { isAddressLookupConfigured } from '@/services/addressLookup';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { enrollCrew, listMyPastCrew } from '@/services/crew';
 import { createProject } from '@/services/projects';
+import { getMyTradesmanProfile } from '@/services/tradesman';
 import { lightTheme } from '@/theme/light';
 import type { Database } from '@/types/db';
 
@@ -45,6 +46,14 @@ const TRADES: { value: TradeType; label: string }[] = [
 export default function NewProjectScreen() {
   const t = lightTheme;
   const queryClient = useQueryClient();
+
+  // A project fronts the tradesman's business to a customer, so the
+  // business profile basics must exist first (beta feedback 23 Oct).
+  const profileQuery = useQuery({
+    queryKey: ['tradesman-profile'],
+    queryFn: getMyTradesmanProfile,
+  });
+  const profileReady = !!profileQuery.data?.business_name?.trim();
 
   const [title, setTitle] = useState('');
   const [trade, setTrade] = useState<TradeType>('kitchen_fitter');
@@ -148,6 +157,23 @@ export default function NewProjectScreen() {
         <View style={{ width: 60 }} />
       </View>
 
+      {!profileQuery.isLoading && !profileReady && (
+        <View style={{ flex: 1, justifyContent: 'center', padding: t.space[6], gap: t.space[4] }}>
+          <Text style={[t.type.title2, { color: t.colors.text.primary }]}>
+            Set up your business first
+          </Text>
+          <Text style={[t.type.bodyLg, { color: t.colors.text.secondary }]}>
+            Your business name fronts every update, quote and invite your customer sees. It takes
+            a minute — then come back and create the project.
+          </Text>
+          <PrimaryButton
+            title="Set up my business"
+            onPress={() => router.push('/settings/business')}
+          />
+        </View>
+      )}
+
+      {(profileQuery.isLoading || profileReady) && (
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={[styles.content, { padding: t.space[5] }]}
@@ -413,6 +439,7 @@ export default function NewProjectScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
   );
 }
