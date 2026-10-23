@@ -198,6 +198,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         router.push({ pathname: '/quote/[id]', params: { id: quoteId } });
         return;
       }
+      const updateId = typeof data.update_id === 'string' ? data.update_id : null;
+      if (updateId) {
+        router.push({ pathname: '/comments/[update_id]', params: { update_id: updateId } });
+        return;
+      }
       if (!projectId) return;
       if (snagId) {
         router.push({ pathname: '/snag/[id]', params: { id: snagId } });

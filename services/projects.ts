@@ -757,6 +757,15 @@ export function currentAndNextMilestone(
 // Project status
 // ============================================================
 
+/** Correct the project's trade (picked by mistake at creation). Lead-only via RLS. */
+export async function updateProjectTrade(project_id: string, trade_type: TradeType): Promise<void> {
+  const { error } = await supabase
+    .from('projects')
+    .update({ trade_type })
+    .eq('id', project_id);
+  if (error) throw error;
+}
+
 /** Change project status. If delayed, requires a reason. Auto-posts a system update. */
 export async function updateProjectStatus(args: {
   project_id: string;

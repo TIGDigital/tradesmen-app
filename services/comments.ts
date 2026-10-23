@@ -1,3 +1,4 @@
+import { notifyCounterparty } from '@/services/projects';
 import { supabase } from '@/services/supabase';
 
 export type Comment = {
@@ -37,6 +38,23 @@ export async function addComment(args: { update_id: string; body: string }) {
     body: trimmed,
   });
   if (error) throw error;
+
+  // Tell the other side — comments were landing silently (23 Oct beta).
+  // Tap routes to the comment thread via update_id in the payload.
+  const { data: update } = await supabase
+    .from('project_updates')
+    .select('project_id')
+    .eq('id', args.update_id)
+    .single();
+  if (update) {
+    void notifyCounterparty({
+      project_id: update.project_id,
+      sender_id: user.id,
+      title: 'New comment',
+      body: trimmed.length > 80 ? trimmed.slice(0, 77) + '…' : trimmed,
+      data: { update_id: args.update_id },
+    });
+  }
 }
 
 /** Soft delete (only the author can do this — RLS enforced). */

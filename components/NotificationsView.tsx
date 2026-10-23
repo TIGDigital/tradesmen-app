@@ -82,13 +82,17 @@ export function NotificationsView() {
     }
     // Each notification lands in its own context, mirroring the push tap
     // handler in app/_layout.tsx.
-    const d = (n.data ?? {}) as { quote_id?: string; snag_id?: string; screen?: string };
+    const d = (n.data ?? {}) as { quote_id?: string; snag_id?: string; update_id?: string; screen?: string };
     if (d.quote_id) {
       router.push({ pathname: '/quote/[id]', params: { id: d.quote_id } });
       return;
     }
     if (d.snag_id) {
       router.push({ pathname: '/snag/[id]', params: { id: d.snag_id } });
+      return;
+    }
+    if (d.update_id) {
+      router.push({ pathname: '/comments/[update_id]', params: { update_id: d.update_id } });
       return;
     }
     if (!n.project_id) return;

@@ -10,12 +10,32 @@ import {
   DELAY_REASON_LABELS,
   fetchProject,
   updateProjectStatus,
+  updateProjectTrade,
 } from '@/services/projects';
 import { lightTheme } from '@/theme/light';
 import type { ProjectStatus } from '@/theme/tokens';
 import type { Database } from '@/types/db';
 
 type DelayReason = Database['public']['Enums']['delay_reason'];
+type TradeType = Database['public']['Enums']['trade_type'];
+
+const TRADE_LABELS: { value: TradeType; label: string }[] = [
+  { value: 'builder', label: 'Builder' },
+  { value: 'kitchen_fitter', label: 'Kitchen fitter' },
+  { value: 'bathroom_fitter', label: 'Bathroom fitter' },
+  { value: 'electrician', label: 'Electrician' },
+  { value: 'plumber', label: 'Plumber' },
+  { value: 'roofer', label: 'Roofer' },
+  { value: 'plasterer', label: 'Plasterer' },
+  { value: 'painter_decorator', label: 'Painter/Decorator' },
+  { value: 'landscaper', label: 'Landscaper' },
+  { value: 'tiler', label: 'Tiler' },
+  { value: 'carpenter', label: 'Carpenter' },
+  { value: 'flooring', label: 'Flooring' },
+  { value: 'hvac', label: 'HVAC' },
+  { value: 'general', label: 'General' },
+  { value: 'other', label: 'Other' },
+];
 
 const STATUSES: ProjectStatus[] = [
   'quote_sent',
@@ -59,6 +79,16 @@ export default function StatusPickerScreen() {
       router.back();
     },
     onError: (e) => Alert.alert("Couldn't update status", (e as Error).message),
+  });
+
+  // Trade correction (picked by mistake at creation) — instant save on tap.
+  const tradeMutation = useMutation({
+    mutationFn: (trade: TradeType) => updateProjectTrade(id!, trade),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      queryClient.invalidateQueries({ queryKey: ['my-projects'] });
+    },
+    onError: (e) => Alert.alert("Couldn't change the trade", (e as Error).message),
   });
 
   function onSave() {
@@ -176,6 +206,44 @@ export default function StatusPickerScreen() {
           </>
         )}
 
+        <Text
+          style={[
+            t.type.caption,
+            { color: t.colors.text.tertiary, marginTop: t.space[8], marginBottom: t.space[3] },
+          ]}
+        >
+          Trade (tap to correct)
+        </Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {TRADE_LABELS.map((tr) => {
+            const active = project?.trade_type === tr.value;
+            return (
+              <Pressable
+                key={tr.value}
+                onPress={() => !active && tradeMutation.mutate(tr.value)}
+                disabled={tradeMutation.isPending}
+                style={{
+                  paddingVertical: 8,
+                  paddingHorizontal: 12,
+                  borderRadius: 999,
+                  backgroundColor: active ? t.colors.brand.primary : t.colors.bg.surface2,
+                }}
+              >
+                <Text
+                  style={[
+                    t.type.footnote,
+                    {
+                      color: active ? t.colors.text.inverse : t.colors.text.primary,
+                      fontWeight: '600',
+                    },
+                  ]}
+                >
+                  {tr.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </ScrollView>
 
       {/* Sticky bottom action — always visible regardless of scroll. */}

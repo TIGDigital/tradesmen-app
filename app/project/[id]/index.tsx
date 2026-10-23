@@ -353,6 +353,19 @@ function Content({
       {/* Today / Next */}
       <Card>
         <View style={styles.metaRow}>
+          <Text style={[t.type.body, { color: t.colors.text.secondary }]}>Trade</Text>
+          <Pressable onPress={isTradesman ? onChangeStatus : undefined} disabled={!isTradesman} hitSlop={6}>
+            <Text
+              style={[
+                t.type.bodyLgEmphasis,
+                { color: isTradesman ? t.colors.text.link : t.colors.text.primary },
+              ]}
+            >
+              {formatTradeLabel(project.trade_type)}
+            </Text>
+          </Pressable>
+        </View>
+        <View style={[styles.metaRow, { marginTop: t.space[3] }]}>
           <Text style={[t.type.body, { color: t.colors.text.secondary }]}>Today</Text>
           <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
             {current ?? '—'}
@@ -824,6 +837,12 @@ function Content({
       )}
     </ScrollView>
   );
+}
+
+/** 'kitchen_fitter' → 'Kitchen fitter' — display label for the trade enum. */
+function formatTradeLabel(trade: string): string {
+  const label = trade.replace(/_/g, ' ');
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 const styles = StyleSheet.create({

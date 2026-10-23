@@ -358,6 +358,23 @@ export default function OnboardingWelcomeScreen() {
         )}
 
         <View style={{ marginTop: t.space[10] }}>
+          {isTradesman && !setupComplete && (
+            <Text
+              style={[
+                t.type.footnote,
+                { color: t.colors.text.secondary, marginBottom: 10, textAlign: 'center' },
+              ]}
+            >
+              Still needed:{' '}
+              {[
+                !businessName.trim() && 'business name',
+                !bio.trim() && 'a line about your business',
+                (!companyName.trim() || !companyNumber.trim()) && 'Companies House details',
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
+          )}
           <PrimaryButton
             title={isTradesman ? 'Save and continue' : "Let's get started"}
             onPress={() => void onContinue()}
