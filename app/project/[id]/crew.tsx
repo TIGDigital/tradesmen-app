@@ -28,6 +28,7 @@ import {
   listPendingCrewInvites,
   listProjectCrew,
   removeCrewMember,
+  revokeCrewInvite,
   type CrewInvite,
   type CrewMember,
 } from '@/services/crew';
@@ -72,6 +73,23 @@ export default function ProjectCrewScreen() {
     onError: (e) => Alert.alert("Couldn't remove", (e as Error).message),
   });
 
+  const revokeMutation = useMutation({
+    mutationFn: (invite_id: string) => revokeCrewInvite(invite_id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project-crew-pending', id] }),
+    onError: (e) => Alert.alert("Couldn't cancel the invite", (e as Error).message),
+  });
+
+  function confirmRevoke(inv: { id: string; invitee_name: string }) {
+    Alert.alert(
+      'Cancel this invite?',
+      `${inv.invitee_name}'s code stops working. You can always send a new one.`,
+      [
+        { text: 'Keep it', style: 'cancel' },
+        { text: 'Cancel invite', style: 'destructive', onPress: () => revokeMutation.mutate(inv.id) },
+      ],
+    );
+  }
+
   // Invite UI state: 'idle' (no form), 'form' (entering name), 'ready' (showing code + share).
   const [inviteState, setInviteState] = useState<'idle' | 'form' | 'ready'>('idle');
   const [inviteeName, setInviteeName] = useState('');
@@ -95,8 +113,8 @@ export default function ProjectCrewScreen() {
     const inviterName = generatedInvite.inviter?.full_name ?? 'your lead';
     const message =
       `${inviterName} has invited you to join ${projectTitle} on Phase.\n\n` +
-      `1. Get the app: ${APP_DOWNLOAD_URL}\n` +
-      `2. Open it and enter this code:\n${generatedInvite.invite_code}\n\n` +
+      `Your crew code: ${generatedInvite.invite_code}\n\n` +
+      `https://getphase.co.uk/crew/${generatedInvite.invite_code}\n\n` +
       `Expires in 14 days.`;
     try {
       await Share.share({ message });
@@ -348,8 +366,8 @@ export default function ProjectCrewScreen() {
                         void Share.share({
                           message:
                             `You've been invited to join a project on Phase.\n\n` +
-                            `1. Get the app: ${APP_DOWNLOAD_URL}\n` +
-                            `2. Open it and enter this code:\n${inv.invite_code}`,
+                            `Your crew code: ${inv.invite_code}\n\n` +
+                            `https://getphase.co.uk/crew/${inv.invite_code}`,
                         })
                       }
                       hitSlop={6}
@@ -357,6 +375,15 @@ export default function ProjectCrewScreen() {
                       accessibilityLabel="Re-share invite"
                     >
                       <Ionicons name="share-outline" size={20} color={t.colors.text.link} />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => confirmRevoke(inv)}
+                      hitSlop={6}
+                      style={{ padding: 6 }}
+                      disabled={revokeMutation.isPending}
+                      accessibilityLabel="Cancel invite"
+                    >
+                      <Ionicons name="close-circle-outline" size={20} color={t.colors.destructive.text} />
                     </Pressable>
                   </View>
                 </Card>

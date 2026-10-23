@@ -157,6 +157,15 @@ export async function enrollCrew(args: {
  * Soft-remove a crew member from a project. RLS already scopes write
  * access to the lead tradesman (crew_write_lead policy).
  */
+/** Revoke a pending crew invite (lead only via RLS). The code stops working. */
+export async function revokeCrewInvite(invite_id: string): Promise<void> {
+  const { error } = await supabase
+    .from('crew_invitations')
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('id', invite_id);
+  if (error) throw error;
+}
+
 export async function removeCrewMember(args: { project_id: string; user_id: string }) {
   const { error } = await supabase
     .from('project_crew')
