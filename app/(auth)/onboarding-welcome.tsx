@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useMutation } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Easing,
   KeyboardAvoidingView,
@@ -10,6 +12,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PhaseLogo } from '@/components/PhaseLogo';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { InputField } from '@/components/ui/InputField';
-import { updateTradesmanProfile } from '@/services/tradesman';
+import { lookupCompany, searchCompanies, updateTradesmanProfile } from '@/services/tradesman';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
@@ -63,17 +66,102 @@ export default function OnboardingWelcomeScreen() {
   }, [opacity, translateY]);
 
   const [businessName, setBusinessName] = useState('');
+  const [bio, setBio] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [companyNumber, setCompanyNumber] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Business setup is the tradesman's FIRST screen (Todd, 23 Oct): the
+  // profile fronts everything their customer sees, so it exists before
+  // the app does. Customers and crew keep the light welcome.
+  const isTradesman = (profile?.role ?? 'tradesman') === 'tradesman';
+  const setupComplete =
+    businessName.trim().length > 0 &&
+    bio.trim().length > 0 &&
+    companyName.trim().length > 0 &&
+    companyNumber.trim().length > 0;
+
+  const lookupMutation = useMutation({
+    mutationFn: (num: string) => lookupCompany(num),
+    onSuccess: (c) => {
+      setCompanyName(c.company_name);
+      setCompanyNumber(c.company_number);
+      if (!businessName.trim()) setBusinessName(c.company_name);
+      if (c.company_status !== 'active') {
+        Alert.alert(
+          'Check the register',
+          `Companies House lists ${c.company_name} as "${c.company_status}".`,
+        );
+      }
+    },
+    onError: (e) => Alert.alert('Not found', (e as Error).message),
+  });
+
+  const searchMutation = useMutation({
+    mutationFn: (query: string) => searchCompanies(query),
+    onSuccess: (matches) => {
+      if (matches.length === 0) {
+        Alert.alert('No companies found', 'Try the exact registered name, or enter your company number instead.');
+        return;
+      }
+      Alert.alert(
+        'Select your company',
+        'Top matches from the register:',
+        [
+          ...matches.slice(0, 3).map((m) => ({
+            text: `${m.company_name} (${m.company_number})`,
+            onPress: () => lookupMutation.mutate(m.company_number),
+          })),
+          { text: 'Cancel', style: 'cancel' as const },
+        ],
+      );
+    },
+    onError: (e) => Alert.alert("Couldn't search", (e as Error).message),
+  });
+
+  function onSearchRegister() {
+    Alert.prompt(
+      'Search Companies House',
+      'Type your company name or company number.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Search',
+          onPress: (input?: string) => {
+            const q = (input ?? '').trim();
+            if (!q) return;
+            const compact = q.replace(/\s/g, '').toUpperCase();
+            if (/^[A-Z]{0,2}\d{5,8}$/.test(compact)) {
+              lookupMutation.mutate(compact);
+            } else if (q.length >= 3) {
+              searchMutation.mutate(q);
+            }
+          },
+        },
+      ],
+      'plain-text',
+      companyName || undefined,
+    );
+  }
 
   async function onContinue() {
-    // Save the business name first if the tradesman gave one — it fronts
-    // their public profile and the customer's 'Your tradesman' card.
-    const trimmed = businessName.trim();
-    if (trimmed && profile?.role === 'tradesman') {
+    // Tradesman: the business profile saves as one blocking write — this
+    // screen IS the setup, so a failure must surface, not slip past.
+    if (isTradesman) {
+      setSaving(true);
       try {
-        await updateTradesmanProfile({ business_name: trimmed });
-      } catch {
-        // Non-blocking — they can set it later in Business details.
+        await updateTradesmanProfile({
+          business_name: businessName.trim(),
+          bio: bio.trim(),
+          company_name: companyName.trim(),
+          company_number: companyNumber.trim(),
+        });
+      } catch (e) {
+        setSaving(false);
+        Alert.alert("Couldn't save your business", (e as Error).message);
+        return;
       }
+      setSaving(false);
     }
     await markOnboardingWelcomeSeen();
     // If the user hasn't seen the tour yet, route there next; otherwise
@@ -106,20 +194,23 @@ export default function OnboardingWelcomeScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Skip — quiet escape for power users / repeat installs. */}
+        {/* Skip — quiet escape for customers/crew. The tradesman can't
+            skip: this screen is their business setup. */}
         <View style={styles.topBar}>
           <View style={{ flex: 1 }} />
-          <Pressable
-            onPress={() => void onContinue()}
-            hitSlop={12}
-            style={{ paddingVertical: 8 }}
-            accessibilityRole="button"
-            accessibilityLabel="Skip welcome"
-          >
-            <Text style={[t.type.body, { color: t.colors.text.tertiary }]}>
-              Skip
-            </Text>
-          </Pressable>
+          {!isTradesman && (
+            <Pressable
+              onPress={() => void onContinue()}
+              hitSlop={12}
+              style={{ paddingVertical: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Skip welcome"
+            >
+              <Text style={[t.type.body, { color: t.colors.text.tertiary }]}>
+                Skip
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         {/* Brand stamp */}
@@ -169,46 +260,110 @@ export default function OnboardingWelcomeScreen() {
               },
             ]}
           >
-            We're glad you're here. Phase is built so {roleLabel}s like you can stay in sync with the people you're working with — without the WhatsApp chase.
+            {isTradesman
+              ? "We're glad you're here. First, set up the business your customers will see — every update, quote and invite carries it."
+              : `We're glad you're here. Phase is built so ${roleLabel}s like you can stay in sync with the people you're working with, without the WhatsApp chase.`}
           </Text>
         </Animated.View>
 
-        {/* What's coming up */}
-        <View style={{ marginTop: t.space[8], gap: t.space[3] }}>
-          <Text
-            style={[
-              t.type.caption,
-              {
-                color: t.colors.text.tertiary,
-                letterSpacing: 1.4,
-                textTransform: 'uppercase',
-              },
-            ]}
-          >
-            What's next
-          </Text>
-          {(role === 'customer' ? CUSTOMER_STEPS : TRADESMAN_STEPS).map(
-            (s, i) => (
-              <Step key={s.title} n={i + 1} title={s.title} body={s.body} />
-            ),
-          )}
-        </View>
+        {/* What's coming up — customers and crew only; the tradesman's
+            first screen is the business setup below. */}
+        {!isTradesman && (
+          <View style={{ marginTop: t.space[8], gap: t.space[3] }}>
+            <Text
+              style={[
+                t.type.caption,
+                {
+                  color: t.colors.text.tertiary,
+                  letterSpacing: 1.4,
+                  textTransform: 'uppercase',
+                },
+              ]}
+            >
+              What's next
+            </Text>
+            {(role === 'customer' ? CUSTOMER_STEPS : TRADESMAN_STEPS).map(
+              (s, i) => (
+                <Step key={s.title} n={i + 1} title={s.title} body={s.body} />
+              ),
+            )}
+          </View>
+        )}
 
-        {role === 'tradesman' && (
-          <View style={{ marginTop: t.space[8] }}>
+        {isTradesman && (
+          <View style={{ marginTop: t.space[8], gap: t.space[4] }}>
             <InputField
-              label="Your business name (optional)"
+              label="Business name"
               value={businessName}
               onChangeText={setBusinessName}
               autoCapitalize="words"
               placeholder="e.g. Daly Building Co"
-              helper="Shown to customers on your profile and projects. You can add or change it later."
+              helper="The name your customers see."
             />
+
+            <View>
+              <Text style={[t.type.footnote, { color: t.colors.text.secondary, marginBottom: 6 }]}>
+                A line about your business
+              </Text>
+              <TextInput
+                value={bio}
+                onChangeText={(v) => v.length <= 200 && setBio(v)}
+                multiline
+                placeholder="Family-run, 12 years in South London. Kitchens, bathrooms and extensions."
+                placeholderTextColor={t.colors.text.tertiary}
+                style={[
+                  t.type.bodyLg,
+                  {
+                    color: t.colors.text.primary,
+                    backgroundColor: t.colors.bg.surface2,
+                    borderColor: t.colors.border.strong,
+                    borderWidth: 1,
+                    borderRadius: t.radius.md,
+                    padding: t.space[4],
+                    minHeight: 88,
+                    textAlignVertical: 'top',
+                  },
+                ]}
+              />
+            </View>
+
+            <InputField
+              label="Company name (Companies House)"
+              value={companyName}
+              onChangeText={setCompanyName}
+              autoCapitalize="words"
+              placeholder="Smith & Sons Plumbing Ltd"
+            />
+            <InputField
+              label="Company number"
+              value={companyNumber}
+              onChangeText={setCompanyNumber}
+              autoCapitalize="characters"
+              placeholder="12345678"
+            />
+            <Pressable
+              onPress={onSearchRegister}
+              disabled={lookupMutation.isPending || searchMutation.isPending}
+              hitSlop={6}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+            >
+              <Ionicons name="search" size={16} color={t.colors.text.link} />
+              <Text style={[t.type.body, { color: t.colors.text.link }]}>
+                {lookupMutation.isPending || searchMutation.isPending
+                  ? 'Checking the register…'
+                  : 'Search Companies House, name or number'}
+              </Text>
+            </Pressable>
           </View>
         )}
 
         <View style={{ marginTop: t.space[10] }}>
-          <PrimaryButton title="Let's get started" onPress={() => void onContinue()} />
+          <PrimaryButton
+            title={isTradesman ? 'Save and continue' : "Let's get started"}
+            onPress={() => void onContinue()}
+            loading={saving}
+            disabled={isTradesman && !setupComplete}
+          />
         </View>
       </ScrollView>
       </KeyboardAvoidingView>
