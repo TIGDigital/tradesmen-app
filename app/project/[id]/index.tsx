@@ -568,7 +568,7 @@ function Content({
           <View>
             <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Documents</Text>
             <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
-              Quotes, certificates, plans
+              Contracts, certificates, plans
             </Text>
           </View>
           <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
@@ -591,7 +591,9 @@ function Content({
               style={styles.metaRow}
             >
               <View>
-                <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Pricing</Text>
+                <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
+                  Quotes & price
+                </Text>
                 <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
                   {quotedAmount != null
                     ? new Intl.NumberFormat('en-GB', {
@@ -601,7 +603,7 @@ function Content({
                         maximumFractionDigits: 2,
                       }).format(quotedAmount)
                     : isTradesman
-                      ? 'Set the agreed price'
+                      ? 'Send a quote or set the agreed price'
                       : 'No quote set yet'}
                 </Text>
               </View>
