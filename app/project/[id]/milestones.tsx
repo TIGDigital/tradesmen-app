@@ -244,6 +244,7 @@ export default function MilestonesScreen() {
                       title={m.title}
                       status={m.status}
                       expectedDate={m.expected_date}
+                      expectedStartDate={m.expected_start_date}
                       onPress={() => router.push({ pathname: '/milestone/[id]', params: { id: m.id } })}
                       onLongPress={() => onDelete(m.id, m.title)}
                     />

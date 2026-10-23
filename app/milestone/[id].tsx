@@ -19,7 +19,12 @@ import { Card } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { fetchMilestone, updateMilestone } from '@/services/projects';
+import {
+  fetchMilestone,
+  fetchMilestones,
+  reorderMilestones,
+  updateMilestone,
+} from '@/services/projects';
 import { lightTheme } from '@/theme/light';
 import type { Database } from '@/types/db';
 
@@ -51,6 +56,15 @@ export default function MilestoneEditScreen() {
     enabled: !!id,
   });
 
+  // The project's other milestones, shown under the calendar so dates can
+  // be slotted around them without hopping back to the overview.
+  const siblingsQuery = useQuery({
+    queryKey: ['milestones', data?.project_id],
+    queryFn: () => fetchMilestones(data!.project_id),
+    enabled: !!data?.project_id,
+  });
+  const siblings = (siblingsQuery.data ?? []).filter((m) => m.id !== id);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<MilestoneStatus>('pending');
@@ -78,6 +92,35 @@ export default function MilestoneEditScreen() {
         expected_date: endDate ? toDateString(endDate) : null,
       }),
     onSuccess: async () => {
+      // Saving dates re-slots this milestone chronologically in the
+      // schedule list (beta feedback 23 Oct: an old-dated milestone was
+      // stuck at the bottom). Drag still overrides afterwards; milestones
+      // without dates keep their relative order, after the dated ones.
+      try {
+        const current = siblingsQuery.data ?? [];
+        if ((startDate || endDate) && current.length > 1 && data?.project_id) {
+          const dateKey = (start: string | null, end: string | null) => start ?? end ?? null;
+          const items = current.map((m, idx) => ({
+            id: m.id,
+            idx,
+            key:
+              m.id === id
+                ? dateKey(startDate ? toDateString(startDate) : null, endDate ? toDateString(endDate) : null)
+                : dateKey(m.expected_start_date, m.expected_date),
+          }));
+          const sorted = [...items].sort((a, b) => {
+            if (a.key && b.key) return a.key < b.key ? -1 : a.key > b.key ? 1 : a.idx - b.idx;
+            if (a.key) return -1; // dated before undated
+            if (b.key) return 1;
+            return a.idx - b.idx; // undated keep their relative order
+          });
+          if (sorted.some((m, i) => m.id !== items[i].id)) {
+            await reorderMilestones(data.project_id, sorted.map((m) => m.id));
+          }
+        }
+      } catch {
+        // Ordering is cosmetic — never block the save over it.
+      }
       await queryClient.invalidateQueries({ queryKey: ['milestone', id] });
       await queryClient.invalidateQueries({ queryKey: ['milestones'] });
       await queryClient.invalidateQueries({ queryKey: ['my-current-project'] });
@@ -289,6 +332,38 @@ export default function MilestoneEditScreen() {
                   </Pressable>
                 )}
               </View>
+
+              {siblings.length > 0 && (
+                <View
+                  style={{
+                    marginTop: 14,
+                    paddingTop: 12,
+                    borderTopWidth: 1,
+                    borderTopColor: t.colors.border.subtle,
+                    gap: 6,
+                  }}
+                >
+                  <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
+                    Other milestones
+                  </Text>
+                  {siblings.map((m) => (
+                    <View
+                      key={m.id}
+                      style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}
+                    >
+                      <Text
+                        numberOfLines={1}
+                        style={[t.type.footnote, { color: t.colors.text.secondary, flex: 1 }]}
+                      >
+                        {m.title}
+                      </Text>
+                      <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>
+                        {formatRange(m.expected_start_date, m.expected_date)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </Card>
           </ScrollView>
 
@@ -315,6 +390,16 @@ export default function MilestoneEditScreen() {
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+/** "3 Nov – 12 Nov", or one side alone, or "No dates". */
+function formatRange(start: string | null, end: string | null): string {
+  const fmt = (s: string) =>
+    new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  if (start && end) return `${fmt(start)} – ${fmt(end)}`;
+  if (end) return `by ${fmt(end)}`;
+  if (start) return `from ${fmt(start)}`;
+  return 'No dates';
 }
 
 function formatNice(d: Date): string {

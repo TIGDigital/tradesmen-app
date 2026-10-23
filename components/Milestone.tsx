@@ -8,14 +8,24 @@ type MilestoneStatus = Database['public']['Enums']['milestone_status'];
 type Props = {
   title: string;
   status: MilestoneStatus;
+  /** End date (expected_date). Shown alone when there's no start. */
   expectedDate?: string | null;
+  /** Start date — when present the row shows the full "3 Nov – 12 Nov" range. */
+  expectedStartDate?: string | null;
   /** If provided, the whole row is pressable — used by tradesman to advance status. */
   onPress?: () => void;
   /** Long-press for delete (tradesman, on the manage screen). */
   onLongPress?: () => void;
 };
 
-export function Milestone({ title, status, expectedDate, onPress, onLongPress }: Props) {
+export function Milestone({
+  title,
+  status,
+  expectedDate,
+  expectedStartDate,
+  onPress,
+  onLongPress,
+}: Props) {
   const t = lightTheme;
 
   const indicator = INDICATORS[status];
@@ -46,9 +56,13 @@ export function Milestone({ title, status, expectedDate, onPress, onLongPress }:
         >
           {title}
         </Text>
-        {expectedDate && (
+        {(expectedDate || expectedStartDate) && (
           <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 2 }]}>
-            {formatDate(expectedDate)}
+            {expectedStartDate && expectedDate
+              ? `${formatDate(expectedStartDate)} – ${formatDate(expectedDate)}`
+              : expectedDate
+                ? formatDate(expectedDate)
+                : `from ${formatDate(expectedStartDate!)}`}
           </Text>
         )}
       </View>

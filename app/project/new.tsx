@@ -112,6 +112,20 @@ export default function NewProjectScreen() {
       queryClient.invalidateQueries({ queryKey: ['my-projects'] });
       queryClient.invalidateQueries({ queryKey: ['project-crew', project.id] });
       router.replace({ pathname: '/project/[id]', params: { id: project.id } });
+      // Walk them straight into setup — milestones are what make the
+      // schedule (and the customer's "what's next") work.
+      Alert.alert(
+        'Project created',
+        'Set up the schedule now? Milestones drive the timeline your customer sees, the Gantt and the finish date.',
+        [
+          {
+            text: 'Set up schedule',
+            onPress: () =>
+              router.push({ pathname: '/project/[id]/milestones', params: { id: project.id } }),
+          },
+          { text: 'Later', style: 'cancel' },
+        ],
+      );
     },
     onError: (e) => Alert.alert("Couldn't create project", (e as Error).message),
   });

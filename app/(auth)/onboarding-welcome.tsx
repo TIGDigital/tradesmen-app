@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -95,9 +97,14 @@ export default function OnboardingWelcomeScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
       <ScrollView
         contentContainerStyle={[styles.scroll, { padding: t.space[6] }]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Skip — quiet escape for power users / repeat installs. */}
         <View style={styles.topBar}>
@@ -204,6 +211,7 @@ export default function OnboardingWelcomeScreen() {
           <PrimaryButton title="Let's get started" onPress={() => void onContinue()} />
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

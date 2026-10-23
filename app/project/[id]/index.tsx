@@ -467,6 +467,7 @@ function Content({
                 title={m.title}
                 status={m.status}
                 expectedDate={m.expected_date}
+                expectedStartDate={m.expected_start_date}
                 onPress={
                   isTradesman ? () => onMilestoneTap(m.id, m.status, m.title) : undefined
                 }

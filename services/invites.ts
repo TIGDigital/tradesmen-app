@@ -1,3 +1,5 @@
+import * as Crypto from 'expo-crypto';
+
 import { supabase } from '@/services/supabase';
 
 /**
@@ -59,11 +61,11 @@ export async function acceptInvite(code: string) {
  */
 
 /** Short, hard-to-typo: 6 chars from an unambiguous alphabet (no 0/O/1/I).
- *  Mirrors the server-side generator so codes look identical either way. */
+ *  Mirrors the server-side generator so codes look identical either way.
+ *  expo-crypto, not global crypto — Hermes has no WebCrypto. */
 function generateInviteCode(): string {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const bytes = new Uint8Array(6);
-  crypto.getRandomValues(bytes);
+  const bytes = Crypto.getRandomBytes(6);
   let out = '';
   for (const b of bytes) out += alphabet[b % alphabet.length];
   return out;
