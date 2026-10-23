@@ -315,6 +315,19 @@ export default function MilestoneEditScreen() {
                 minimumDate={dateTarget === 'end' ? startDate ?? undefined : undefined}
                 onChange={onDateChange}
               />
+              {/* Tapping the already-selected date fires no change event,
+                  so a one-day job needs its own affordance (23 Oct). */}
+              {startDate && !endDate && (
+                <Pressable
+                  onPress={() => setEndDate(startDate)}
+                  hitSlop={6}
+                  style={{ paddingVertical: 6 }}
+                >
+                  <Text style={[t.type.body, { color: t.colors.text.link }]}>
+                    One-day job — finish on the start date
+                  </Text>
+                </Pressable>
+              )}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>
                   Pick the start — the calendar flips to the end date for you.
