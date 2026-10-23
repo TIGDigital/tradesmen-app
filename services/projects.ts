@@ -261,6 +261,19 @@ export async function fetchMilestones(projectId: string) {
 }
 
 /** Insert a new project (signed-in user becomes the lead tradesman). */
+/**
+ * First name for greetings from a stored customer name that may lead
+ * with a salutation ("Mrs Sarah Smith" → "Sarah"). Greetings must never
+ * say "Hi Mrs".
+ */
+const SALUTATIONS = new Set(['mr', 'mrs', 'ms', 'miss', 'mx', 'dr', 'prof', 'rev', 'sir']);
+export function customerFirstName(name?: string | null): string | null {
+  if (!name) return null;
+  const parts = name.trim().split(/\s+/);
+  const lead = parts[0]?.replace(/\.$/, '').toLowerCase();
+  return (SALUTATIONS.has(lead) ? parts[1] : parts[0]) || null;
+}
+
 export async function createProject(args: {
   title: string;
   trade_type: TradeType;

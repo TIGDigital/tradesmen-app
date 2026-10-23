@@ -43,6 +43,8 @@ const TRADES: { value: TradeType; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
+const SALUTATIONS = ['Mr', 'Mrs', 'Ms', 'Mx', 'Dr'];
+
 export default function NewProjectScreen() {
   const t = lightTheme;
   const queryClient = useQueryClient();
@@ -75,8 +77,15 @@ export default function NewProjectScreen() {
   // configured (e.g. local dev without the key). User can also opt into
   // it via the "Enter manually" link on the lookup component.
   const [showManual, setShowManual] = useState(!isAddressLookupConfigured());
-  const [customerName, setCustomerName] = useState('');
+  const [salutation, setSalutation] = useState('');
+  const [customerFirst, setCustomerFirst] = useState('');
+  const [customerLast, setCustomerLast] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  // Stored as one composed string; greetings strip the salutation via
+  // customerFirstName() so nudges and invites say "Hi Alex", never "Hi Mr".
+  const customerName = [salutation, customerFirst.trim(), customerLast.trim()]
+    .filter(Boolean)
+    .join(' ');
 
   // Past crew — people the tradesman has worked with on prior projects.
   // Used by the "Bring your crew?" section. Empty list (or first-time
@@ -151,7 +160,7 @@ export default function NewProjectScreen() {
   });
 
   function onSubmit() {
-    if (!title.trim() || !address.trim() || !city.trim() || !postcode.trim() || !customerName.trim() || !customerPhone.trim()) {
+    if (!title.trim() || !address.trim() || !city.trim() || !postcode.trim() || !salutation || !customerFirst.trim() || !customerLast.trim() || !customerPhone.trim()) {
       Alert.alert('Fill in all fields', 'Every field is required for now.');
       return;
     }
@@ -330,14 +339,63 @@ export default function NewProjectScreen() {
             <View style={{ height: t.space[2] }} />
             <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Your customer</Text>
 
-            <InputField
-              label="Customer name"
-              value={customerName}
-              onChangeText={setCustomerName}
-              placeholder="Alex"
-              autoCapitalize="words"
-              textContentType="name"
-            />
+            <View>
+              <Text style={[t.type.footnote, { color: t.colors.text.secondary, marginBottom: 6 }]}>
+                Title
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {SALUTATIONS.map((s) => {
+                  const active = salutation === s;
+                  return (
+                    <Pressable
+                      key={s}
+                      onPress={() => setSalutation(s)}
+                      style={{
+                        paddingVertical: 8,
+                        paddingHorizontal: 14,
+                        borderRadius: 999,
+                        backgroundColor: active ? t.colors.brand.primary : t.colors.bg.surface2,
+                      }}
+                    >
+                      <Text
+                        style={[
+                          t.type.footnote,
+                          {
+                            color: active ? t.colors.text.inverse : t.colors.text.primary,
+                            fontWeight: '600',
+                          },
+                        ]}
+                      >
+                        {s}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: t.space[3] }}>
+              <View style={{ flex: 1 }}>
+                <InputField
+                  label="First name"
+                  value={customerFirst}
+                  onChangeText={setCustomerFirst}
+                  placeholder="Alex"
+                  autoCapitalize="words"
+                  textContentType="givenName"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <InputField
+                  label="Last name"
+                  value={customerLast}
+                  onChangeText={setCustomerLast}
+                  placeholder="Smith"
+                  autoCapitalize="words"
+                  textContentType="familyName"
+                />
+              </View>
+            </View>
 
             <InputField
               label="Customer phone (UK)"

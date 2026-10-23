@@ -27,6 +27,7 @@ import { fireLeaveSiteNudge } from '@/services/notifications';
 import {
   currentAndNextMilestone,
   dayOfProject,
+  customerFirstName,
   fetchMilestones,
   fetchProject,
   fetchProjectUpdates,
@@ -224,7 +225,7 @@ export default function ProjectDetailScreen() {
               await logLeaveSite(id!);
               const customerFirst =
                 projectQuery.data?.customer?.full_name?.split(' ')[0] ??
-                projectQuery.data?.pending_customer_name?.split(' ')[0] ??
+                customerFirstName(projectQuery.data?.pending_customer_name) ??
                 'your customer';
               await fireLeaveSiteNudge({
                 project_id: id!,

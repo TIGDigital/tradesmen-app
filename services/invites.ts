@@ -1,5 +1,6 @@
 import * as Crypto from 'expo-crypto';
 
+import { customerFirstName } from '@/services/projects';
 import { supabase } from '@/services/supabase';
 
 /**
@@ -108,7 +109,8 @@ export async function markInviteShared(project_id: string): Promise<void> {
 
 /** The message dropped into WhatsApp/SMS/email via the share sheet. */
 export function inviteShareMessage(code: string, customerName?: string | null): string {
-  const hi = customerName ? `Hi ${customerName.split(' ')[0]}, ` : '';
+  const first = customerFirstName(customerName);
+  const hi = first ? `Hi ${first}, ` : '';
   return (
     `${hi}I'll be running our project on Phase. You'll see photo updates, ` +
     `what's happening next and the agreed price, all in one place.\n\n` +

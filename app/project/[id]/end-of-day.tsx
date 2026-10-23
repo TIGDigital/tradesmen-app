@@ -23,6 +23,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Toggle } from '@/components/ui/Toggle';
 import { pickPhotos, type PickedPhoto } from '@/services/media';
 import {
+  customerFirstName,
   fetchMilestones,
   fetchProject,
   postEndOfDay,
@@ -118,7 +119,7 @@ export default function EndOfDayScreen() {
 
   const customerFirst =
     projectQuery.data?.customer?.full_name?.split(' ')[0] ??
-    projectQuery.data?.pending_customer_name?.split(' ')[0] ??
+    customerFirstName(projectQuery.data?.pending_customer_name) ??
     'your customer';
 
   return (
