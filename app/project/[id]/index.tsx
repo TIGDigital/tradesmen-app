@@ -213,6 +213,7 @@ export default function ProjectDetailScreen() {
           updates={updatesQuery.data ?? []}
           milestones={milestonesQuery.data ?? []}
           isTradesman={isTradesman}
+          isCrewSide={role !== 'customer'}
           refreshing={isRefreshing}
           onRefresh={refreshAll}
           onCompose={() => router.push({ pathname: '/project/[id]/compose', params: { id: id! } })}
@@ -293,6 +294,7 @@ function Content({
   updates,
   milestones,
   isTradesman,
+  isCrewSide,
   refreshing,
   onRefresh,
   onCompose,
@@ -309,6 +311,7 @@ function Content({
   updates: Awaited<ReturnType<typeof fetchProjectUpdates>>;
   milestones: Awaited<ReturnType<typeof fetchMilestones>>;
   isTradesman: boolean;
+  isCrewSide: boolean;
   refreshing: boolean;
   onRefresh: () => void;
   onCompose: () => void;
@@ -612,6 +615,26 @@ function Content({
           <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
         </Pressable>
       </Card>
+
+      {/* Job list — trade side only (lead + crew); customers never see it. */}
+      {isCrewSide && (
+        <Card>
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/project/[id]/tasks', params: { id: project.id } })
+            }
+            style={styles.metaRow}
+          >
+            <View>
+              <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Job list</Text>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                {isTradesman ? 'Set the crew their jobs' : 'Your jobs for this project'}
+              </Text>
+            </View>
+            <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+          </Pressable>
+        </Card>
+      )}
 
       {/* Pricing — always visible to both parties. The price changes here
           are the "no surprise bills" wedge: every change is logged,

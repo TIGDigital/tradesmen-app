@@ -29,6 +29,7 @@ import {
   listProjectCrew,
   removeCrewMember,
   revokeCrewInvite,
+  updateCrewRole,
   type CrewInvite,
   type CrewMember,
 } from '@/services/crew';
@@ -72,6 +73,30 @@ export default function ProjectCrewScreen() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project-crew', id] }),
     onError: (e) => Alert.alert("Couldn't remove", (e as Error).message),
   });
+
+  const roleMutation = useMutation({
+    mutationFn: (args: { user_id: string; role: 'apprentice' | 'helper' }) =>
+      updateCrewRole({ project_id: id!, user_id: args.user_id, role_on_project: args.role }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project-crew', id] }),
+    onError: (e) => Alert.alert("Couldn't change their role", (e as Error).message),
+  });
+
+  function onChangeRole(member: CrewMember) {
+    const other = member.role_on_project === 'apprentice' ? 'helper' : 'apprentice';
+    Alert.alert(
+      `Make ${member.user?.full_name?.split(' ')[0] ?? 'them'} a ${other}?`,
+      other === 'helper'
+        ? 'Helpers post straight to the customer, no approval queue.'
+        : 'Apprentice posts wait in your approval queue first.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: `Make ${other}`,
+          onPress: () => roleMutation.mutate({ user_id: member.user_id, role: other }),
+        },
+      ],
+    );
+  }
 
   const revokeMutation = useMutation({
     mutationFn: (invite_id: string) => revokeCrewInvite(invite_id),
@@ -345,7 +370,16 @@ export default function ProjectCrewScreen() {
                   >
                     {m.user?.full_name ?? 'Crew member'}
                   </Text>
-                  <RolePill role={m.role_on_project} />
+                  {m.role_on_project !== 'lead' ? (
+                    <Pressable onPress={() => onChangeRole(m)} hitSlop={6}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <RolePill role={m.role_on_project} />
+                        <Ionicons name="swap-horizontal" size={14} color={t.colors.text.link} />
+                      </View>
+                    </Pressable>
+                  ) : (
+                    <RolePill role={m.role_on_project} />
+                  )}
                 </View>
                 {m.role_on_project !== 'lead' && (
                   <Pressable

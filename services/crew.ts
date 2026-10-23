@@ -157,6 +157,20 @@ export async function enrollCrew(args: {
  * Soft-remove a crew member from a project. RLS already scopes write
  * access to the lead tradesman (crew_write_lead policy).
  */
+/** Change a member's role (lead only via RLS): apprentice <-> helper. */
+export async function updateCrewRole(args: {
+  project_id: string;
+  user_id: string;
+  role_on_project: 'apprentice' | 'helper';
+}): Promise<void> {
+  const { error } = await supabase
+    .from('project_crew')
+    .update({ role_on_project: args.role_on_project })
+    .eq('project_id', args.project_id)
+    .eq('user_id', args.user_id);
+  if (error) throw error;
+}
+
 /** Revoke a pending crew invite (lead only via RLS). The code stops working. */
 export async function revokeCrewInvite(invite_id: string): Promise<void> {
   const { error } = await supabase
