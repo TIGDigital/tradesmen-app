@@ -48,12 +48,23 @@ export default function NewProjectScreen() {
   const queryClient = useQueryClient();
 
   // A project fronts the tradesman's business to a customer, so the
-  // business profile basics must exist first (beta feedback 23 Oct).
+  // business profile must exist first — name, bio and Companies House
+  // details (bar raised on Todd's call, 23 Oct; sole traders are
+  // deliberately out of scope for the beta).
   const profileQuery = useQuery({
     queryKey: ['tradesman-profile'],
     queryFn: getMyTradesmanProfile,
   });
-  const profileReady = !!profileQuery.data?.business_name?.trim();
+  const profileMissing: string[] = [];
+  {
+    const p = profileQuery.data;
+    if (!p?.business_name?.trim()) profileMissing.push('Business name');
+    if (!p?.bio?.trim()) profileMissing.push('A short bio');
+    if (!p?.company_name?.trim() || !p?.company_number?.trim()) {
+      profileMissing.push('Companies House details');
+    }
+  }
+  const profileReady = profileMissing.length === 0;
 
   const [title, setTitle] = useState('');
   const [trade, setTrade] = useState<TradeType>('kitchen_fitter');
@@ -163,9 +174,15 @@ export default function NewProjectScreen() {
             Set up your business first
           </Text>
           <Text style={[t.type.bodyLg, { color: t.colors.text.secondary }]}>
-            Your business name fronts every update, quote and invite your customer sees. It takes
-            a minute — then come back and create the project.
+            Your business fronts every update, quote and invite your customer sees. Still needed:
           </Text>
+          <View style={{ gap: 6 }}>
+            {profileMissing.map((item) => (
+              <Text key={item} style={[t.type.bodyLg, { color: t.colors.text.primary }]}>
+                {'•'}  {item}
+              </Text>
+            ))}
+          </View>
           <PrimaryButton
             title="Set up my business"
             onPress={() => router.push('/settings/business')}
