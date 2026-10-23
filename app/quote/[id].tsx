@@ -156,6 +156,30 @@ export default function QuoteScreen() {
             <StatusPill status={quote.status} />
           </View>
 
+          {/* Customer's note — the single most actionable thing on a
+              declined quote, so it leads (beta feedback 23 Oct). */}
+          {quote.response_note && (
+            <View
+              style={{
+                backgroundColor: quote.status === 'rejected' ? '#FDEBEA' : t.colors.bg.surface2,
+                borderRadius: t.radius.md,
+                padding: t.space[4],
+              }}
+            >
+              <Text
+                style={[
+                  t.type.caption,
+                  { color: quote.status === 'rejected' ? '#C0392B' : t.colors.text.tertiary },
+                ]}
+              >
+                Customer's note
+              </Text>
+              <Text style={[t.type.body, { color: t.colors.text.primary, marginTop: 4, lineHeight: 22 }]}>
+                {quote.response_note}
+              </Text>
+            </View>
+          )}
+
           {/* ── Line items ─────────────────────────────────────── */}
           <View
             style={{
@@ -233,15 +257,6 @@ export default function QuoteScreen() {
             </Pressable>
           )}
 
-          {quote.response_note && (
-            <View>
-              <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Customer's note</Text>
-              <Text style={[t.type.body, { color: t.colors.text.primary, marginTop: 4 }]}>
-                {quote.response_note}
-              </Text>
-            </View>
-          )}
-
           {/* ── Actions ────────────────────────────────────────── */}
           {quote.status === 'sent' && isCustomer && (
             <View style={{ gap: 8, marginTop: t.space[2] }}>
@@ -269,6 +284,43 @@ export default function QuoteScreen() {
             >
               <Text style={[t.type.body, { color: t.colors.destructive.text }]}>Withdraw quote</Text>
             </Pressable>
+          )}
+
+          {/* A declined quote is not a dead end (23 Oct): the customer can
+              change their mind in-app; the tradesman can revise + resend. */}
+          {quote.status === 'rejected' && isCustomer && (
+            <View style={{ gap: 8, marginTop: t.space[2] }}>
+              <PrimaryButton
+                title={`Changed your mind? Approve — ${formatGbp(quote.total)}`}
+                onPress={onApprove}
+                loading={decideMutation.isPending}
+              />
+              <Text style={[t.type.footnote, { color: t.colors.text.tertiary, textAlign: 'center' }]}>
+                Approving makes this the agreed price, same as before.
+              </Text>
+            </View>
+          )}
+
+          {(quote.status === 'rejected' || quote.status === 'withdrawn') && !isCustomer && (
+            <View style={{ marginTop: t.space[2] }}>
+              <PrimaryButton
+                title="Revise and resend"
+                onPress={() =>
+                  router.push({
+                    pathname: '/project/[id]/quote-new',
+                    params: { id: quote.project_id, from: quote.id },
+                  })
+                }
+              />
+              <Text
+                style={[
+                  t.type.footnote,
+                  { color: t.colors.text.tertiary, textAlign: 'center', marginTop: 8 },
+                ]}
+              >
+                Opens a new quote prefilled from this one — adjust the lines and send.
+              </Text>
+            </View>
           )}
         </ScrollView>
       )}

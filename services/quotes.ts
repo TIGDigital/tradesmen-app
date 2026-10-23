@@ -126,6 +126,7 @@ export async function createAndSendQuote(args: {
     sender_id: user.id,
     title: 'New quote for you',
     body: `Quote for ${formatQuoteGbp(totals.total)} — tap to review and approve.`,
+    data: { quote_id: quote.id },
   });
 
   return fetchQuote(quote.id);
@@ -181,6 +182,7 @@ export async function decideQuote(args: {
       body: args.approve
         ? `${formatQuoteGbp(quote.total)} is now the agreed price.`
         : 'Tap to see their note and send a revised quote.',
+      data: { quote_id: args.quote_id },
     });
   }
 }

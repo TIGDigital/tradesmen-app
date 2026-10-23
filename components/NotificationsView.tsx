@@ -79,6 +79,12 @@ export function NotificationsView() {
       // Fire-and-forget — UI will refresh via realtime + invalidation.
       void markNotificationRead(n.id);
     }
+    // Quote notifications land on the quote itself, not the project.
+    const quoteId = (n.data as { quote_id?: string } | null)?.quote_id;
+    if (quoteId) {
+      router.push({ pathname: '/quote/[id]', params: { id: quoteId } });
+      return;
+    }
     if (n.project_id) {
       router.push({ pathname: '/project/[id]', params: { id: n.project_id } });
     }

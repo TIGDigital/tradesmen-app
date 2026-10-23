@@ -481,6 +481,8 @@ export async function notifyCounterparty(args: {
   sender_id: string;
   title: string;
   body: string;
+  /** Extra payload for tap deep-links, e.g. { quote_id } → /quote/[id]. */
+  data?: Record<string, string>;
 }) {
   devLog('[notify] start', { project_id: args.project_id, sender: args.sender_id });
   try {
@@ -518,7 +520,7 @@ export async function notifyCounterparty(args: {
       project_id: args.project_id,
       title: args.title,
       body: args.body,
-      data: { project_id: args.project_id },
+      data: { project_id: args.project_id, ...args.data },
     });
 
     const { data: tokens } = await supabase
@@ -532,7 +534,7 @@ export async function notifyCounterparty(args: {
       tokens: tokens.map((t) => t.token),
       title: args.title,
       body: args.body,
-      data: { project_id: args.project_id },
+      data: { project_id: args.project_id, ...args.data },
     });
     devLog('[notify] sendPush returned');
   } catch (e) {

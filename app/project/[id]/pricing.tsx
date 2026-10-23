@@ -324,38 +324,44 @@ export default function PricingScreen() {
           {(isLead || quotes.length > 0) && (
             <View style={{ marginTop: t.space[5], gap: t.space[3] }}>
               <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Quotes</Text>
-              {quotes.map((q) => (
-                <Pressable
-                  key={q.id}
-                  onPress={() => router.push({ pathname: '/quote/[id]', params: { id: q.id } })}
-                  style={[
-                    styles.card,
-                    {
-                      backgroundColor: t.colors.bg.surface,
-                      borderColor:
-                        q.status === 'sent' ? t.colors.brand.primary : t.colors.border.subtle,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                    },
-                  ]}
-                >
-                  <View>
-                    <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
-                      {formatGbp(q.total)}
-                    </Text>
-                    <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: 2 }]}>
-                      {q.items.length} {q.items.length === 1 ? 'item' : 'items'} ·{' '}
-                      {q.status === 'sent'
-                        ? 'awaiting approval'
-                        : q.status === 'approved'
-                          ? 'approved ✓'
-                          : q.status}
-                    </Text>
-                  </View>
-                  <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
-                </Pressable>
-              ))}
+              {quotes.map((q) => {
+                // Decision states shout (beta feedback 23 Oct): green card
+                // for approved, red for declined, blue border while waiting.
+                const tone =
+                  q.status === 'approved'
+                    ? { bg: '#E7F6EC', border: '#1C7C3D', fg: '#1C7C3D', label: 'Approved' }
+                    : q.status === 'rejected'
+                      ? { bg: '#FDEBEA', border: '#C0392B', fg: '#C0392B', label: 'Declined — read their note' }
+                      : q.status === 'sent'
+                        ? { bg: t.colors.bg.surface, border: t.colors.brand.primary, fg: t.colors.brand.primary, label: 'Awaiting approval' }
+                        : { bg: t.colors.bg.surface, border: t.colors.border.subtle, fg: t.colors.text.tertiary, label: 'Withdrawn' };
+                return (
+                  <Pressable
+                    key={q.id}
+                    onPress={() => router.push({ pathname: '/quote/[id]', params: { id: q.id } })}
+                    style={[
+                      styles.card,
+                      {
+                        backgroundColor: tone.bg,
+                        borderColor: tone.border,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      },
+                    ]}
+                  >
+                    <View>
+                      <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>
+                        {formatGbp(q.total)}
+                      </Text>
+                      <Text style={[t.type.footnote, { color: tone.fg, fontWeight: '600', marginTop: 2 }]}>
+                        {q.items.length} {q.items.length === 1 ? 'item' : 'items'} · {tone.label}
+                      </Text>
+                    </View>
+                    <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+                  </Pressable>
+                );
+              })}
               {isLead && !quotes.some((q) => q.status === 'sent') && (
                 <Pressable
                   onPress={() =>

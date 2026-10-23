@@ -20,7 +20,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { listProjectDocuments, pickDocument, uploadDocument } from '@/services/documents';
 import { formatGbp } from '@/services/pricing';
-import { createAndSendQuote, parseQuotePdf, quoteTotals } from '@/services/quotes';
+import { createAndSendQuote, fetchQuote, parseQuotePdf, quoteTotals } from '@/services/quotes';
 import { getMyTradesmanProfile } from '@/services/tradesman';
 import { lightTheme } from '@/theme/light';
 
@@ -42,13 +42,40 @@ function toNumber(s: string): number {
 export default function NewQuoteScreen() {
   const t = lightTheme;
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const qc = useQueryClient();
 
   const [lines, setLines] = useState<DraftLine[]>([{ ...EMPTY_LINE }]);
   const [vatRegistered, setVatRegistered] = useState(false);
   const [discount, setDiscount] = useState('');
   const [notes, setNotes] = useState('');
+
+  // "Revise and resend": ?from=<quoteId> prefills the composer from a
+  // declined/withdrawn quote so the tradesman adjusts instead of retyping.
+  const [prefilled, setPrefilled] = useState(false);
+  const sourceQuoteQuery = useQuery({
+    queryKey: ['quote', from],
+    queryFn: () => fetchQuote(from!),
+    enabled: !!from,
+  });
+  useEffect(() => {
+    const q = sourceQuoteQuery.data;
+    if (!q || prefilled) return;
+    setPrefilled(true);
+    setLines(
+      q.items.map((i) => ({
+        description: i.description,
+        qty: String(i.qty),
+        price: String(i.unit_price),
+      })),
+    );
+    if (q.discount_amount > 0) setDiscount(String(q.discount_amount));
+    setVatRegistered(q.vat_registered);
+    if (q.notes) setNotes(q.notes);
+    if (q.pdf_document_id) {
+      setAttachedPdf({ id: q.pdf_document_id, name: 'PDF from the previous quote' });
+    }
+  }, [sourceQuoteQuery.data, prefilled]);
   const [attachedPdf, setAttachedPdf] = useState<{ id: string; name: string } | null>(null);
 
   // Prefill the VAT toggle from the business profile — a VAT number on

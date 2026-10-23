@@ -190,6 +190,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data ?? {};
       const projectId = typeof data.project_id === 'string' ? data.project_id : null;
+      const quoteId = typeof data.quote_id === 'string' ? data.quote_id : null;
+      if (quoteId) {
+        // Quote pushes land ON the quote — hunting for it was beta
+        // feedback (23 Oct).
+        router.push({ pathname: '/quote/[id]', params: { id: quoteId } });
+        return;
+      }
       if (!projectId) return;
       if (data.action === 'end_of_day') {
         router.push({ pathname: '/project/[id]/end-of-day', params: { id: projectId } });
