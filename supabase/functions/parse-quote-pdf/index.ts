@@ -93,7 +93,9 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-5-5',
-        max_tokens: 2000,
+        // Generous: a long multi-page quote can be 100+ line items, and a
+        // truncated reply is unparseable JSON (beta failure 23 Oct).
+        max_tokens: 6000,
         messages: [
           {
             role: 'user',
@@ -129,6 +131,15 @@ Deno.serve(async (req: Request) => {
     try {
       parsed = JSON.parse(match[0]);
     } catch {
+      // A reply cut off at the token cap is the usual cause of broken JSON.
+      if (ai.stop_reason === 'max_tokens') {
+        console.error('[parse-quote-pdf] reply truncated at max_tokens');
+        return json(
+          { error: 'That quote has too many lines to read in one go — type the big ones in and attach the PDF for the rest' },
+          422,
+        );
+      }
+      console.error('[parse-quote-pdf] unparseable JSON', text.slice(0, 300));
       return json({ error: 'Could not read quote details from that PDF' }, 422);
     }
 
