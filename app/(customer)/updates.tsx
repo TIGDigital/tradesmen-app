@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { router } from 'expo-router';
 import {
   Pressable,
@@ -37,6 +37,7 @@ export default function CustomerUpdatesScreen() {
   const t = lightTheme;
   const insets = useSafeAreaInsets();
 
+  const queryClient = useQueryClient();
   const projectQuery = useQuery({
     queryKey: ['my-current-project'],
     queryFn: () => fetchMyCurrentProject(),
@@ -45,17 +46,27 @@ export default function CustomerUpdatesScreen() {
 
   useRealtimeProject(projectId);
 
-  // Read receipt: opening this feed marks the project's updates as seen
-  // (idempotent server-side; tradesman then sees 'Seen ✓').
-  useEffect(() => {
-    if (projectId) void markUpdatesSeen(projectId);
-  }, [projectId]);
-
   const updatesQuery = useQuery({
     queryKey: ['updates', projectId],
     queryFn: () => fetchProjectUpdates(projectId!),
     enabled: !!projectId,
   });
+
+  // Which updates were UNSEEN when the feed opened — snapshot once, show
+  // a NEW pill on those for the session, THEN send the read receipt
+  // (previously the receipt fired first, so nothing ever looked new —
+  // beta feedback 23 Oct).
+  const newIdsRef = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (!updatesQuery.data || !projectId || newIdsRef.current) return;
+    newIdsRef.current = new Set(
+      updatesQuery.data
+        .filter((u) => !(u as { customer_seen_at?: string | null }).customer_seen_at)
+        .map((u) => u.id),
+    );
+    void markUpdatesSeen(projectId);
+    queryClient.invalidateQueries({ queryKey: ['unseen-updates'] });
+  }, [updatesQuery.data, projectId]);
 
   // Customers only see approved updates — pending ones are hidden until
   // the lead signs off (Sprint 38 approval queue).
@@ -131,6 +142,22 @@ export default function CustomerUpdatesScreen() {
                 }
               >
                 <Card>
+                  {newIdsRef.current?.has(u.id) && (
+                    <View
+                      style={{
+                        alignSelf: 'flex-start',
+                        paddingVertical: 3,
+                        paddingHorizontal: 9,
+                        borderRadius: 999,
+                        backgroundColor: '#EAF0FF',
+                        marginBottom: 8,
+                      }}
+                    >
+                      <Text style={{ color: '#1B4DD9', fontSize: 11, fontWeight: '700', letterSpacing: 0.8 }}>
+                        NEW
+                      </Text>
+                    </View>
+                  )}
                   <View style={styles.updateHead}>
                     <View style={[styles.avatar, { backgroundColor: '#A04A1C' }]}>
                       <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>

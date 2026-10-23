@@ -4,6 +4,7 @@ import { Tabs } from 'expo-router';
 
 import { fetchUnreadMessageCount } from '@/services/messages';
 import { fetchUnreadNotificationCount } from '@/services/notifications';
+import { fetchUnseenUpdateCount } from '@/services/projects';
 import { lightTheme } from '@/theme/light';
 
 /**
@@ -24,6 +25,11 @@ export default function CustomerLayout() {
   const { data: unreadNotifications = 0 } = useQuery({
     queryKey: ['unread-notifications'],
     queryFn: fetchUnreadNotificationCount,
+    refetchInterval: 30_000,
+  });
+  const { data: unseenUpdates = 0 } = useQuery({
+    queryKey: ['unseen-updates'],
+    queryFn: fetchUnseenUpdateCount,
     refetchInterval: 30_000,
   });
 
@@ -60,6 +66,7 @@ export default function CustomerLayout() {
       <Tabs.Screen
         name="updates"
         options={{
+          tabBarBadge: unseenUpdates > 0 ? unseenUpdates : undefined,
           title: 'Updates',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="list-outline" color={color} size={size} />

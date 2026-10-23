@@ -468,6 +468,21 @@ export async function postEndOfDay(args: {
   return update;
 }
 
+/** Unseen update count for the signed-in customer — drives the tab badge. */
+export async function fetchUnseenUpdateCount(): Promise<number> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 0;
+  const { count, error } = await supabase
+    .from('project_updates')
+    .select('id, project:projects!inner(customer_id)', { count: 'exact', head: true })
+    .eq('project.customer_id', user.id)
+    .is('customer_seen_at', null)
+    .is('deleted_at', null)
+    .neq('author_id', user.id);
+  if (error) return 0;
+  return count ?? 0;
+}
+
 /**
  * Soft-delete an update the caller authored ("just in case" posts — wrong
  * photo, wrong project). RLS updates_update_own scopes this to the author;

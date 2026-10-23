@@ -1,7 +1,9 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import {
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -13,8 +15,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { listMyCrew, type CrewMember } from '@/services/crew';
+import { fetchMyProjects } from '@/services/projects';
 import { lightTheme } from '@/theme/light';
 
 /**
@@ -35,10 +39,35 @@ export default function TradesmanCrewScreen() {
 
   const grouped = groupByUser(data ?? []);
 
+  // Crew join a specific project, so "add" means picking the job first
+  // (beta feedback 23 Oct: the tab had no add path at all).
+  const projectsQuery = useQuery({ queryKey: ['my-projects'], queryFn: fetchMyProjects });
+  function onAddCrew() {
+    const projects = projectsQuery.data ?? []; // fetchMyProjects already excludes archived
+    if (projects.length === 0) {
+      Alert.alert('Create a project first', 'Crew join a specific job — once you have a project, invite them from here.');
+      return;
+    }
+    if (projects.length === 1) {
+      router.push({ pathname: '/project/[id]/crew', params: { id: projects[0].id } });
+      return;
+    }
+    Alert.alert('Which job are they on?', undefined, [
+      ...projects.slice(0, 5).map((p) => ({
+        text: p.title,
+        onPress: () => router.push({ pathname: '/project/[id]/crew', params: { id: p.id } }),
+      })),
+      { text: 'Cancel', style: 'cancel' as const },
+    ]);
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: t.colors.bg.canvas }}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <Text style={[t.type.title1, { color: t.colors.text.primary }]}>Crew</Text>
+        <Text style={[t.type.title1, { color: t.colors.text.primary, flex: 1 }]}>Crew</Text>
+        <Pressable onPress={onAddCrew} hitSlop={12} accessibilityLabel="Add crew">
+          <Ionicons name="add-circle" size={30} color={t.colors.text.link} />
+        </Pressable>
       </View>
 
       {isLoading && (
@@ -60,11 +89,16 @@ export default function TradesmanCrewScreen() {
       {error && <ErrorState message={(error as Error).message} onRetry={() => void refetch()} />}
 
       {!isLoading && !error && grouped.length === 0 && (
-        <ErrorState
-          tone="empty"
-          title="No crew yet"
-          message="Open a project and tap the Crew card to add apprentices in the next sprint."
-        />
+        <View style={{ flex: 1 }}>
+          <ErrorState
+            tone="empty"
+            title="No crew yet"
+            message="Invite your team to a job: they post from site, apprentice updates wait for your approval."
+          />
+          <View style={{ paddingHorizontal: 24, marginTop: -8 }}>
+            <PrimaryButton title="Add crew to a job" onPress={onAddCrew} />
+          </View>
+        </View>
       )}
 
       {grouped.length > 0 && (
