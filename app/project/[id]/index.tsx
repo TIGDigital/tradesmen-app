@@ -34,6 +34,7 @@ import {
   formatEta,
   relativeTime,
   setMilestoneStatus,
+  softDeleteUpdate,
   statusHeadline,
 } from '@/services/projects';
 import { useAuthStore } from '@/stores/auth';
@@ -248,6 +249,25 @@ export default function ProjectDetailScreen() {
           onSetReminder={() => router.push({ pathname: '/project/[id]/reminders', params: { id: id! } })}
           onChangeStatus={() => router.push({ pathname: '/project/[id]/status', params: { id: id! } })}
           onMilestoneTap={onMilestoneTap}
+          currentUserId={useAuthStore.getState().profile?.id ?? null}
+          onDeleteUpdate={(update_id) => {
+            Alert.alert('Delete this update?', 'It disappears from the timeline for everyone.', [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await softDeleteUpdate(update_id);
+                    queryClient.invalidateQueries({ queryKey: ['project-updates', id] });
+                    updatesQuery.refetch();
+                  } catch (e) {
+                    Alert.alert("Couldn't delete", (e as Error).message);
+                  }
+                },
+              },
+            ]);
+          }}
           onShareInvite={async () => {
             try {
               const code = await ensureInviteCode(id!);
@@ -282,6 +302,8 @@ function Content({
   onChangeStatus,
   onMilestoneTap,
   onShareInvite,
+  onDeleteUpdate,
+  currentUserId,
 }: {
   project: NonNullable<Awaited<ReturnType<typeof fetchProject>>>;
   updates: Awaited<ReturnType<typeof fetchProjectUpdates>>;
@@ -296,6 +318,8 @@ function Content({
   onChangeStatus: () => void;
   onMilestoneTap: (milestone_id: string, current_status: string, title: string) => void;
   onShareInvite: () => void;
+  onDeleteUpdate: (update_id: string) => void;
+  currentUserId: string | null;
 }) {
   const t = lightTheme;
 
@@ -710,6 +734,10 @@ function Content({
               onPress={() =>
                 router.push({ pathname: '/comments/[update_id]', params: { update_id: u.id } })
               }
+              onLongPress={
+                u.author_id === currentUserId ? () => onDeleteUpdate(u.id) : undefined
+              }
+              delayLongPress={450}
             >
             {(u as { approval_status?: string }).approval_status === 'pending' && (
               <View

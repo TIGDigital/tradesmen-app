@@ -469,6 +469,19 @@ export async function postEndOfDay(args: {
 }
 
 /**
+ * Soft-delete an update the caller authored ("just in case" posts — wrong
+ * photo, wrong project). RLS updates_update_own scopes this to the author;
+ * feeds already filter deleted_at.
+ */
+export async function softDeleteUpdate(update_id: string): Promise<void> {
+  const { error } = await supabase
+    .from('project_updates')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', update_id);
+  if (error) throw error;
+}
+
+/**
  * Send a push to the OTHER party on the project (sender does not push to self).
  * Reads the recipient's push_tokens via RLS (counterparty policy added in Sprint 7).
  * Fully non-blocking — any failure is logged inside sendPush; caller does not await.
