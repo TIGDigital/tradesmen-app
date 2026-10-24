@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import { forwardRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { lightTheme } from '@/theme/light';
 
@@ -30,6 +31,9 @@ export const InputField = forwardRef<TextInput, Props>(
   ({ label, helper, error, onFocus, onBlur, style, ...rest }, ref) => {
     const t = lightTheme;
     const [focused, setFocused] = useState(false);
+    // Password fields get an eye toggle (beta feedback 24 Oct).
+    const isSecure = !!rest.secureTextEntry;
+    const [revealed, setRevealed] = useState(false);
 
     const borderColor = error
       ? t.colors.destructive.text
@@ -44,9 +48,11 @@ export const InputField = forwardRef<TextInput, Props>(
             {label}
           </Text>
         )}
+        <View>
         <TextInput
           ref={ref}
           {...rest}
+          secureTextEntry={isSecure && !revealed}
           onFocus={(e) => {
             setFocused(true);
             onFocus?.(e);
@@ -65,11 +71,33 @@ export const InputField = forwardRef<TextInput, Props>(
               borderRadius: t.radius.md,
               height: 50,
               paddingHorizontal: t.space[4],
+              paddingRight: isSecure ? 44 : t.space[4],
               color: t.colors.text.primary,
             },
             style,
           ]}
         />
+        {isSecure && (
+          <Pressable
+            onPress={() => setRevealed((r) => !r)}
+            hitSlop={10}
+            accessibilityLabel={revealed ? 'Hide password' : 'Show password'}
+            style={{
+              position: 'absolute',
+              right: 12,
+              top: 0,
+              height: 50,
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons
+              name={revealed ? 'eye-off-outline' : 'eye-outline'}
+              size={21}
+              color={t.colors.text.tertiary}
+            />
+          </Pressable>
+        )}
+        </View>
         {(error || helper) && (
           <Text
             style={[
