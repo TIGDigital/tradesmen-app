@@ -176,12 +176,12 @@ export default function OnboardingWelcomeScreen() {
   }
 
   const role = profile?.role ?? 'tradesman';
-  const roleLabel =
-    role === 'customer'
-      ? 'customer'
-      : role === 'apprentice'
-        ? 'crew'
-        : 'tradesman';
+  // Role-voiced welcome line. Crew gets its own sentence — templating
+  // "{roleLabel}s like you" used to render the awkward "crews like you".
+  const welcomeBody =
+    role === 'apprentice'
+      ? "We're glad you're here. Phase keeps you and your lead on the same page — today's job, your job list, and updates straight from site."
+      : "We're glad you're here. Phase is built so customers like you can stay in sync with the people you're working with, without the WhatsApp chase.";
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['top', 'bottom']}>
@@ -262,7 +262,7 @@ export default function OnboardingWelcomeScreen() {
           >
             {isTradesman
               ? "We're glad you're here. First, set up the business your customers will see — every update, quote and invite carries it."
-              : `We're glad you're here. Phase is built so ${roleLabel}s like you can stay in sync with the people you're working with, without the WhatsApp chase.`}
+              : welcomeBody}
           </Text>
         </Animated.View>
 
@@ -282,11 +282,14 @@ export default function OnboardingWelcomeScreen() {
             >
               What's next
             </Text>
-            {(role === 'customer' ? CUSTOMER_STEPS : TRADESMAN_STEPS).map(
-              (s, i) => (
-                <Step key={s.title} n={i + 1} title={s.title} body={s.body} />
-              ),
-            )}
+            {(role === 'customer'
+              ? CUSTOMER_STEPS
+              : role === 'apprentice'
+                ? CREW_STEPS
+                : TRADESMAN_STEPS
+            ).map((s, i) => (
+              <Step key={s.title} n={i + 1} title={s.title} body={s.body} />
+            ))}
           </View>
         )}
 
@@ -452,6 +455,27 @@ const CUSTOMER_STEPS = [
   {
     title: 'Approve every price change',
     body: "If the price needs to move, you get the request first. Approve or reject.",
+  },
+];
+
+/** Crew (apprentices + helpers) land in the Today shell — these steps
+ *  mirror what they'll actually do on day one. */
+const CREW_STEPS = [
+  {
+    title: 'Quick tour',
+    body: 'Three screens, 20 seconds. How Phase works on site.',
+  },
+  {
+    title: "Open today's job",
+    body: "The project, the address and your job list — all on the Today tab.",
+  },
+  {
+    title: 'Post a photo update',
+    body: "Snap it, send it. Your lead gives it the once-over before the customer sees it.",
+  },
+  {
+    title: 'Tick off your job list',
+    body: 'Your lead assigns the jobs; you tick them off as you go.',
   },
 ];
 

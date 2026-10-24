@@ -1,5 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 
+import { notifyCounterparty } from '@/services/projects';
 import { supabase } from '@/services/supabase';
 
 // The project_documents table is defined in migration 20260604000400 but
@@ -88,6 +89,16 @@ export async function uploadDocument(args: {
     `)
     .single();
   if (insertErr) throw insertErr;
+
+  // Tell the other side something new landed — a quietly-appearing
+  // document is exactly the "left wondering" moment Phase exists to
+  // prevent (persona audit C). Fire-and-forget; upload already succeeded.
+  void notifyCounterparty({
+    project_id,
+    sender_id: user.id,
+    title: 'New document on your project',
+    body: `"${asset.name ?? 'A document'}" was added — open the project to view it.`,
+  });
 
   return row as unknown as ProjectDocument;
 }

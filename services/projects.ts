@@ -78,10 +78,11 @@ export async function fetchMyProjects() {
   const { data, error } = await supabase
     .from('projects')
     .select(`
-      id, title, status, trade_type, city, postcode,
+      id, title, status, trade_type, address_line_1, city, postcode,
       expected_start_date, expected_end_date, actual_start_date,
       created_at, last_update_at, pending_customer_name, customer_id,
-      customer:profiles!projects_customer_id_fkey ( full_name )
+      customer:profiles!projects_customer_id_fkey ( full_name ),
+      tradesman:profiles!projects_tradesman_id_fkey ( id, full_name )
     `)
     .or(filter)
     .is('archived_at', null)
@@ -96,7 +97,7 @@ export async function fetchProject(projectId: string) {
   const { data, error } = await supabase
     .from('projects')
     .select(`
-      id, title, status, trade_type, quoted_amount,
+      id, title, status, trade_type, quoted_amount, delay_reason,
       address_line_1, address_line_2, city, postcode,
       expected_start_date, expected_end_date, actual_start_date, actual_end_date,
       pending_customer_name, pending_customer_phone,
@@ -917,6 +918,24 @@ export async function updateProjectStatus(args: {
     type: 'status',
   });
 
+  // A delay or completion should never be something the customer finds
+  // out by opening the app (persona audit C) — system status posts are
+  // deliberately silent, so push these two explicitly.
+  if (args.new_status === 'delayed' || args.new_status === 'completed') {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      void notifyCounterparty({
+        project_id: args.project_id,
+        sender_id: user.id,
+        title: args.new_status === 'delayed' ? 'Running behind' : 'All done',
+        body:
+          args.new_status === 'delayed'
+            ? `${DELAY_REASON_LABELS[args.delay_reason!]} — new finish date to follow.`
+            : 'Your project is complete.',
+      });
+    }
+  }
+
   return data;
 }
 
@@ -966,9 +985,26 @@ export function relativeTime(iso: string): string {
   return `${days} days ago`;
 }
 
+/**
+ * Headline + subhead for the project hero. Persona-neutral and factual —
+ * the same strings show to the customer AND the lead, so no "your"
+ * either way, no "tap to…" prompts (the card isn't tappable for
+ * customers, and no review feature exists), and never a date presented
+ * as something it isn't.
+ */
 export function statusHeadline(
   status: string,
-  ctx: { endDate?: string | null; day?: number; total?: number }
+  ctx: {
+    /** Expected start — drives the 'scheduled' subhead. */
+    startDate?: string | null;
+    endDate?: string | null;
+    day?: number;
+    total?: number;
+    /** Set when status is 'delayed' and a reason was recorded. */
+    delayReason?: DelayReason | null;
+    /** A revised finish date, only when one has actually been set. */
+    revisedEndDate?: string | null;
+  }
 ): { headline: string; subhead: string } {
   switch (status) {
     case 'in_progress':
@@ -979,24 +1015,40 @@ export function statusHeadline(
     case 'scheduled':
       return {
         headline: 'Booked in',
-        subhead: ctx.endDate ? `Work starts ${formatDay(ctx.endDate)}` : 'Start date being confirmed',
+        // Start date, never the end date — "Work starts {finish date}"
+        // was a straight lie on the hero (persona audit C).
+        subhead: ctx.startDate
+          ? `Work starts ${formatDay(ctx.startDate)}`
+          : 'Start date being confirmed',
       };
     case 'materials_ordered':
       return { headline: 'Materials on order', subhead: 'Expected back on site soon' };
-    case 'delayed':
-      return { headline: 'Slight delay, still on track', subhead: '' };
+    case 'delayed': {
+      const reason = ctx.delayReason ? DELAY_REASON_LABELS[ctx.delayReason] : null;
+      return {
+        headline: reason ? `Running behind — ${reason.toLowerCase()}` : 'Running behind',
+        subhead: ctx.revisedEndDate
+          ? `New finish date: ${formatDay(ctx.revisedEndDate)}`
+          : 'New finish date to follow',
+      };
+    }
     case 'awaiting_approval':
-      return { headline: 'Needs your approval', subhead: 'Tap to review' };
+      return { headline: 'Waiting on an approval', subhead: '' };
     case 'awaiting_inspection':
       return { headline: 'Awaiting inspection', subhead: '' };
     case 'completed':
-      return { headline: 'All done', subhead: 'Tap to leave a review' };
+      return { headline: 'All done', subhead: 'Project complete' };
     case 'quote_sent':
     default:
-      return { headline: 'Quote ready for you', subhead: 'Tap to review' };
+      return { headline: 'Quote sent', subhead: 'Waiting on a decision' };
   }
 }
 
-function formatDay(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', { weekday: 'long' });
+/** Full, friendly date: "Friday 12 Dec". */
+export function formatDay(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+  });
 }

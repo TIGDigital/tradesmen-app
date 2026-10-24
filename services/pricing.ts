@@ -225,14 +225,32 @@ export async function respondToPriceChange(args: {
 
 /** Lead withdraws their own pending proposal (typo, changed mind). */
 export async function withdrawPriceChange(change_id: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const client = supabase as any;
-  const { error } = await client
+  const { data, error } = await client
     .from('project_price_changes')
     .update({ status: 'withdrawn' })
     .eq('id', change_id)
-    .eq('status', 'pending');
+    .eq('status', 'pending')
+    .select('project_id')
+    .maybeSingle();
   if (error) throw error;
+
+  // Tell the customer the request is gone — otherwise the "waiting for
+  // your OK" they saw just vanishes with no explanation (persona audit C).
+  const project_id = (data as { project_id?: string } | null)?.project_id;
+  if (project_id) {
+    void notifyCounterparty({
+      project_id,
+      sender_id: user.id,
+      title: 'Price change withdrawn',
+      body: 'The proposed price change has been withdrawn — your agreed price stays as it is.',
+      data: { screen: 'pricing' },
+    });
+  }
 }
 
 /** Full history for the audit log view, newest first. */

@@ -20,13 +20,18 @@ import { useRealtimeProject } from '@/hooks/useRealtimeProject';
 import { signOut, switchMyRole } from '@/services/auth';
 import { fireLocalTest } from '@/services/notifications';
 import { fetchCustomerOnboarding } from '@/services/onboarding';
+import { fetchPendingChange, formatGbp } from '@/services/pricing';
 import {
+  customerFirstName,
   dayOfProject,
   fetchMyCurrentProject,
   fetchMyProjects,
+  formatDay,
   formatEta,
   relativeTime,
 } from '@/services/projects';
+import { fetchQuotes } from '@/services/quotes';
+import { fetchProjectSnags } from '@/services/snags';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 import type { ProjectStatus } from '@/theme/tokens';
@@ -232,7 +237,7 @@ export default function HomeScreen() {
       {data && (
         <ProjectContent
           data={data}
-          firstName={profile?.full_name?.split(' ')[0] ?? 'there'}
+          firstName={customerFirstName(profile?.full_name) ?? 'there'}
           onOpen={() => router.push({ pathname: '/project/[id]', params: { id: data.id } })}
           onRefresh={refetch}
           refreshing={isRefetching}
@@ -388,29 +393,17 @@ function ProjectContent({
     .slice()
     .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())[0];
 
-  // ─── "This week" instrument readouts ─────────────────────────────
-  const weekMs = 7 * 24 * 60 * 60 * 1000;
-  const cutoff = Date.now() - weekMs;
-  const recentUpdates = updates.filter(
-    (u) => u.created_at && new Date(u.created_at).getTime() >= cutoff,
-  );
-  const photosThisWeek = recentUpdates.reduce(
-    (n, u) => n + (u.media?.filter((m) => m.media_type !== 'voice').length ?? 0),
-    0,
-  );
-  const updatesThisWeek = recentUpdates.length;
-  const daysLeft = data.expected_end_date
-    ? Math.max(
-        0,
-        Math.ceil((new Date(data.expected_end_date).getTime() - Date.now()) / 86_400_000),
-      )
-    : null;
-
   const tradesmanName = data.tradesman?.full_name ?? 'your tradesman';
   const tradesmanFirst = tradesmanName.split(' ')[0];
 
-  // Status copy lives next to the ring.
-  const statusText = t.statusLabels[data.status as ProjectStatus] ?? 'In progress';
+  // Status copy lives next to the ring. For the customer, 'quote_sent'
+  // reads as the action THEY take — "Quote to review", not "Quote sent"
+  // (persona audit C; the shared label map in theme/tokens.ts stays
+  // persona-neutral, so the override lives here at the render site).
+  const statusText =
+    data.status === 'quote_sent'
+      ? 'Quote to review'
+      : t.statusLabels[data.status as ProjectStatus] ?? 'In progress';
 
   return (
     <ScrollView
@@ -422,6 +415,9 @@ function ProjectContent({
       <Text style={[t.type.title1, { color: t.colors.text.primary }]}>
         Hello, {firstName}
       </Text>
+
+      {/* ── Waiting on you — anything that needs the customer's OK ── */}
+      <WaitingOnYou data={data} tradesmanFirst={tradesmanFirst} />
 
       {/* ── Onboarding checklist (renders only while items pending) ── */}
       {ob && checklistItems.length > 0 && (
@@ -493,39 +489,6 @@ function ProjectContent({
           </View>
         </View>
       </Pressable>
-
-      {/* ── This week — three instrument readouts ──────────────── */}
-      <View>
-        <Text
-          style={[
-            t.type.caption,
-            { color: t.colors.text.tertiary, marginBottom: t.space[3] },
-          ]}
-        >
-          This week
-        </Text>
-        <View style={{ flexDirection: 'row', gap: t.space[3] }}>
-          <Stat
-            label="Photos"
-            value={photosThisWeek.toString()}
-            onPress={() =>
-              router.push({ pathname: '/project/[id]/photos', params: { id: data.id } })
-            }
-          />
-          <Stat
-            label="Updates"
-            value={updatesThisWeek.toString()}
-            onPress={() => router.push('/(customer)/updates')}
-          />
-          <Stat
-            label="Days left"
-            value={daysLeft != null ? daysLeft.toString() : '—'}
-            onPress={() =>
-              router.push({ pathname: '/project/[id]/schedule', params: { id: data.id } })
-            }
-          />
-        </View>
-      </View>
 
       {/* ── Latest update — quiet preview ──────────────────────── */}
       <View>
@@ -676,37 +639,186 @@ function ProjectContent({
 }
 
 // ── Small dashboard primitives ─────────────────────────────────────
-function Stat({ label, value, onPress }: { label: string; value: string; onPress?: () => void }) {
+
+type ProjectData = NonNullable<Awaited<ReturnType<typeof fetchMyCurrentProject>>>;
+
+/**
+ * "Waiting on you" — the one card that answers the customer's first
+ * question: do I need to do anything? Quote to review, price change to
+ * OK, fix to sign off. When nothing's waiting, it says so — and shows
+ * where the money stands plus what's coming next (persona audit C).
+ */
+function WaitingOnYou({
+  data,
+  tradesmanFirst,
+}: {
+  data: ProjectData;
+  tradesmanFirst: string;
+}) {
+  const t = lightTheme;
+  const projectId = data.id;
+
+  const query = useQuery({
+    queryKey: ['waiting-on-you', projectId],
+    queryFn: async () => {
+      // Each fetch fails soft — a hiccup on one table must never take
+      // the whole dashboard card down.
+      const [quotes, pendingChange, snags] = await Promise.all([
+        fetchQuotes(projectId).catch(() => []),
+        fetchPendingChange(projectId).catch(() => null),
+        fetchProjectSnags(projectId).catch(() => []),
+      ]);
+      return {
+        quote: quotes.find((q) => q.status === 'sent') ?? null,
+        pendingChange,
+        snag: snags.find((s) => s.status === 'resolved' && !s.confirmed_at) ?? null,
+      };
+    },
+  });
+
+  // Decisions happen on sub-screens (quote, pricing, snag) — re-check
+  // whenever the dashboard regains focus so a done item disappears.
+  // Stable refetch fn only in the deps — see the jobs.tsx July crash.
+  const { refetch } = query;
+  useFocusEffect(
+    useCallback(() => {
+      void refetch();
+    }, [refetch]),
+  );
+
+  const waiting = query.data;
+  if (!waiting) return null;
+
+  const rows: Array<{ key: string; title: string; sub?: string; onPress: () => void }> = [];
+  const quote = waiting.quote;
+  if (quote) {
+    rows.push({
+      key: 'quote',
+      title: `Quote to review — ${formatGbp(quote.total)}`,
+      sub: `From ${tradesmanFirst} — read it and reply when you're ready`,
+      onPress: () => router.push({ pathname: '/quote/[id]', params: { id: quote.id } }),
+    });
+  }
+  const change = waiting.pendingChange;
+  if (change) {
+    rows.push({
+      key: 'price-change',
+      title: `Price change to OK — ${formatGbp(change.proposed_amount)}`,
+      sub: change.reason,
+      onPress: () =>
+        router.push({ pathname: '/project/[id]/pricing', params: { id: projectId } }),
+    });
+  }
+  const snag = waiting.snag;
+  if (snag) {
+    rows.push({
+      key: 'snag',
+      title: 'Check the fix and sign it off',
+      sub: snag.title,
+      onPress: () => router.push({ pathname: '/snag/[id]', params: { id: snag.id } }),
+    });
+  }
+
+  // Quiet state — show the agreed price ("no surprise bills" promise)
+  // and the next milestone, when we know either.
+  const nextMilestone = (data.milestones ?? [])
+    .slice()
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .find((m) => m.status === 'pending');
+  const nextDate = nextMilestone?.expected_date ?? nextMilestone?.expected_start_date ?? null;
+
+  if (rows.length === 0 && data.quoted_amount == null && !nextMilestone) return null;
+
+  return (
+    <View>
+      <Text
+        style={[t.type.caption, { color: t.colors.text.tertiary, marginBottom: t.space[3] }]}
+      >
+        Waiting on you
+      </Text>
+      <View
+        style={[
+          t.elevation[1],
+          {
+            backgroundColor: t.colors.bg.surface,
+            borderColor: rows.length > 0 ? t.colors.brand.primary : t.colors.border.subtle,
+            borderWidth: 1,
+            borderRadius: t.radius.lg,
+            overflow: 'hidden',
+          },
+        ]}
+      >
+        {rows.length > 0 ? (
+          rows.map((row, i) => (
+            <WaitingRow
+              key={row.key}
+              title={row.title}
+              sub={row.sub}
+              onPress={row.onPress}
+              divider={i < rows.length - 1}
+            />
+          ))
+        ) : (
+          <View style={{ padding: t.space[4], gap: 6 }}>
+            <Text style={[t.type.body, { color: t.colors.text.secondary }]}>
+              Nothing right now — you're all caught up.
+            </Text>
+            {data.quoted_amount != null && (
+              <Text style={[t.type.body, { color: t.colors.text.primary }]}>
+                Agreed price {formatGbp(data.quoted_amount)} — any change needs your OK.
+              </Text>
+            )}
+            {nextMilestone && (
+              <Text style={[t.type.body, { color: t.colors.text.secondary }]}>
+                Next up: {nextMilestone.title}
+                {nextDate ? ` — ${formatDay(nextDate)}` : ''}
+              </Text>
+            )}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function WaitingRow({
+  title,
+  sub,
+  onPress,
+  divider,
+}: {
+  title: string;
+  sub?: string;
+  onPress: () => void;
+  divider?: boolean;
+}) {
   const t = lightTheme;
   return (
     <Pressable
       onPress={onPress}
-      disabled={!onPress}
-      style={({ pressed }) => [
-        t.elevation[1],
-        {
-          flex: 1,
-          backgroundColor: pressed ? t.colors.bg.surface2 : t.colors.bg.surface,
-          borderColor: t.colors.border.subtle,
-          borderWidth: 1,
-          borderRadius: t.radius.lg,
-          padding: t.space[4],
-        },
-      ]}
+      style={({ pressed }) => ({
+        paddingVertical: t.space[4],
+        paddingHorizontal: t.space[4],
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: t.space[3],
+        borderBottomWidth: divider ? 1 : 0,
+        borderBottomColor: t.colors.border.subtle,
+        backgroundColor: pressed ? t.colors.bg.surface2 : 'transparent',
+      })}
     >
-      <Text
-        style={{
-          fontFamily: 'GeistMono_500Medium',
-          fontSize: 28,
-          color: t.colors.text.primary,
-          letterSpacing: -0.5,
-        }}
-      >
-        {value}
-      </Text>
-      <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginTop: 4 }]}>
-        {label}
-      </Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>{title}</Text>
+        {sub ? (
+          <Text
+            style={[t.type.footnote, { color: t.colors.text.secondary, marginTop: 2 }]}
+            numberOfLines={1}
+          >
+            {sub}
+          </Text>
+        ) : null}
+      </View>
+      <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
     </Pressable>
   );
 }

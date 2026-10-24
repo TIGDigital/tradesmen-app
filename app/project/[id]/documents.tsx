@@ -44,22 +44,6 @@ export default function DocumentsScreen() {
     enabled: !!id,
   });
 
-  const uploadMutation = useMutation({
-    mutationFn: async () => {
-      const asset = await pickDocument();
-      if (!asset) return null; // user cancelled
-      return uploadDocument({ project_id: id!, asset });
-    },
-    onSuccess: (row) => {
-      if (row) {
-        queryClient.invalidateQueries({ queryKey: ['documents', id] });
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert('Uploaded', `"${row.file_name}" is now on the project.`);
-      }
-    },
-    onError: (e) => Alert.alert("Couldn't upload", (e as Error).message),
-  });
-
   const items = data ?? [];
 
   // Two sections: the viewer's own uploads, then the other side's — so a
@@ -70,6 +54,29 @@ export default function DocumentsScreen() {
   const theirName =
     theirs[0]?.uploader?.full_name?.split(' ')[0] ??
     (role === 'customer' ? 'Your tradesman' : 'Your customer');
+  // Same name, mid-sentence case — for "— Dave can see it" copy.
+  const theirNameMidSentence =
+    theirs[0]?.uploader?.full_name?.split(' ')[0] ??
+    (role === 'customer' ? 'your tradesman' : 'your customer');
+
+  const uploadMutation = useMutation({
+    mutationFn: async () => {
+      const asset = await pickDocument();
+      if (!asset) return null; // user cancelled
+      return uploadDocument({ project_id: id!, asset });
+    },
+    onSuccess: (row) => {
+      if (row) {
+        queryClient.invalidateQueries({ queryKey: ['documents', id] });
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(
+          'Uploaded',
+          `"${row.file_name}" is on the project — ${theirNameMidSentence} can see it.`,
+        );
+      }
+    },
+    onError: (e) => Alert.alert("Couldn't upload", (e as Error).message),
+  });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['bottom']}>
@@ -124,7 +131,9 @@ export default function DocumentsScreen() {
           <ErrorState
             tone="empty"
             title="No documents yet"
-            message="Tap the + above to share a PDF or image with the other party."
+            message={`Tap the + above to share a PDF or image with ${
+              role === 'customer' ? 'your tradesman' : 'your customer'
+            }.`}
           />
         </View>
       )}

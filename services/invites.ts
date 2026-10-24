@@ -12,19 +12,23 @@ export async function getInviteByCode(code: string) {
   const cleaned = code.trim().toUpperCase();
   if (!cleaned) return null;
 
-  const { data, error } = await supabase
-    .from('projects')
-    .select(`
-      id, title, trade_type,
-      address_line_1, city, postcode,
-      pending_customer_name,
-      tradesman:profiles!projects_tradesman_id_fkey ( id, full_name )
-    `)
-    .eq('invite_code', cleaned)
-    .maybeSingle();
-
+  // SECURITY DEFINER RPC returning safe fields only — the old open select
+  // exposed the pending customer's phone number and full address to any
+  // signed-in user (persona audit).
+  const { data, error } = await supabase.rpc('lookup_project_invite', {
+    p_code: cleaned,
+  });
   if (error) throw error;
-  return data;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    trade_type: row.trade_type as string,
+    city: (row.city as string | null) ?? null,
+    pending_customer_name: (row.pending_customer_name as string | null) ?? null,
+    tradesman: row.tradesman_name ? { id: '', full_name: row.tradesman_name as string } : null,
+  };
 }
 
 /**

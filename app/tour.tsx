@@ -24,8 +24,9 @@ import { lightTheme } from '@/theme/light';
  *
  * Content branches by role:
  *   - customer → CUSTOMER_SLIDES (you'll see what your tradesman is doing)
- *   - tradesman / apprentice → TRADESMAN_SLIDES (the work side: jobs,
- *     EoD, leave-site nudge, less customer chasing)
+ *   - apprentice (crew) → CREW_SLIDES (post from site, job list, schedule)
+ *   - tradesman → TRADESMAN_SLIDES (the work side: jobs, EoD,
+ *     leave-site nudge, less customer chasing)
  *
  * Persistence: tapping Skip or Get started flips `tourSeen` to true in
  * AsyncStorage via the auth store, and AuthGate stops routing to /tour
@@ -134,16 +135,50 @@ const TRADESMAN_SLIDES: Slide[] = [
   },
 ];
 
+/** Crew tour — apprentices + helpers posting from site. Three slides:
+ *  the approval loop, the job list, the schedule. */
+const CREW_SLIDES: Slide[] = [
+  {
+    icon: 'camera',
+    iconBg: '#E6F0FE',
+    iconColor: '#1B4DD9',
+    eyebrow: 'Post from site',
+    title: 'Snap it, send it',
+    body: "Photo updates go to your lead first. One tap of approval and the customer sees your work.",
+  },
+  {
+    icon: 'checkbox',
+    iconBg: '#E6F0FE',
+    iconColor: '#1B4DD9',
+    eyebrow: 'Your job list',
+    title: "Know what's yours today",
+    body: "Your lead assigns the jobs. Tick them off as you go — everyone sees the list move.",
+  },
+  {
+    icon: 'calendar',
+    iconBg: '#E6F0FE',
+    iconColor: '#1B4DD9',
+    eyebrow: 'The schedule',
+    title: 'See where the job is heading',
+    body: "Milestones and dates for every project you're on, so you always know what's next.",
+  },
+];
+
 export default function TourScreen() {
   const t = lightTheme;
   const markTourSeen = useAuthStore((s) => s.markTourSeen);
   const role = useAuthStore((s) => s.profile?.role);
 
-  // Customer-only sees CUSTOMER_SLIDES. Tradesman + apprentice + any
-  // future on-site role sees TRADESMAN_SLIDES. Default to customer when
-  // role is briefly null (right after sign-up, before the trigger fires)
-  // — it's the more common path and the wording still makes sense.
-  const slides = role === 'customer' ? CUSTOMER_SLIDES : TRADESMAN_SLIDES;
+  // Customer sees CUSTOMER_SLIDES, crew (apprentice) sees CREW_SLIDES,
+  // everything else gets TRADESMAN_SLIDES. Default to customer when role
+  // is briefly null (right after sign-up, before the trigger fires) —
+  // it's the more common path and the wording still makes sense.
+  const slides =
+    role === 'customer'
+      ? CUSTOMER_SLIDES
+      : role === 'apprentice'
+        ? CREW_SLIDES
+        : TRADESMAN_SLIDES;
 
   const listRef = useRef<FlatList<Slide>>(null);
   const [index, setIndex] = useState(0);

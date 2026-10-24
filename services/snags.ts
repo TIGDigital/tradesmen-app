@@ -276,7 +276,7 @@ export async function markSnagInProgress(args: { id: string; project_id: string 
     .from('project_snags')
     .update({ status: 'in_progress' })
     .eq('id', args.id)
-    .select('title')
+    .select('title, reporter_id')
     .single();
   if (error) throw error;
 
@@ -286,6 +286,7 @@ export async function markSnagInProgress(args: { id: string; project_id: string 
     actor_id: user.id,
     title: 'Snag in progress',
     body: snag?.title ?? '',
+    reporter_id: snag?.reporter_id ?? null,
   });
 }
 
@@ -346,7 +347,7 @@ export async function resolveSnag(args: {
       confirmed_by: null,
     })
     .eq('id', args.id)
-    .select('title')
+    .select('title, reporter_id')
     .single();
   if (error) throw error;
 
@@ -356,6 +357,7 @@ export async function resolveSnag(args: {
     actor_id: user.id,
     title: 'Snag resolved',
     body: snag?.title ?? '',
+    reporter_id: (snag as { reporter_id?: string } | null)?.reporter_id ?? null,
   });
 }
 
@@ -429,6 +431,11 @@ export async function reopenSnag(args: { id: string; project_id: string; reason:
  * Generic "tell the OTHER party about a snag state change" helper. Same
  * pattern as notifyCounterpartyOfSnag (used for creation) but takes an
  * explicit title + body so each action can phrase the push its own way.
+ *
+ * When `reporter_id` is passed, the snag's reporter is notified too (if
+ * they're neither the actor nor already the counterparty) — a crew- or
+ * customer-reported snag's progress must reach whoever flagged it, not
+ * just the lead's counterparty (persona audit C).
  */
 async function notifyAboutSnag(args: {
   snag_id: string;
@@ -436,6 +443,7 @@ async function notifyAboutSnag(args: {
   actor_id: string;
   title: string;
   body: string;
+  reporter_id?: string | null;
 }) {
   try {
     const { data: project } = await supabase
@@ -445,23 +453,30 @@ async function notifyAboutSnag(args: {
       .single();
     if (!project) return;
 
-    const recipient_id =
+    const counterparty_id =
       project.tradesman_id === args.actor_id ? project.customer_id : project.tradesman_id;
-    if (!recipient_id) return;
 
-    await recordNotification({
-      user_id: recipient_id,
-      kind: 'new_update',
-      project_id: args.project_id,
-      title: args.title,
-      body: args.body,
-      data: { project_id: args.project_id, snag_id: args.snag_id },
-    });
+    const recipients = new Set<string>();
+    if (counterparty_id) recipients.add(counterparty_id);
+    if (args.reporter_id) recipients.add(args.reporter_id);
+    recipients.delete(args.actor_id);
+    if (recipients.size === 0) return;
+
+    for (const recipient_id of recipients) {
+      await recordNotification({
+        user_id: recipient_id,
+        kind: 'new_update',
+        project_id: args.project_id,
+        title: args.title,
+        body: args.body,
+        data: { project_id: args.project_id, snag_id: args.snag_id },
+      });
+    }
 
     const { data: tokens } = await supabase
       .from('push_tokens')
       .select('token')
-      .eq('user_id', recipient_id);
+      .in('user_id', [...recipients]);
     if (!tokens || tokens.length === 0) return;
 
     await sendPush({

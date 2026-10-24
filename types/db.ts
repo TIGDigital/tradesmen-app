@@ -2048,11 +2048,39 @@ export type Database = {
       is_project_crew: { Args: { p_id: string }; Returns: boolean }
       is_project_participant: { Args: { p_id: string }; Returns: boolean }
       is_project_tradesman: { Args: { p_id: string }; Returns: boolean }
+      lookup_crew_invite: {
+        Args: { p_code: string }
+        Returns: {
+          accepted_at: string
+          created_at: string
+          expires_at: string
+          id: string
+          invite_code: string
+          invitee_name: string
+          inviter_id: string
+          inviter_name: string
+          project_id: string
+          project_title: string
+          role_on_project: string
+        }[]
+      }
+      lookup_project_invite: {
+        Args: { p_code: string }
+        Returns: {
+          city: string
+          id: string
+          pending_customer_name: string
+          title: string
+          trade_type: string
+          tradesman_name: string
+        }[]
+      }
       mark_updates_seen: { Args: { p_project_id: string }; Returns: undefined }
       reorder_milestones: {
         Args: { p_ids: string[]; p_project_id: string }
         Returns: undefined
       }
+      shares_project_with: { Args: { p_other: string }; Returns: boolean }
     }
     Enums: {
       certificate_kind:

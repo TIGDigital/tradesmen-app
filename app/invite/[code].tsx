@@ -95,7 +95,7 @@ export default function InviteAcceptScreen() {
                   { color: t.colors.text.secondary, marginTop: t.space[2] },
                 ]}
               >
-                {[data.address_line_1, data.city, data.postcode].filter(Boolean).join(', ') || '—'}
+                {data.city ?? '—'}
               </Text>
             </Card>
 

@@ -1,18 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 
 import { fetchUnreadMessageCount } from '@/services/messages';
 import { fetchUnreadNotificationCount } from '@/services/notifications';
+import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
 /**
- * Tradesman tab bar: Jobs / Messages / Account. The Crew tab from the
- * prototype is parked until the apprentice persona ships. The `projects/new`
- * sub-route is hidden from the tab bar with `href: null`.
+ * Tradesman tab bar: Jobs / Messages / Crew / Activity / Account — the
+ * LEAD's shell. Crew (role 'apprentice') have their own `(crew)` group;
+ * the Redirect below catches any stale link that still points here.
  */
 export default function TradesmanLayout() {
   const t = lightTheme;
+  const profile = useAuthStore((s) => s.profile);
   // Unread chat badge on the Messages tab; same query key as the home-feed
   // banner so one fetch serves both (beta feedback 16 Oct).
   const { data: unreadMessages = 0 } = useQuery({
@@ -27,6 +29,13 @@ export default function TradesmanLayout() {
     queryFn: fetchUnreadNotificationCount,
     refetchInterval: 30_000,
   });
+
+  // Crew never belong in the lead shell — old deep links, the pre-(crew)
+  // index redirect, or a cold-start push could still land them here.
+  // Placed AFTER the hooks so hook order never changes between renders.
+  if (profile?.role === 'apprentice') {
+    return <Redirect href="/(crew)/today" />;
+  }
 
   return (
     <Tabs

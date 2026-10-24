@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -18,7 +18,9 @@ import { PhotoStrip } from '@/components/PhotoStrip';
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { type PickedPhoto, pickPhotos } from '@/services/media';
+import { customerFirstName, fetchProject } from '@/services/projects';
 import { createSnag, type SnagSeverity } from '@/services/snags';
+import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
 const DESCRIPTION_MAX = 2000;
@@ -35,6 +37,15 @@ export default function NewSnagScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const myId = useAuthStore((s) => s.profile?.id);
+
+  // Fire-and-forget fetch so the confirmation can name who's been told.
+  // Shares the project screen's cache key + shape, so it's usually free.
+  const { data: project } = useQuery({
+    queryKey: ['project', id],
+    queryFn: () => fetchProject(id!),
+    enabled: !!id,
+  });
 
   const [title, setTitle] = useState('');
   const [locationHint, setLocationHint] = useState('');
@@ -55,6 +66,13 @@ export default function NewSnagScreen() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['snags', id] });
       router.back();
+      // Close the loop in plain English: who, exactly, now knows about
+      // this. The snag's push goes to the OTHER party, so name them.
+      const isLead = !!project?.tradesman && project.tradesman.id === myId;
+      const told = isLead
+        ? customerFirstName(project?.customer?.full_name) ?? 'Your customer'
+        : project?.tradesman?.full_name?.split(' ')[0] ?? 'Your tradesman';
+      Alert.alert('Reported', `${told}'s been told.`);
     },
     onError: (e) => Alert.alert("Couldn't send", (e as Error).message),
   });

@@ -317,6 +317,8 @@ function Content({
   );
   const { headline, subhead } = statusHeadline(project.status, {
     endDate: project.expected_end_date,
+    startDate: project.expected_start_date,
+    delayReason: project.delay_reason ?? undefined,
     day: range?.day,
     total: range?.total,
   });

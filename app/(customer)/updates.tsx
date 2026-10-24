@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
-import { router } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
 import {
   Pressable,
   RefreshControl,
@@ -16,6 +16,7 @@ import { Reactions } from '@/components/Reactions';
 import { VoicePlayer } from '@/components/VoicePlayer';
 import { Card } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { EventPill } from '@/components/ui/EventPill';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useRealtimeProject } from '@/hooks/useRealtimeProject';
 import {
@@ -52,21 +53,43 @@ export default function CustomerUpdatesScreen() {
     enabled: !!projectId,
   });
 
-  // Which updates were UNSEEN when the feed opened — snapshot once, show
-  // a NEW pill on those for the session, THEN send the read receipt
-  // (previously the receipt fired first, so nothing ever looked new —
-  // beta feedback 23 Oct).
-  const newIdsRef = useRef<Set<string> | null>(null);
+  // Which updates were UNSEEN when the feed opened — snapshot those, show
+  // a NEW pill on them, THEN send the read receipt (the receipt used to
+  // fire first, so nothing ever looked new — beta feedback 23 Oct).
+  //
+  // The snapshot re-arms every time the screen regains FOCUS (not just
+  // once per mount, as before): tab screens stay mounted, so updates that
+  // arrived while you were elsewhere never got pills and never got marked
+  // seen until a full relaunch.
+  const [newIds, setNewIds] = useState<Set<string>>(new Set());
+  const needsSnapshot = useRef(true);
+
+  const { refetch: refetchUpdates } = updatesQuery;
+  useFocusEffect(
+    useCallback(() => {
+      needsSnapshot.current = true;
+      void refetchUpdates();
+    }, [refetchUpdates]),
+  );
+
   useEffect(() => {
-    if (!updatesQuery.data || !projectId || newIdsRef.current) return;
-    newIdsRef.current = new Set(
-      updatesQuery.data
-        .filter((u) => !(u as { customer_seen_at?: string | null }).customer_seen_at)
-        .map((u) => u.id),
-    );
-    void markUpdatesSeen(projectId);
-    queryClient.invalidateQueries({ queryKey: ['unseen-updates'] });
-  }, [updatesQuery.data, projectId]);
+    if (!updatesQuery.data || !projectId) return;
+    const unseen = updatesQuery.data
+      .filter((u) => !(u as { customer_seen_at?: string | null }).customer_seen_at)
+      .map((u) => u.id);
+    if (needsSnapshot.current) {
+      // Fresh focus: pills reflect exactly what's new since last visit.
+      needsSnapshot.current = false;
+      setNewIds(new Set(unseen));
+    } else if (unseen.length > 0) {
+      // Realtime arrival while already focused: add to the pills.
+      setNewIds((prev) => new Set([...prev, ...unseen]));
+    }
+    if (unseen.length > 0) {
+      void markUpdatesSeen(projectId);
+      queryClient.invalidateQueries({ queryKey: ['unseen-updates'] });
+    }
+  }, [updatesQuery.data, projectId, queryClient]);
 
   // Customers only see approved updates — pending ones are hidden until
   // the lead signs off (Sprint 38 approval queue).
@@ -131,18 +154,40 @@ export default function CustomerUpdatesScreen() {
               No updates yet.
             </Text>
           ) : (
-            updates.map((u) => (
+            updates.map((u) => {
+              // System rows (status flips, milestone ticks) render as quiet
+              // event pills, not full author cards — nobody "wrote" them.
+              if (u.type === 'status' || u.type === 'milestone') {
+                return (
+                  <Pressable
+                    key={u.id}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/comments/[update_id]',
+                        params: { update_id: u.id },
+                      })
+                    }
+                  >
+                    <EventPill
+                      kind={u.type === 'milestone' ? 'milestone' : 'left'}
+                      title={(u.body ?? '').replace(/^Status:\s*/, '')}
+                      timestamp={relativeTime(u.created_at!)}
+                    />
+                  </Pressable>
+                );
+              }
+              return (
               <Pressable
                 key={u.id}
                 onPress={() =>
                   router.push({
-                    pathname: '/project/[id]',
-                    params: { id: projectId! },
+                    pathname: '/comments/[update_id]',
+                    params: { update_id: u.id },
                   })
                 }
               >
                 <Card>
-                  {newIdsRef.current?.has(u.id) && (
+                  {newIds.has(u.id) && (
                     <View
                       style={{
                         alignSelf: 'flex-start',
@@ -223,7 +268,8 @@ export default function CustomerUpdatesScreen() {
                   </Pressable>
                 </Card>
               </Pressable>
-            ))
+              );
+            })
           )}
         </ScrollView>
       )}

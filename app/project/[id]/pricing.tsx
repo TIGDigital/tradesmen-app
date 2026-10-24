@@ -82,8 +82,13 @@ export default function PricingScreen() {
     tradesman_id?: string | null;
     customer_id?: string | null;
     quoted_amount?: number | null;
+    tradesman?: { full_name: string | null } | null;
   };
   const project = projectQ.data as ProjectShape | undefined;
+
+  // First name for customer-facing copy — "Dave's been told" beats
+  // "the tradesman has been notified".
+  const leadFirst = project?.tradesman?.full_name?.split(' ')[0] ?? 'Your tradesman';
 
   const quotesQ = useQuery({
     queryKey: ['quotes', id],
@@ -147,7 +152,26 @@ export default function PricingScreen() {
       decision: 'approved' | 'rejected';
       note?: string;
     }) => respondToPriceChange({ change_id, decision, note }),
-    onSuccess: () => invalidateAll(),
+    onSuccess: (row, vars) => {
+      invalidateAll();
+      // Say what just happened in plain English — a silent state flip
+      // leaves the customer wondering whether it took (persona audit C).
+      if (vars.decision === 'approved') {
+        Alert.alert(
+          "That's agreed",
+          `The price is now ${formatGbp(row.proposed_amount)}. ${leadFirst}'s been told.`,
+        );
+      } else {
+        const stays =
+          row.previous_amount != null
+            ? ` The price stays at ${formatGbp(row.previous_amount)}.`
+            : ' The price stays as it is.';
+        Alert.alert(
+          'You declined',
+          `${leadFirst}'s been told${vars.note ? ' — your note is with them' : ''}.${stays}`,
+        );
+      }
+    },
     onError: (e: Error) => Alert.alert('Something went wrong', e.message),
   });
 
@@ -185,7 +209,7 @@ export default function PricingScreen() {
     if (!pending) return;
     Alert.alert(
       'Approve new price?',
-      `The new agreed price will be ${formatGbp(pending.proposed_amount)}.`,
+      `The agreed price will become ${formatGbp(pending.proposed_amount)}.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -200,18 +224,25 @@ export default function PricingScreen() {
 
   function onReject() {
     if (!pending) return;
-    Alert.alert(
-      'Reject this change?',
-      'Your tradesman will be notified. The current price stays as it is.',
+    // Optional note, same pattern as declining a quote — it travels with
+    // the decision so the lead knows why, not just "no".
+    Alert.prompt(
+      'Decline this change?',
+      `Add a note if you like — ${leadFirst} will see it. The current price stays as it is.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Reject',
+          text: 'Decline',
           style: 'destructive',
-          onPress: () =>
-            respondMut.mutate({ change_id: pending.id, decision: 'rejected' }),
+          onPress: (note?: string) =>
+            respondMut.mutate({
+              change_id: pending.id,
+              decision: 'rejected',
+              note: note?.trim() || undefined,
+            }),
         },
       ],
+      'plain-text',
     );
   }
 
@@ -330,13 +361,27 @@ export default function PricingScreen() {
               {quotes.map((q) => {
                 // Decision states shout (beta feedback 23 Oct): green card
                 // for approved, red for declined, blue border while waiting.
+                // Labels are role-aware — the customer did the declining,
+                // so "read their note" makes no sense to them.
                 const tone =
                   q.status === 'approved'
                     ? { bg: '#E7F6EC', border: '#1C7C3D', fg: '#1C7C3D', label: 'Approved' }
                     : q.status === 'rejected'
-                      ? { bg: '#FDEBEA', border: '#C0392B', fg: '#C0392B', label: 'Declined — read their note' }
+                      ? {
+                          bg: '#FDEBEA',
+                          border: '#C0392B',
+                          fg: '#C0392B',
+                          label: isCustomer
+                            ? `You declined — your note is with ${leadFirst}`
+                            : 'Declined — read their note',
+                        }
                       : q.status === 'sent'
-                        ? { bg: t.colors.bg.surface, border: t.colors.brand.primary, fg: t.colors.brand.primary, label: 'Awaiting approval' }
+                        ? {
+                            bg: t.colors.bg.surface,
+                            border: t.colors.brand.primary,
+                            fg: t.colors.brand.primary,
+                            label: isCustomer ? 'Waiting for your OK' : 'Awaiting approval',
+                          }
                         : { bg: t.colors.bg.surface, border: t.colors.border.subtle, fg: t.colors.text.tertiary, label: 'Withdrawn' };
                 return (
                   <Pressable
@@ -406,7 +451,7 @@ export default function PricingScreen() {
                     },
                   ]}
                 >
-                  Pending change
+                  {isCustomer ? 'Waiting for your OK' : 'Pending change'}
                 </Text>
               </View>
               <Text
@@ -435,7 +480,7 @@ export default function PricingScreen() {
                 }}
               >
                 <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
-                  REASON
+                  Reason
                 </Text>
                 <Text
                   style={[
@@ -479,7 +524,7 @@ export default function PricingScreen() {
                         { color: t.colors.destructive.text },
                       ]}
                     >
-                      Reject
+                      Decline
                     </Text>
                   </Pressable>
                 </View>
@@ -562,7 +607,7 @@ export default function PricingScreen() {
                       { color: t.colors.text.tertiary, marginTop: 12, marginBottom: 6 },
                     ]}
                   >
-                    REASON (REQUIRED)
+                    Reason (required)
                   </Text>
                   <TextInput
                     style={[
@@ -637,6 +682,14 @@ export default function PricingScreen() {
   );
 }
 
+// Human labels for the audit log — never show a raw enum value.
+const HISTORY_STATUS_LABELS: Record<PriceChange['status'], string> = {
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Declined',
+  withdrawn: 'Withdrawn',
+};
+
 function HistoryRow({ row }: { row: PriceChange }) {
   const t = lightTheme;
   const statusColor =
@@ -661,10 +714,10 @@ function HistoryRow({ row }: { row: PriceChange }) {
         <Text
           style={[
             t.type.caption,
-            { color: statusColor, textTransform: 'uppercase', letterSpacing: 1 },
+            { color: statusColor, letterSpacing: 0.4 },
           ]}
         >
-          {row.status}
+          {HISTORY_STATUS_LABELS[row.status]}
         </Text>
       </View>
       <Text style={[t.type.body, { color: t.colors.text.secondary, marginTop: 4 }]}>

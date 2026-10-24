@@ -301,22 +301,15 @@ export async function createCrewInvite(args: {
  *  in the next `supabase gen types typescript --linked` regeneration after
  *  the 20260610000200 migration is pushed. Cast through `any` until then. */
 export async function fetchCrewInviteByCode(code: string): Promise<CrewInvite | null> {
-  const { data, error } = await supabase
-    .from('crew_invitations')
-    .select(`
-      id, project_id, inviter_id, invitee_name, invite_code,
-      role_on_project, created_at, accepted_at, expires_at,
-      project_title, inviter_name
-    ` as string)
-    .eq('invite_code', code.toUpperCase())
-    .is('accepted_at', null)
-    .is('revoked_at', null)
-    .maybeSingle();
+  // SECURITY DEFINER RPC: answers one valid code with safe fields. The old
+  // open select policy let anyone LIST every live code (audit H9); it's
+  // dropped once this client is in testers' hands.
+  const { data, error } = await supabase.rpc('lookup_crew_invite', {
+    p_code: code,
+  });
   if (error) throw error;
-  if (!data) return null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const row: any = data;
-  if (new Date(row.expires_at as string) < new Date()) return null;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
   // Normalise to the CrewInvite shape with project + inviter as null —
   // the recipient screen reads project_title / inviter_name directly.
   return { ...row, project: null, inviter: null } as unknown as CrewInvite;
