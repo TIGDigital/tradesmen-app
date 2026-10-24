@@ -54,7 +54,10 @@ export default function PricingScreen() {
   // pending change + history. Three lightweight queries — fine
   // because the screen isn't hot.
   const projectQ = useQuery({
-    queryKey: ['project', id],
+    // Own key: this fetch returns a DIFFERENT shape from fetchProject, and
+    // sharing ['project', id] poisoned the project screen's cache
+    // (missing trade_type -> formatTradeLabel crash; null for crew).
+    queryKey: ['project-pricing', id],
     queryFn: () => fetchMyCurrentProject(id!),
     enabled: !!id,
   });

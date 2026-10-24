@@ -22,8 +22,6 @@ import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useRealtimeProject } from '@/hooks/useRealtimeProject';
 import { ensureInviteCode, inviteShareMessage, markInviteShared } from '@/services/invites';
-import { logLeaveSite } from '@/services/location';
-import { fireLeaveSiteNudge } from '@/services/notifications';
 import {
   currentAndNextMilestone,
   dayOfProject,
@@ -217,30 +215,11 @@ export default function ProjectDetailScreen() {
           refreshing={isRefreshing}
           onRefresh={refreshAll}
           onCompose={() => router.push({ pathname: '/project/[id]/compose', params: { id: id! } })}
-          onEndOfDay={async () => {
-            // Fire the leave-site nudge in the background — logs the event
-            // + sends a local notification matching what the real geofence
-            // would do. Swallow any failure (notification permission
-            // denied, simulator, etc.) and continue — the user tapped
-            // "End my day" and they want the modal, not just a side-effect.
-            try {
-              await logLeaveSite(id!);
-              const customerFirst =
-                projectQuery.data?.customer?.full_name?.split(' ')[0] ??
-                customerFirstName(projectQuery.data?.pending_customer_name) ??
-                'your customer';
-              await fireLeaveSiteNudge({
-                project_id: id!,
-                customer_first_name: customerFirst,
-              });
-            } catch (e) {
-              console.warn('[EndMyDay] nudge failed', e);
-            }
-            // Open the EoD card directly so the user always gets immediate
-            // feedback. On a real phone with notifications enabled, both
-            // happen (nudge fires AND modal opens) — harmless redundancy.
-            // On simulator / with notifications denied / when the app is
-            // foregrounded, this is the only thing that actually works.
+          onEndOfDay={() => {
+            // Straight to the EoD card. A manual tap must NOT log a
+            // confirmed left_site event or self-notify (persona audit H12:
+            // false location audit trail + polluted Activity badge). The
+            // real geofence logs its own events when it ships.
             router.push({
               pathname: '/project/[id]/end-of-day',
               params: { id: id! },

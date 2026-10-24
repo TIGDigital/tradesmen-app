@@ -96,7 +96,7 @@ export async function fetchProject(projectId: string) {
   const { data, error } = await supabase
     .from('projects')
     .select(`
-      id, title, status, trade_type,
+      id, title, status, trade_type, quoted_amount,
       address_line_1, address_line_2, city, postcode,
       expected_start_date, expected_end_date, actual_start_date, actual_end_date,
       pending_customer_name, pending_customer_phone,

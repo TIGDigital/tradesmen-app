@@ -44,7 +44,7 @@ export default function JobsScreen() {
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['my-projects', profile?.id],
     queryFn: fetchMyProjects,
-    enabled: !!profile && profile.role === 'tradesman',
+    enabled: !!profile && (profile.role === 'tradesman' || profile.role === 'apprentice'),
   });
 
   // One-time nudge on the first empty Jobs visit: offer the first project,
@@ -52,7 +52,7 @@ export default function JobsScreen() {
   // One-shot by design: state guards the session, AsyncStorage the install.
   const [firstPromptChecked, setFirstPromptChecked] = useState(false);
   useEffect(() => {
-    if (firstPromptChecked || !data || data.length > 0) return;
+    if (firstPromptChecked || !data || data.length > 0 || profile?.role !== 'tradesman') return;
     setFirstPromptChecked(true);
     void (async () => {
       try {
@@ -96,11 +96,13 @@ export default function JobsScreen() {
   // down every signup + signed-in boot from 4–19 Jul (native builds
   // #9–#15). TanStack guarantees refetch identity is stable.
   const { refetch: refetchOnboarding } = onboardingQuery;
+  const isLeadRole = profile?.role === 'tradesman';
   useFocusEffect(
     useCallback(() => {
-      void refetchOnboarding();
+      // refetch() bypasses `enabled`, so re-check the gate by hand.
+      if (isLeadRole && onboardingDismissed === false) void refetchOnboarding();
       void refetch();
-    }, [refetchOnboarding, refetch]),
+    }, [refetchOnboarding, refetch, isLeadRole, onboardingDismissed]),
   );
 
   // The checklist items only render if there's at least one outstanding
