@@ -158,7 +158,7 @@ export default function ProjectDetailScreen() {
   const error = projectQuery.error || updatesQuery.error;
   // Relationship to THIS project, not account role — a tradesman crewing
   // on someone else's job is crew here (persona audit, 24 Oct).
-  const { isLead, isCrew, isTradeSide } = useProjectRole(id);
+  const { isLead, isCrew, isTradeSide, loading: roleLoading } = useProjectRole(id);
   const isRefreshing =
     projectQuery.isRefetching || updatesQuery.isRefetching || milestonesQuery.isRefetching;
   const refreshAll = () => {
@@ -216,6 +216,7 @@ export default function ProjectDetailScreen() {
           isLead={isLead}
           isCrew={isCrew}
           isTradeSide={isTradeSide}
+          roleLoading={roleLoading}
           refreshing={isRefreshing}
           onRefresh={refreshAll}
           onCompose={() => router.push({ pathname: '/project/[id]/compose', params: { id: id! } })}
@@ -279,6 +280,7 @@ function Content({
   isLead,
   isCrew,
   isTradeSide,
+  roleLoading,
   refreshing,
   onRefresh,
   onCompose,
@@ -297,6 +299,7 @@ function Content({
   isLead: boolean;
   isCrew: boolean;
   isTradeSide: boolean;
+  roleLoading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
   onCompose: () => void;
@@ -377,8 +380,10 @@ function Content({
         </Text>
       </Card>
 
-      {/* Your tradesman — customer view only. Tap to see the public profile. */}
-      {!isTradeSide && project.tradesman && (
+      {/* Your tradesman — customer view only. Tap to see the public profile.
+          roleLoading guard: while the role lookup resolves, isTradeSide is
+          still false, which flashed this card at crew (sim re-test, 24 Oct). */}
+      {!roleLoading && !isTradeSide && project.tradesman && (
         <Card>
           <Pressable
             onPress={() =>

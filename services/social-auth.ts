@@ -1,4 +1,5 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
+import Constants from 'expo-constants';
 
 import { supabase } from '@/services/supabase';
 
@@ -63,6 +64,10 @@ const GOOGLE_IOS_CLIENT_ID =
  * would crash dev sessions at bundle evaluation.
  */
 export function isGoogleSignInAvailable(): boolean {
+  // In Expo Go the module can't exist — short-circuit BEFORE require():
+  // the failed lookup itself trips RN's global error handler and painted
+  // a scary [FATAL] toast over dev sessions (sim test, 24 Oct).
+  if (Constants.appOwnership === 'expo') return false;
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     require('@react-native-google-signin/google-signin');

@@ -15,6 +15,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { PhotoStrip } from '@/components/PhotoStrip';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { useProjectRole } from '@/hooks/useProjectRole';
 import { pickPhotos, type PickedPhoto } from '@/services/media';
 import { postUpdate } from '@/services/projects';
 import { lightTheme } from '@/theme/light';
@@ -28,6 +29,9 @@ export default function ComposeUpdateScreen() {
   const queryClient = useQueryClient();
   const [body, setBody] = useState('');
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
+  // Crew posts queue for the lead first — say so up front, not just in the
+  // post-send alert (persona audit M9, finished after the 24 Oct sim run).
+  const { isLead, loading: roleLoading } = useProjectRole(id);
 
   const mutation = useMutation({
     mutationFn: () => postUpdate({ project_id: id!, body: body.trim(), photos }),
@@ -110,7 +114,11 @@ export default function ComposeUpdateScreen() {
           </View>
 
           <Text style={[t.type.footnote, { color: t.colors.text.tertiary, marginTop: t.space[2] }]}>
-            Customer sees this on their Updates tab.
+            {roleLoading
+              ? ' '
+              : isLead
+                ? 'Customer sees this on their Updates tab.'
+                : 'Your lead checks it before the customer sees it.'}
           </Text>
 
           <View style={{ flex: 1 }} />
