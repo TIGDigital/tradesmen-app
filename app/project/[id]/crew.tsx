@@ -35,6 +35,7 @@ import {
 } from '@/services/crew';
 import { APP_DOWNLOAD_URL } from '@/constants/links';
 import { relativeTime } from '@/services/projects';
+import { useProjectRole } from '@/hooks/useProjectRole';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
@@ -52,6 +53,8 @@ export default function ProjectCrewScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
+  // Lead of THIS project, not account role (persona audit).
+  const { isLead } = useProjectRole(id);
   const role = useAuthStore((s) => s.profile?.role);
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
@@ -174,7 +177,7 @@ export default function ProjectCrewScreen() {
         </Pressable>
         <Text style={[t.type.bodyLgEmphasis, { color: t.colors.text.primary }]}>Crew</Text>
         {/* Inviting crew is the tradesman's job — customers see the list read-only. */}
-        {role === 'tradesman' ? (
+        {isLead ? (
           <Pressable
             onPress={() => {
               setGeneratedInvite(null);
@@ -215,7 +218,7 @@ export default function ProjectCrewScreen() {
         <ErrorState
           tone="empty"
           title="No crew yet"
-          message="The lead tradesman is shown here. Add an apprentice in Sprint 37."
+          message="The lead tradesman is shown here. Invite your team — they post from site and you stay in control."
         />
       )}
 
@@ -370,7 +373,7 @@ export default function ProjectCrewScreen() {
                   >
                     {m.user?.full_name ?? 'Crew member'}
                   </Text>
-                  {m.role_on_project !== 'lead' ? (
+                  {m.role_on_project !== 'lead' && isLead ? (
                     <Pressable onPress={() => onChangeRole(m)} hitSlop={6}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                         <RolePill role={m.role_on_project} />
@@ -381,7 +384,7 @@ export default function ProjectCrewScreen() {
                     <RolePill role={m.role_on_project} />
                   )}
                 </View>
-                {m.role_on_project !== 'lead' && (
+                {m.role_on_project !== 'lead' && isLead && (
                   <Pressable
                     onPress={() => confirmRemove(m)}
                     hitSlop={6}
@@ -400,7 +403,7 @@ export default function ProjectCrewScreen() {
           ))}
 
           {/* ── Outstanding invites — sent but not yet accepted ── */}
-          {pendingInvites.length > 0 && (
+          {isLead && pendingInvites.length > 0 && (
             <>
               <Text
                 style={[

@@ -14,6 +14,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { fetchMilestones, fetchProject } from '@/services/projects';
+import { useProjectRole } from '@/hooks/useProjectRole';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
@@ -34,6 +35,7 @@ export default function ScheduleScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const role = useAuthStore((s) => s.profile?.role);
+  const { isLead } = useProjectRole(id);
   const { width: screenWidth } = useWindowDimensions();
 
   const projectQuery = useQuery({
@@ -117,7 +119,7 @@ export default function ScheduleScreen() {
                 : 'The schedule is built from milestones. Add the phases of the job and the timeline draws itself.'
             }
           />
-          {role !== 'customer' && (
+          {isLead && (
             <View style={{ paddingHorizontal: 24, marginTop: -8 }}>
               <PrimaryButton
                 title="Add milestones"
@@ -184,11 +186,11 @@ export default function ScheduleScreen() {
                   // The milestone editor is tradesman-only — customers see the
                   // schedule read-only (beta feedback 16 Oct).
                   onPress={
-                    role === 'customer'
+                    !isLead
                       ? undefined
                       : () => router.push({ pathname: '/milestone/[id]', params: { id: m.id } })
                   }
-                  disabled={role === 'customer'}
+                  disabled={!isLead}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',

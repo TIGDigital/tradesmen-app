@@ -15,6 +15,7 @@ import { PhaseSpinner } from '@/components/ui/PhaseSpinner';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { formatGbp } from '@/services/pricing';
 import { decideQuote, fetchQuote, withdrawQuote, type QuoteStatus } from '@/services/quotes';
+import { useProjectRole } from '@/hooks/useProjectRole';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
@@ -110,6 +111,8 @@ export default function QuoteScreen() {
   }
 
   const isCustomer = role === 'customer';
+  // Withdraw/revise are the LEAD's, not any trade account (persona audit).
+  const { isLead } = useProjectRole(quote?.project_id);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['bottom']}>
@@ -271,7 +274,7 @@ export default function QuoteScreen() {
             </View>
           )}
 
-          {quote.status === 'sent' && !isCustomer && (
+          {quote.status === 'sent' && isLead && (
             <Pressable
               onPress={() =>
                 Alert.alert('Withdraw this quote?', 'Your customer will no longer be able to approve it.', [
@@ -301,7 +304,7 @@ export default function QuoteScreen() {
             </View>
           )}
 
-          {(quote.status === 'rejected' || quote.status === 'withdrawn') && !isCustomer && (
+          {(quote.status === 'rejected' || quote.status === 'withdrawn') && isLead && (
             <View style={{ marginTop: t.space[2] }}>
               <PrimaryButton
                 title="Revise and resend"

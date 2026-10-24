@@ -35,6 +35,7 @@ import {
   softDeleteUpdate,
   statusHeadline,
 } from '@/services/projects';
+import { useProjectRole } from '@/hooks/useProjectRole';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 import type { ProjectStatus } from '@/theme/tokens';
@@ -155,7 +156,9 @@ export default function ProjectDetailScreen() {
 
   const isLoading = projectQuery.isLoading || updatesQuery.isLoading;
   const error = projectQuery.error || updatesQuery.error;
-  const isTradesman = role === 'tradesman';
+  // Relationship to THIS project, not account role — a tradesman crewing
+  // on someone else's job is crew here (persona audit, 24 Oct).
+  const { isLead, isCrew, isTradeSide } = useProjectRole(id);
   const isRefreshing =
     projectQuery.isRefetching || updatesQuery.isRefetching || milestonesQuery.isRefetching;
   const refreshAll = () => {
@@ -210,8 +213,9 @@ export default function ProjectDetailScreen() {
           project={projectQuery.data}
           updates={updatesQuery.data ?? []}
           milestones={milestonesQuery.data ?? []}
-          isTradesman={isTradesman}
-          isCrewSide={role !== 'customer'}
+          isLead={isLead}
+          isCrew={isCrew}
+          isTradeSide={isTradeSide}
           refreshing={isRefreshing}
           onRefresh={refreshAll}
           onCompose={() => router.push({ pathname: '/project/[id]/compose', params: { id: id! } })}
@@ -272,8 +276,9 @@ function Content({
   project,
   updates,
   milestones,
-  isTradesman,
-  isCrewSide,
+  isLead,
+  isCrew,
+  isTradeSide,
   refreshing,
   onRefresh,
   onCompose,
@@ -289,8 +294,9 @@ function Content({
   project: NonNullable<Awaited<ReturnType<typeof fetchProject>>>;
   updates: Awaited<ReturnType<typeof fetchProjectUpdates>>;
   milestones: Awaited<ReturnType<typeof fetchMilestones>>;
-  isTradesman: boolean;
-  isCrewSide: boolean;
+  isLead: boolean;
+  isCrew: boolean;
+  isTradeSide: boolean;
   refreshing: boolean;
   onRefresh: () => void;
   onCompose: () => void;
@@ -329,18 +335,18 @@ function Content({
         headline={headline}
         subhead={subhead}
         progressPct={progressPct}
-        onStatusPress={isTradesman ? onChangeStatus : undefined}
+        onStatusPress={isLead ? onChangeStatus : undefined}
       />
 
       {/* Today / Next */}
       <Card>
         <View style={styles.metaRow}>
           <Text style={[t.type.body, { color: t.colors.text.secondary }]}>Trade</Text>
-          <Pressable onPress={isTradesman ? onChangeStatus : undefined} disabled={!isTradesman} hitSlop={6}>
+          <Pressable onPress={isLead ? onChangeStatus : undefined} disabled={!isLead} hitSlop={6}>
             <Text
               style={[
                 t.type.bodyLgEmphasis,
-                { color: isTradesman ? t.colors.text.link : t.colors.text.primary },
+                { color: isLead ? t.colors.text.link : t.colors.text.primary },
               ]}
             >
               {formatTradeLabel(project.trade_type)}
@@ -370,7 +376,7 @@ function Content({
       </Card>
 
       {/* Your tradesman — customer view only. Tap to see the public profile. */}
-      {!isTradesman && project.tradesman && (
+      {!isTradeSide && project.tradesman && (
         <Card>
           <Pressable
             onPress={() =>
@@ -398,7 +404,7 @@ function Content({
       )}
 
       {/* Invite card — tradesman only, only while customer hasn't joined */}
-      {isTradesman && !project.customer_id && (
+      {isLead && !project.customer_id && (
         <Card>
           <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
             Invite {project.pending_customer_name ?? 'customer'}
@@ -460,7 +466,7 @@ function Content({
         <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>
           Milestones · {milestones.length}
         </Text>
-        {isTradesman && (
+        {isLead && (
           <Pressable onPress={onManageMilestones} hitSlop={8}>
             <Text style={[t.type.footnote, { color: t.colors.text.link }]}>Manage</Text>
           </Pressable>
@@ -470,7 +476,7 @@ function Content({
       {milestones.length === 0 ? (
         <Card>
           <Text style={[t.type.body, { color: t.colors.text.tertiary }]}>
-            {isTradesman ? 'No milestones yet — tap Manage to add some.' : 'No milestones set yet.'}
+            {isLead ? 'No milestones yet — tap Manage to add some.' : 'No milestones set yet.'}
           </Text>
         </Card>
       ) : (
@@ -489,7 +495,7 @@ function Content({
                 expectedDate={m.expected_date}
                 expectedStartDate={m.expected_start_date}
                 onPress={
-                  isTradesman ? () => onMilestoneTap(m.id, m.status, m.title) : undefined
+                  isLead ? () => onMilestoneTap(m.id, m.status, m.title) : undefined
                 }
               />
             </View>
@@ -497,8 +503,14 @@ function Content({
         </Card>
       )}
 
-      {/* Tradesman CTAs: end-of-day primary, quick-post as ghost link */}
-      {isTradesman && (
+      {/* Trade-side CTAs: lead gets End my day; crew get Post update as
+          the primary (they previously could not post at all — audit H1). */}
+      {isCrew && (
+        <View style={{ alignSelf: 'stretch' }}>
+          <PrimaryButton title="Post a photo update" onPress={onCompose} />
+        </View>
+      )}
+      {isLead && (
         <View style={{ gap: t.space[2], alignItems: 'center' }}>
           <View style={{ alignSelf: 'stretch' }}>
             <PrimaryButton title="End my day" onPress={onEndOfDay} />
@@ -596,7 +608,7 @@ function Content({
       </Card>
 
       {/* Job list — trade side only (lead + crew); customers never see it. */}
-      {isCrewSide && (
+      {isTradeSide && (
         <Card>
           <Pressable
             onPress={() =>
@@ -607,7 +619,7 @@ function Content({
             <View>
               <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Job list</Text>
               <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
-                {isTradesman ? 'Set the crew their jobs' : 'Your jobs for this project'}
+                {isLead ? 'Set the crew their jobs' : 'Your jobs for this project'}
               </Text>
             </View>
             <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
@@ -615,7 +627,8 @@ function Content({
         </Card>
       )}
 
-      {/* Pricing — always visible to both parties. The price changes here
+      {/* Pricing — lead and customer only; crew never see the money
+          (audit M2/M16). The price changes here
           are the "no surprise bills" wedge: every change is logged,
           customer must approve. quoted_amount isn't in this query's
           select list, so read it through a widened cast. */}
@@ -642,7 +655,7 @@ function Content({
                         minimumFractionDigits: 0,
                         maximumFractionDigits: 2,
                       }).format(quotedAmount)
-                    : isTradesman
+                    : isLead
                       ? 'Send a quote or set the agreed price'
                       : 'No quote set yet'}
                 </Text>
@@ -656,7 +669,7 @@ function Content({
       {/* Approvals card — only visible to the lead when there's pending
           work to review. Apprentice updates queue here before reaching
           the customer. */}
-      {isTradesman && (() => {
+      {isLead && (() => {
         const pending = updates.filter(
           (u) => (u as { approval_status?: string }).approval_status === 'pending',
         ).length;
@@ -718,13 +731,13 @@ function Content({
         </Pressable>
       </Card>
 
-      {/* Updates feed — customer view hides pending + rejected. Lead +
-          author both see them; pending get a badge in the card. */}
+      {/* Updates feed — RLS already hides pending/rejected from customers.
+          The lead sees all; an author always sees their own, including
+          rejected with the reason (audit H2 crew). */}
       <Text style={[t.type.caption, { color: t.colors.text.tertiary, marginTop: t.space[2] }]}>
         Updates · {updates.filter((u) => {
           const s = (u as { approval_status?: string }).approval_status;
-          if (s === 'rejected') return false;
-          if (s === 'pending') return isTradesman;
+          if (s === 'pending' || s === 'rejected') return isLead || u.author_id === currentUserId;
           return true;
         }).length}
       </Text>
@@ -737,8 +750,7 @@ function Content({
         updates
           .filter((u) => {
             const s = (u as { approval_status?: string }).approval_status;
-            if (s === 'rejected') return false;
-            if (s === 'pending') return isTradesman; // hide from non-lead
+            if (s === 'pending' || s === 'rejected') return isLead || u.author_id === currentUserId;
             return true;
           })
           .map((u) => (
@@ -754,6 +766,25 @@ function Content({
               }
               delayLongPress={450}
             >
+            {(u as { approval_status?: string; rejection_reason?: string | null }).approval_status === 'rejected' && (
+              <View
+                style={{
+                  alignSelf: 'flex-start',
+                  paddingVertical: 4,
+                  paddingHorizontal: 10,
+                  borderRadius: 999,
+                  backgroundColor: '#FDEBEA',
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={[t.type.footnote, { color: '#C0392B', fontWeight: '600' }]}>
+                  {'Not approved' +
+                    ((u as { rejection_reason?: string | null }).rejection_reason
+                      ? ` — ${(u as { rejection_reason?: string | null }).rejection_reason}`
+                      : '')}
+                </Text>
+              </View>
+            )}
             {(u as { approval_status?: string }).approval_status === 'pending' && (
               <View
                 style={{
@@ -782,7 +813,7 @@ function Content({
                 </Text>
                 <Text style={[t.type.footnote, { color: t.colors.text.tertiary }]}>
                   {relativeTime(u.created_at!)}
-                  {isTradesman && (u as { customer_seen_at?: string | null }).customer_seen_at
+                  {isLead && (u as { customer_seen_at?: string | null }).customer_seen_at
                     ? ' · Seen ✓'
                     : ''}
                 </Text>

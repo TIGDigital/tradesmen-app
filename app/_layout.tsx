@@ -206,6 +206,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       if (!projectId) return;
       if (snagId) {
         router.push({ pathname: '/snag/[id]', params: { id: snagId } });
+      } else if (data.screen === 'approvals') {
+        router.push({ pathname: '/project/[id]/approvals', params: { id: projectId } });
       } else if (data.screen === 'chat') {
         router.push({ pathname: '/project/[id]/chat', params: { id: projectId } });
       } else if (data.screen === 'pricing') {

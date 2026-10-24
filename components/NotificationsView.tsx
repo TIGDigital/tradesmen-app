@@ -96,7 +96,9 @@ export function NotificationsView() {
       return;
     }
     if (!n.project_id) return;
-    if (d.screen === 'chat') {
+    if (d.screen === 'approvals') {
+      router.push({ pathname: '/project/[id]/approvals', params: { id: n.project_id } });
+    } else if (d.screen === 'chat') {
       router.push({ pathname: '/project/[id]/chat', params: { id: n.project_id } });
     } else if (d.screen === 'pricing') {
       router.push({ pathname: '/project/[id]/pricing', params: { id: n.project_id } });

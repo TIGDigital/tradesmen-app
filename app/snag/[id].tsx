@@ -32,6 +32,7 @@ import {
   signOffSnag,
   type SnagStatus,
 } from '@/services/snags';
+import { useProjectRole } from '@/hooks/useProjectRole';
 import { useAuthStore } from '@/stores/auth';
 import { lightTheme } from '@/theme/light';
 
@@ -141,15 +142,16 @@ export default function SnagDetailScreen() {
     }
   }
 
+  const { isCustomer, isTradeSide } = useProjectRole(snag?.project_id);
+
   const reportedPhotos = snag?.photos.filter((p) => p.kind !== 'resolution') ?? [];
   const proofExisting = snag?.photos.filter((p) => p.kind === 'resolution') ?? [];
 
-  // Sign-off / re-open are actions for the OTHER party — usually customer.
-  // We just require it's not the person who resolved it.
+  // Sign-off / re-open belong to the CUSTOMER — the lead approving their
+  // own crew's fix would defeat the audit trail (persona audit M11).
   const canSignOff =
-    !!snag && snag.status === 'resolved' && !snag.confirmed_at && snag.resolved_by !== myId;
-  const canReopen =
-    !!snag && snag.status === 'resolved' && snag.resolved_by !== myId;
+    !!snag && isCustomer && snag.status === 'resolved' && !snag.confirmed_at;
+  const canReopen = !!snag && isCustomer && snag.status === 'resolved';
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: t.colors.bg.canvas }} edges={['bottom']}>
@@ -206,7 +208,7 @@ export default function SnagDetailScreen() {
                   Flagged by {snag.reporter?.full_name ?? 'someone'} ·{' '}
                   {relativeTime(snag.created_at)}
                 </Text>
-                {role !== 'customer' && snag.status !== 'resolved' ? (
+                {isTradeSide && snag.status !== 'resolved' ? (
                   <Pressable onPress={onSetDueDate} hitSlop={6} style={{ marginTop: 4 }}>
                     <Text style={[t.type.footnote, { color: t.colors.text.link }]}>
                       {snag.due_date
@@ -390,14 +392,14 @@ export default function SnagDetailScreen() {
             >
               {/* Working the snag (progress / resolve) is the trade side's job.
                   Customers only sign off or re-open (beta feedback 16 Oct). */}
-              {role !== 'customer' && snag.status === 'open' && (
+              {isTradeSide && snag.status === 'open' && (
                 <PrimaryButton
                   title="Mark in progress"
                   onPress={() => inProgressMutation.mutate()}
                   loading={inProgressMutation.isPending}
                 />
               )}
-              {role !== 'customer' && (snag.status === 'open' || snag.status === 'in_progress') && (
+              {isTradeSide && (snag.status === 'open' || snag.status === 'in_progress') && (
                 <PrimaryButton title="Mark resolved with proof…" onPress={() => setMode('resolve')} />
               )}
               {canSignOff && (

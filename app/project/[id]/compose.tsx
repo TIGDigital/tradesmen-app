@@ -31,10 +31,15 @@ export default function ComposeUpdateScreen() {
 
   const mutation = useMutation({
     mutationFn: () => postUpdate({ project_id: id!, body: body.trim(), photos }),
-    onSuccess: () => {
+    onSuccess: (update) => {
       queryClient.invalidateQueries({ queryKey: ['updates', id] });
       queryClient.invalidateQueries({ queryKey: ['my-current-project'] });
       router.back();
+      // Say where the post actually went (persona audit H2 crew):
+      // apprentices' posts queue for the lead, they don't reach the customer.
+      if ((update as { approval_status?: string })?.approval_status === 'pending') {
+        Alert.alert('Sent for approval', 'Your lead checks it before the customer sees it.');
+      }
     },
     onError: (e) => {
       Alert.alert("Couldn't post update", (e as Error).message);
@@ -43,7 +48,7 @@ export default function ComposeUpdateScreen() {
 
   function onSend() {
     if (!body.trim() && photos.length === 0) {
-      Alert.alert('Add a note or photo', 'At least something for your customer.');
+      Alert.alert('Add a note or photo', 'Add at least a line or a photo.');
       return;
     }
     mutation.mutate();

@@ -159,19 +159,47 @@ export async function listPendingApprovals(projectId: string) {
   return data ?? [];
 }
 
-/** Approve a pending update. RLS gates writes to project participants. */
+/** Approve a pending update: tell the author it's live and the customer
+ *  there's news (persona audit H5 — approvals were silent). */
 export async function approveUpdate(id: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not signed in');
-  const { error } = await supabase
+  const { data: row, error } = await supabase
     .from('project_updates')
     .update({
       approval_status: 'approved',
       approval_decided_at: new Date().toISOString(),
       approval_decided_by: user.id,
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('project_id, author_id, body')
+    .single();
   if (error) throw error;
+
+  if (row) {
+    const preview = (row.body ?? '').length > 80 ? row.body!.slice(0, 77) + '…' : row.body ?? '';
+    if (row.author_id !== user.id) {
+      void notifyUser({
+        user_id: row.author_id,
+        project_id: row.project_id,
+        title: 'Your update is live',
+        body: preview,
+      });
+    }
+    const { data: proj } = await supabase
+      .from('projects')
+      .select('customer_id')
+      .eq('id', row.project_id)
+      .single();
+    if (proj?.customer_id) {
+      void notifyUser({
+        user_id: proj.customer_id,
+        project_id: row.project_id,
+        title: 'New update on your project',
+        body: preview,
+      });
+    }
+  }
 }
 
 /** Reject a pending update with a written reason. */
@@ -180,7 +208,7 @@ export async function rejectUpdate(args: { id: string; reason: string }) {
   if (!user) throw new Error('Not signed in');
   const trimmed = args.reason.trim();
   if (!trimmed) throw new Error('Reason required');
-  const { error } = await supabase
+  const { data: row, error } = await supabase
     .from('project_updates')
     .update({
       approval_status: 'rejected',
@@ -188,8 +216,20 @@ export async function rejectUpdate(args: { id: string; reason: string }) {
       approval_decided_by: user.id,
       rejection_reason: trimmed,
     })
-    .eq('id', args.id);
+    .eq('id', args.id)
+    .select('project_id, author_id')
+    .single();
   if (error) throw error;
+
+  // Tell the author, with the reason — rejections were silent (H5).
+  if (row && row.author_id !== user.id) {
+    void notifyUser({
+      user_id: row.author_id,
+      project_id: row.project_id,
+      title: 'Update needs another go',
+      body: trimmed,
+    });
+  }
 }
 
 /** Format an eta_at ISO string as "tomorrow at 8:00 AM" / "today at 8:00 AM". */
@@ -391,16 +431,42 @@ export async function postUpdate(args: {
     await attachPhotos({ update_id: update.id, user_id: user.id, photos: args.photos });
   }
 
-  // Fire-and-forget push to the counterparty. System updates (milestone/status)
-  // don't push — too noisy when a tradesman is ticking off milestones quickly.
+  // Route the push by what actually happened (persona audit H5):
+  // a PENDING post tells the lead their approval queue has work (deep-link
+  // to Approvals); an approved post tells the customer. System updates
+  // (milestone/status) stay silent — too noisy.
   if ((args.type ?? 'progress') === 'progress') {
     const preview = args.body.length > 100 ? args.body.slice(0, 97) + '…' : args.body;
-    void notifyCounterparty({
-      project_id: args.project_id,
-      sender_id: user.id,
-      title: 'New update',
-      body: preview,
-    });
+    const status = (update as { approval_status?: string }).approval_status;
+    const { data: proj } = await supabase
+      .from('projects')
+      .select('tradesman_id, customer_id')
+      .eq('id', args.project_id)
+      .single();
+    if (status === 'pending' && proj?.tradesman_id && proj.tradesman_id !== user.id) {
+      void notifyUser({
+        user_id: proj.tradesman_id,
+        project_id: args.project_id,
+        title: 'Update waiting for your approval',
+        body: preview,
+        data: { screen: 'approvals' },
+      });
+    } else if (proj?.customer_id && proj.customer_id !== user.id) {
+      void notifyUser({
+        user_id: proj.customer_id,
+        project_id: args.project_id,
+        title: 'New update on your project',
+        body: preview,
+      });
+    } else if (!proj?.customer_id && proj?.tradesman_id && proj.tradesman_id !== user.id) {
+      // No customer yet: at least tell the lead their crew posted.
+      void notifyUser({
+        user_id: proj.tradesman_id,
+        project_id: args.project_id,
+        title: 'New update from your crew',
+        body: preview,
+      });
+    }
   }
 
   return update;
@@ -494,6 +560,40 @@ export async function softDeleteUpdate(update_id: string): Promise<void> {
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', update_id);
   if (error) throw error;
+}
+
+/** Push + inbox row for one named user on a project (approval loop etc.). */
+export async function notifyUser(args: {
+  user_id: string;
+  project_id: string;
+  title: string;
+  body: string;
+  data?: Record<string, string>;
+}): Promise<void> {
+  try {
+    await recordNotification({
+      user_id: args.user_id,
+      kind: 'new_update',
+      project_id: args.project_id,
+      title: args.title,
+      body: args.body,
+      data: { project_id: args.project_id, ...args.data },
+    });
+    const { data: tokens } = await supabase
+      .from('push_tokens')
+      .select('token')
+      .eq('user_id', args.user_id);
+    if (tokens && tokens.length > 0) {
+      await sendPush({
+        tokens: tokens.map((t) => t.token),
+        title: args.title,
+        body: args.body,
+        data: { project_id: args.project_id, ...args.data },
+      });
+    }
+  } catch (e) {
+    console.warn('[notifyUser] failed', e);
+  }
 }
 
 /**
