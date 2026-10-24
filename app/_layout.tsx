@@ -10,7 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Alert, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -183,17 +183,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, [initialise]);
 
-  // Notification tap → deep-link based on the payload.
-  // - action='end_of_day' → open the EoD card directly (leave-site nudge)
-  // - else if project_id present → open project detail
-  useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data ?? {};
+  // Notification tap → deep-link based on the payload. Each notification
+  // lands in its own context, not the project front door (23 Oct).
+  const routeFromNotificationData = useCallback(
+    (data: Record<string, unknown>) => {
       const projectId = typeof data.project_id === 'string' ? data.project_id : null;
       const quoteId = typeof data.quote_id === 'string' ? data.quote_id : null;
       const snagId = typeof data.snag_id === 'string' ? data.snag_id : null;
-      // Each notification lands in its own context, not the project front
-      // door (beta feedback 23 Oct).
       if (quoteId) {
         router.push({ pathname: '/quote/[id]', params: { id: quoteId } });
         return;
@@ -217,9 +213,33 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       } else {
         router.push({ pathname: '/project/[id]', params: { id: projectId } });
       }
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      routeFromNotificationData(response.notification.request.content.data ?? {});
     });
     return () => sub.remove();
-  }, [router]);
+  }, [routeFromNotificationData]);
+
+  // Cold-start replay: a push tapped while the app was CLOSED never hits
+  // the listener above — fetch it once routing has a signed-in user and
+  // deliver it (persona audit H9: 'urgent snag or quote push can be lost').
+  const coldStartHandled = useRef(false);
+  useEffect(() => {
+    if (coldStartHandled.current || !profile?.role) return;
+    coldStartHandled.current = true;
+    void Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (!response) return;
+      // Give AuthGate a beat to settle on the home shell first.
+      setTimeout(
+        () => routeFromNotificationData(response.notification.request.content.data ?? {}),
+        600,
+      );
+    });
+  }, [profile?.role, routeFromNotificationData]);
 
   // ── Loop-proof navigation ─────────────────────────────────────────
   // ROOT CAUSE of the 19 Jul crash ("Maximum update depth exceeded" at
@@ -274,14 +294,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Signed in with a role. The welcome / promise screen is the homepage —
-    // every cold app launch routes here first, regardless of session state.
-    // The screen sets welcomeShown=true on any CTA tap, after which we bounce
-    // out of the auth zone like a normal app.
-    if (!welcomeShown) {
-      if (!onWelcome && !inCrewFlow) go('/(auth)/welcome');
-      return;
-    }
+    // Signed in with a role: straight to the app. The welcome / promise
+    // splash is for signed-out visitors only (persona audit H9 — it was
+    // showing on every cold launch and swallowing cold-start push taps).
 
     // Role-select whitelist. The sign-up form defaults role to 'customer'
     // in the DB (via the profile-autocreate trigger) and then explicitly

@@ -167,7 +167,7 @@ export default function JobsScreen() {
       ]
     : [];
 
-  type Filter = 'all' | 'on_track' | 'delayed' | 'needs_update';
+  type Filter = 'all' | 'on_track' | 'delayed' | 'needs_update' | 'done';
   const [filter, setFilter] = useState<Filter>('all');
 
   // Greeting + filtering rely on `data` so they must be inside useMemo, not
@@ -181,7 +181,9 @@ export default function JobsScreen() {
     const isOnTrack = (p: (typeof list)[number]) =>
       isActive(p) && p.status !== 'delayed';
     const isStale = (p: (typeof list)[number]) => {
-      if (!isActive(p)) return false;
+      // Only running jobs can go quiet — a job booked for next month
+      // shouldn't carry a red dot (persona audit M1).
+      if (p.status !== 'in_progress' && p.status !== 'delayed') return false;
       if (!p.last_update_at) return true; // no update ever posted
       const days =
         (Date.now() - new Date(p.last_update_at).getTime()) / 86_400_000;
@@ -195,6 +197,7 @@ export default function JobsScreen() {
         on_track: list.filter(isOnTrack).length,
         delayed: list.filter((p) => p.status === 'delayed').length,
         needs_update: list.filter(isStale).length,
+        done: list.filter((p) => p.status === 'completed').length,
       },
     };
   }, [data]);
@@ -203,6 +206,7 @@ export default function JobsScreen() {
     const list = stats.list;
     if (filter === 'all') return list.filter((p) => p.status !== 'completed');
     if (filter === 'needs_update') return list.filter(stats.isStale);
+    if (filter === 'done') return list.filter((p) => p.status === 'completed');
     if (filter === 'on_track') {
       return list.filter((p) => p.status !== 'completed' && p.status !== 'delayed');
     }
@@ -376,6 +380,9 @@ export default function JobsScreen() {
               <Chip label="On track" count={stats.counts.on_track} active={filter === 'on_track'} onPress={() => setFilter('on_track')} />
               <Chip label="Delayed" count={stats.counts.delayed} active={filter === 'delayed'} onPress={() => setFilter('delayed')} accent="amber" />
               <Chip label="Quiet a while" count={stats.counts.needs_update} active={filter === 'needs_update'} onPress={() => setFilter('needs_update')} accent="red" />
+              {stats.counts.done > 0 && (
+                <Chip label="Done" count={stats.counts.done} active={filter === 'done'} onPress={() => setFilter('done')} />
+              )}
             </ScrollView>
           )}
 

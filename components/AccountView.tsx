@@ -125,7 +125,13 @@ export function AccountView() {
               { color: t.colors.text.primary, marginTop: 4, textTransform: 'capitalize' },
             ]}
           >
-            {profile?.role ?? '—'}
+            {profile?.role === 'tradesman'
+              ? 'Tradesperson'
+              : profile?.role === 'apprentice'
+                ? 'Crew member'
+                : profile?.role === 'customer'
+                  ? 'Homeowner'
+                  : '—'}
           </Text>
         </Card>
 
@@ -188,7 +194,7 @@ export function AccountView() {
               <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
             </Pressable>
           </Card>
-        ) : (
+        ) : profile?.role === 'apprentice' ? (
           <Card>
             <Pressable
               onPress={() => {
@@ -216,6 +222,39 @@ export function AccountView() {
                 <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Have an invite?</Text>
                 <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
                   Enter a crew invite code
+                </Text>
+              </View>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+            </Pressable>
+          </Card>
+        ) : null}
+
+        {/* Settings — was only reachable from the ≡ menu on Jobs (M5). */}
+        <Card>
+          <Pressable onPress={() => router.push('/settings')} style={styles.rowBetween}>
+            <View>
+              <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>App</Text>
+              <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                Settings & notifications
+              </Text>
+            </View>
+            <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
+          </Pressable>
+        </Card>
+
+        {/* The lead can see their own shopfront as customers do. */}
+        {profile?.role === 'tradesman' && profile?.id && (
+          <Card>
+            <Pressable
+              onPress={() =>
+                router.push({ pathname: '/tradesman/[id]', params: { id: profile.id } })
+              }
+              style={styles.rowBetween}
+            >
+              <View>
+                <Text style={[t.type.caption, { color: t.colors.text.tertiary }]}>Your profile</Text>
+                <Text style={[t.type.bodyLg, { color: t.colors.text.primary, marginTop: 4 }]}>
+                  Preview it as your customer sees it
                 </Text>
               </View>
               <Text style={[t.type.bodyLg, { color: t.colors.text.tertiary }]}>›</Text>
